@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: team-tracker
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn run:app

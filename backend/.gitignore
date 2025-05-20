@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+dist/
+build/
+htmlcov/ # Coverage reports
+.coverage
+.pytest_cache/
+*.log
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env.* # .env.local, .env.development, etc. (if used, but not .env itself if it holds non-sensitive dev defaults)
+
+# .env file - IMPORTANT for security
+# Contains sensitive credentials and configurations.
+# Should NOT be committed to the repository.
+# Each developer should have their own local .env file.
+# Production environments should use platform-specific environment variable settings.
+.env
+
+# Instance folder - often contains sensitive config or local DB
+instance/
+# If you have specific non-sensitive files in 'instance' you want to track,
+# you can negate them, e.g., !instance/some_safe_config.py
+# However, it's generally safer to ignore the whole folder if it might contain secrets.
+
+# SQLite databases (if used for local quick testing, should not be versioned)
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+# Docker-compose override files (often local)
+docker-compose.override.yml
+docker-compose.*.yml # e.g. docker-compose.local.yml
+
+# IDEs and Editors
+.idea/ # IntelliJ
+.vscode/ # VS Code (allow .vscode/settings.json for shared settings if desired, e.g. !.vscode/settings.json)
+*.sublime-project
+*.sublime-workspace
+nbproject/ # Netbeans
+*.DS_Store # macOS
+Thumbs.db # Windows
+ehthumbs.db # Windows
+
+# Node.js (if you add a JavaScript frontend build process later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # If you prefer to only commit package.json and generate lock files on install
+# Or, if you commit package-lock.json, then ignore only the logs:
+# npm-debug.log*
+# yarn-debug.log*
+# yarn-error.log*
+
+# Build outputs for frontend (if applicable)
+# /public/build/
+# /public/hot/
+# /dist/ # (already listed under Python but good to be explicit if frontend uses it too)
+
+# Operating System files
+Desktop.ini
+.Spotlight-V100
+.Trashes
+
+# Miscellaneous
+*.swp # Vim swap files
+*~ # Backup files
+*.bak
+*.tmp
+
+# Secrets files (if you use other naming conventions)
+secrets.yml
+secrets.json
+*.pem
+*.key
+
+# Specific to your project if any
+# e.g., data_exports/
+# e.g., local_reports/

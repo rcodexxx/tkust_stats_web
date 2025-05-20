@@ -1,0 +1,38 @@
+version: '3.12'
+
+services:
+  web:
+    build: .. # 使用當前目錄下的 Dockerfile 來建置映像
+    container_name: tkust_stats_web_app
+    ports:
+      - "8000:5000" # 將主機的 5000 連接埠映射到容器的 5000 連接埠 (Gunicorn 監聽的)
+    volumes:
+      - .:/app  # 將當前目錄掛載到容器的 /app，方便開發時程式碼即時更新 (生產環境可移除此行或改為僅複製)
+      # 如果您有 instance 資料夾且需要在容器內使用，可以單獨掛載
+      # - ./instance:/app/instance
+    env_file:
+      - .env # 從 .env 檔案載入環境變數
+    depends_on:
+      db:
+        condition: service_healthy # 等待資料庫健康檢查通過後再啟動 web 服務
+    # command: flask run --host=0.0.0.0 # 開發時若不想用 Gunicorn，可以覆寫 Dockerfile 的 CMD
+
+  db:
+    image: postgres:15 # 使用官方 PostgreSQL 15 映像
+    container_name: tkust_stats_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # 持久化資料庫資料
+    ports:
+      - "5433:5432" # 將主機的 5433 連接埠映射到容器的 5432 (避免與本機已安裝的 PostgreSQL 衝突)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER} # 從 .env 檔案讀取
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck: # 健康檢查，確保資料庫已準備好接受連線
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: # 定義一個具名 volume 來持久化 PostgreSQL 資料
