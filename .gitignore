@@ -1,0 +1,41 @@
+# tkust_tennis_project/.gitignore
+
+# General
+.DS_Store
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Python backend specific in backend/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/.venv/
+backend/venv/
+backend/env/
+backend/ENV/
+backend/instance/
+backend/.env # Backend .env for local docker
+backend/*.sqlite3
+backend/*.db
+backend/htmlcov/
+backend/.coverage
+backend/.pytest_cache/
+
+# Node frontend specific in frontend/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnp/
+frontend/.pnp.js
+
+# IDE specific
+.idea/
+.vscode/
+# !.vscode/settings.json # 如果你想共享 VSCode 設定
