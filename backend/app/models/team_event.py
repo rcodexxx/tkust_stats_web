@@ -1,5 +1,5 @@
-from backend.app.extensions import db
-from backend.app.models.enums import OverallMatchNatureEnum, SQLAlchemyEnum
+from ..extensions import db
+from .enums import OverallMatchNatureEnum, SQLAlchemyEnum
 import datetime
 
 class TeamEvent(db.Model):

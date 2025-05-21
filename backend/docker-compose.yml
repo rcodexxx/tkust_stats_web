@@ -1,9 +1,7 @@
-version: '3.12'
-
 services:
   web:
-    build: .. # 使用當前目錄下的 Dockerfile 來建置映像
-    container_name: tkust_stats_web_app
+    build: . # 使用當前目錄下的 Dockerfile 來建置映像
+    container_name: tkust_stats_web_backend
     ports:
       - "8000:5000" # 將主機的 5000 連接埠映射到容器的 5000 連接埠 (Gunicorn 監聽的)
     volumes:

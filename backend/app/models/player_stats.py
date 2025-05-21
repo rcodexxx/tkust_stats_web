@@ -1,5 +1,5 @@
 # 建議放在 app/models/player_match_stats.py
-from backend.app.extensions import db
+from ..extensions import db
 
 
 class PlayerStats(db.Model):

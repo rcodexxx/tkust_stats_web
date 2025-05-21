@@ -1,12 +1,13 @@
-from backend.app.extensions import db
-from backend.app.models.enums import GenderEnum, PositionEnum, SQLAlchemyEnum
+from ..extensions import db
+from .enums import GenderEnum, PositionEnum, SQLAlchemyEnum
 import datetime
 
 class TeamMember(db.Model):
     __tablename__ = 'team_members'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, comment="姓名")
+    name = db.Column(db.String(50), nullable=False, comment="姓名")
     student_id = db.Column(db.String(20), unique=True, nullable=True, comment="學號")
+    organization_id = db.Column(db.String(20), nullable=True, comment="單位")
     gender = db.Column(SQLAlchemyEnum(GenderEnum), nullable=True, comment="性別")
     position = db.Column(SQLAlchemyEnum(PositionEnum), nullable=True, comment="位置")
     score = db.Column(db.Integer, nullable=False, default=0, comment="積分")

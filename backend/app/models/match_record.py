@@ -1,5 +1,5 @@
-from backend.app.extensions import db
-from backend.app.models.enums import MatchTypeEnum, OutcomeEnum, SQLAlchemyEnum
+from ..extensions import db
+from .enums import MatchTypeEnum, OutcomeEnum, SQLAlchemyEnum
 import datetime
 
 

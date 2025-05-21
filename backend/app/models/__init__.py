@@ -1,5 +1,5 @@
 from .enums import PositionEnum, OutcomeEnum, MatchTypeEnum, GenderEnum, OverallMatchNatureEnum
-from .MatchRecord import MatchRecord
-from .PlayerStats import PlayerStats
-from .TeamMember import TeamMember
-from .TeamEvent import TeamEvent
+from .match_record import MatchRecord
+from .player_stats import PlayerStats
+from .team_member import TeamMember
+from .team_event import TeamEvent
