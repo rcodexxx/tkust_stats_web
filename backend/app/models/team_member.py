@@ -19,5 +19,16 @@ class TeamMember(db.Model):
 
     match_stats_records = db.relationship('PlayerStats', backref='player', lazy='dynamic', cascade="all, delete-orphan")
 
+    def to_dict(self):
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "score": self.score,
+            "student_id": self.student_id,
+            "gender": self.gender.value if self.gender else None,
+            "position": self.position.value if self.position else None,
+        }
+        return data
+
     def __repr__(self):
         return f"<TeamMember {self.name}>"

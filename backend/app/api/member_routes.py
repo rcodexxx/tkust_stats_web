@@ -92,13 +92,6 @@ def create_member():
     if not isinstance(is_active_val, bool):
         errors['is_active'] = "is_active must be a boolean (true or false)."
 
-    try:
-        score = int(score_val)
-        if not (0 <= score <= 9999):  # 假設分數範圍限制
-            errors['score'] = "Score must be an integer between 0 and 9999."
-    except (ValueError, TypeError):
-        errors['score'] = "Score must be a valid integer."
-
     if errors:
         return jsonify({"error": "Input validation failed", "details": errors}), 400
 
@@ -109,7 +102,7 @@ def create_member():
             student_id=student_id,
             gender=gender_enum,
             position=position_enum,
-            score=score,
+            score=0,
             join_date=join_date_obj,
             is_active=is_active_val,
             notes=notes
