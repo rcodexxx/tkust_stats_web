@@ -11,10 +11,14 @@
             <li class="nav-item">
               <router-link class="nav-link" active-class="active" to="/">排行榜</router-link>
             </li>
+<!--            <li class="nav-item">-->
+<!--              <router-link class="nav-link" active-class="active" to="/match/record">記錄比賽</router-link>-->
+<!--            </li>-->
             <li class="nav-item">
-              <router-link class="nav-link" active-class="active" to="/match/record">記錄比賽</router-link>
+              <router-link class="nav-link" active-class="active" to="/members/add">新增成員</router-link>
             </li>
-            </ul>
+            {/* ... 其他登入/登出連結 (如果已實作) ... */}
+          </ul>
         </div>
       </div>
     </nav>
@@ -28,9 +32,7 @@
     </main>
 
     <footer class="footer mt-auto py-3 bg-light">
-      <div class="container text-center">
-        <span class="text-muted">&copy; {{ new Date().getFullYear() }} TKUST Tennis Team Stats. Vue Edition.</span>
-      </div>
+      {/* ... footer 內容 ... */}
     </footer>
   </div>
 </template>

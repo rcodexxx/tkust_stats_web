@@ -41,52 +41,44 @@ def get_all_members():
 
 
 @bp.route('/members', methods=['POST'])
+# @jwt_required() # 如果未來加入 JWT 認證，取消註解此行
 def create_member():
     data = request.get_json()
 
     if not data:
         return jsonify({"error": "Request payload must be JSON"}), 400
 
-    # 1. 提取資料 (並提供預設值或處理缺失的可選欄位)
+    # 1. 提取資料
     name = data.get('name')
     student_id = data.get('student_id')
-    # organization_id = data.get('organization_id')  # 假設類型
-    gender_str = data.get('gender')  # 前端傳送 Enum 的 NAME (大寫)
-    position_str = data.get('position')  # 前端傳送 Enum 的 NAME (大寫)
-    join_date_str = data.get('join_date')  # 預期格式 'YYYY-MM-DD'
-    leave_date_str = data.get('leave_date')  # 預期格式 'YYYY-MM-DD'
-    is_active_val = data.get('is_active', True)  # 如果沒提供，預設為 True
-    # racket = data.get('racket')
+    gender_str = data.get('gender')  # 前端應傳送 Enum 的 NAME，例如 'MALE'
+    position_str = data.get('position')  # 前端應傳送 Enum 的 NAME，例如 'SINGLES'
+    score_val = data.get('score', 0)
+    join_date_str = data.get('join_date')
+    is_active_val = data.get('is_active', True)  # 如果前端沒給，預設為 True
     notes = data.get('notes')
-    score = 0  # 如果沒提供，預設為 0
 
-    # 2. 後端資料驗證 (非常重要)
+    # 2. 後端資料驗證
     errors = {}
     if not name:
         errors['name'] = "Name is required."
-    elif len(name) > 50:  # 假設模型中 name 欄位長度限制為 100
-        errors['name'] = "Name is too long (max 100 characters)."
+    elif len(name) > 100:
+        errors['name'] = "Name cannot exceed 100 characters."
 
-    if student_id and len(student_id) > 20:  # 假設學號長度限制
-        errors['student_id'] = "Student ID is too long (max 20 characters)."
+    if student_id:
+        if len(student_id) > 20:
+            errors['student_id'] = "Student ID cannot exceed 20 characters."
+        if TeamMember.query.filter_by(student_id=student_id).first():
+            errors['student_id'] = f"Student ID '{student_id}' already exists."
 
-    # 檢查 student_id 是否已存在 (如果它是唯一的)
-    if student_id and TeamMember.query.filter_by(student_id=student_id).first():
-        errors['student_id'] = f"Student ID '{student_id}' already exists."
+    gender_enum = GenderEnum.get_by_name(gender_str)  # 使用 classmethod 轉換
+    if gender_str and gender_enum is None:  # 如果前端傳了值但無法轉換
+        errors['gender'] = f"Invalid gender value: '{gender_str}'. Valid are: {[e.name for e in GenderEnum]}."
 
-    gender_enum = None
-    if gender_str:
-        try:
-            gender_enum = GenderEnum[gender_str.upper()]
-        except KeyError:
-            errors['gender'] = f"Invalid gender value: '{gender_str}'. Valid values are: {[e.name for e in GenderEnum]}."
-
-    position_enum = None
-    if position_str:
-        try:
-            position_enum = PositionEnum[position_str.upper()]
-        except KeyError:
-            errors['position'] = f"Invalid position value: '{position_str}'. Valid values are: {[e.name for e in PositionEnum]}."
+    position_enum = PositionEnum.get_by_name(position_str)  # 使用 classmethod 轉換
+    if position_str and position_enum is None:
+        errors[
+            'position'] = f"Invalid position value: '{position_str}'. Valid are: {[e.name for e in PositionEnum]}."
 
     join_date_obj = None
     if join_date_str:
@@ -94,69 +86,47 @@ def create_member():
             join_date_obj = datetime.datetime.strptime(join_date_str, '%Y-%m-%d').date()
         except ValueError:
             errors['join_date'] = "Invalid join_date format. Expected YYYY-MM-DD."
-    else:  # 如果前端沒傳，預設為今天
+    else:  # 如果前端沒傳 join_date，可以設為今天或允許為空
         join_date_obj = datetime.date.today()
-
-    leave_date_obj = None
-    if leave_date_str:
-        try:
-            leave_date_obj = datetime.datetime.strptime(leave_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            errors['leave_date'] = "Invalid leave_date format. Expected YYYY-MM-DD."
 
     if not isinstance(is_active_val, bool):
         errors['is_active'] = "is_active must be a boolean (true or false)."
 
-    if racket and len(racket) > 100:  # 假設球拍長度限制
-        errors['racket'] = "Racket information is too long (max 100 characters)."
+    try:
+        score = int(score_val)
+        if not (0 <= score <= 9999):  # 假設分數範圍限制
+            errors['score'] = "Score must be an integer between 0 and 9999."
+    except (ValueError, TypeError):
+        errors['score'] = "Score must be a valid integer."
 
     if errors:
-        return jsonify({"error": "Input validation failed", "details": errors}), 400  # 400 Bad Request
+        return jsonify({"error": "Input validation failed", "details": errors}), 400
 
     # 3. 創建模型實例
     try:
         new_member = TeamMember(
             name=name,
-            student_id=student_id if student_id else None,
-            organization_id=organization_id,  # 假設 organization_id 允許為 None
+            student_id=student_id,
             gender=gender_enum,
-            position=position_enum,  # 注意：您的 get_members 用的是 position，之前模型用的是 preferred_position，請統一
+            position=position_enum,
             score=score,
-            racket=racket if racket else None,
             join_date=join_date_obj,
-            leave_date=leave_date_obj,
             is_active=is_active_val,
             notes=notes
         )
 
-        # 4. 加入資料庫並提交
         db.session.add(new_member)
         db.session.commit()
 
-        # 5. 回傳成功訊息和新資源的數據 (與您的 get_members 格式盡量一致)
         return jsonify({
-            "message": "Team member created successfully",
-            "member": {
-                "id": new_member.id,
-                "name": new_member.name,
-                "score": new_member.score,
-                "student_id": new_member.student_id,
-                "organization_id": new_member.organization_id,
-                "gender": new_member.gender.value if new_member.gender else None,
-                "position": new_member.position.value if new_member.position else None,
-                "join_date": new_member.join_date.isoformat() if new_member.join_date else None,
-                "leave_date": new_member.leave_date.isoformat() if new_member.leave_date else None,
-                "is_active": new_member.is_active,
-                "racket": new_member.racket
-            }
-        }), 201  # 201 Created 狀態碼
+            "message": "Team member created successfully!",
+            "member": new_member.to_dict()  # 使用 to_dict()
+        }), 201
 
-    except IntegrityError as e:  # 例如違反 unique 約束 (可能是 student_id 重複，如果資料庫層面有設定)
+    except IntegrityError:  # 主要由 student_id unique 約束觸發
         db.session.rollback()
-        if "unique constraint" in str(e.orig).lower():  # 嘗試從錯誤訊息判斷
-            return jsonify({"error": "A unique field (like student_id) likely already exists."}), 409  # 409 Conflict
-        return jsonify({"error": "Database integrity error."}), 409
+        return jsonify({"error": "Database integrity error. Student ID might already exist if it's unique."}), 409
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating member: {e}")  # 伺服器端日誌，除錯用
-        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+        print(f"Unexpected error creating member: {str(e)}")  # 伺服器日誌
+        return jsonify({"error": "An unexpected error occurred on the server."}), 500

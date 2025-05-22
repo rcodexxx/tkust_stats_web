@@ -55,17 +55,13 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
 
     # 設定 CORS
-    # allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost:5173,http://127.0.0.1:5173") # Vite 預設 5173
-    # allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',')]
-    # if "*" in allowed_origins_str: # 允許所有，通常僅限開發
-    #     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
-    # else:
-    #     cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
-    # print(f" * CORS allowed origins: {allowed_origins}") # 除錯用
-
-    # 更簡單的 CORS 初始化方式 (在 extensions.py 中 cors = CORS() 後):
-    cors.init_app(app)  # 如果您在 extensions.py 中沒有 app 參數，或者使用預設設定
-    # 更好的做法是傳遞 app 並在 extensions.py 中或這裡配置 origins
+    allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost:5173")  # 預設允許本地 Vue
+    allowed_origins_list = [origin.strip() for origin in allowed_origins_str.split(',')]
+    if "*" in allowed_origins_str:
+        cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    else:
+        cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins_list}})
+    print(f" * CORS configured for origins: {allowed_origins_list}")
 
     # 3. 註冊藍圖 (Blueprints)
     # 從 app.api 套件的 __init__.py 中匯入 bp 實例 (我們之前將其命名為 bp，但叫 api_bp 可能更清晰)

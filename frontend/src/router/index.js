@@ -1,6 +1,7 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import LeaderboardView from '../views/LeaderboardView.vue'
+import AddMemberView from "../views/AddMemberView.vue";
 // import RecordMatchView from '../views/RecordMatchView.vue'
 
 const routes = [
@@ -9,6 +10,11 @@ const routes = [
     name: 'Leaderboard',
     component: LeaderboardView
   },
+  {
+    path: '/',
+    name: 'AddMember',
+    component: AddMemberView
+  }
   // {
   //   path: '/match/record',
   //   name: 'RecordMatch',
