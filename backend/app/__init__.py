@@ -55,7 +55,7 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
 
     # 設定 CORS
-    allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost:5173")  # 預設允許本地 Vue
+    allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS')  # 預設允許本地 Vue
     allowed_origins_list = [origin.strip() for origin in allowed_origins_str.split(',')]
     if "*" in allowed_origins_str:
         cors.init_app(app, resources={r"/api/*": {"origins": "*"}})

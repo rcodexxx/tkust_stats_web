@@ -11,7 +11,7 @@ const routes = [
     component: LeaderboardView
   },
   {
-    path: '/',
+    path: '/members/add',
     name: 'AddMember',
     component: AddMemberView
   }

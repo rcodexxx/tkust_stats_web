@@ -32,7 +32,9 @@
     </main>
 
     <footer class="footer mt-auto py-3 bg-light">
-      {/* ... footer 內容 ... */}
+      <div class="container text-center">
+        <span class="text-muted">&copy; {{ new Date().getFullYear() }} TKUST Tennis Team Stats. Vue Edition.</span>
+      </div>
     </footer>
   </div>
 </template>
