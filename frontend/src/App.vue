@@ -33,7 +33,7 @@
 
     <footer class="footer mt-auto py-3 bg-light">
       <div class="container text-center">
-        <span class="text-muted">&copy; {{ new Date().getFullYear() }} TKUST Tennis Team Stats. Vue Edition.</span>
+        <span class="text-muted">&copy; {{ new Date().getFullYear() }} TKU Tennis Team Stats.</span>
       </div>
     </footer>
   </div>
