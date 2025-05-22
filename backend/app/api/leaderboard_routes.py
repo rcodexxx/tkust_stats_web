@@ -6,23 +6,21 @@ from sqlalchemy.orm import joinedload # 用於預載入關聯數據
 
 @bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
-    """獲取排行榜數據，按分數降序排列"""
-    # 預載入 organization 和 racket_info 以避免 N+1 查詢
-    members = TeamMember.query.options(
-        joinedload(TeamMember.organization),
-        joinedload(TeamMember.racket_info)
-    ).order_by(TeamMember.score.desc()).all()
-
-    leaderboard_data = []
-    for member in members:
-        leaderboard_data.append({
-            "id": member.id,
-            "name": member.name,
-            "score": member.score,
-            "student_id": member.student_id,
-            "organization_name": member.organization.name if member.organization else None,
-            "racket_display": f"{member.racket_info.brand} {member.racket_info.model_name}" if member.racket_info else None,
-            "gender": member.gender.value if member.gender else None,
-            "position": member.position.value if member.position else None, # 假設模型中是 position
-        })
-    return jsonify(leaderboard_data)
+    """獲取排行榜數據，按分數降序排列 (只包含活躍成員)"""
+    try:
+        members = TeamMember.query.order_by(TeamMember.score.desc()).all()
+        leaderboard_data = []
+        for member in members:
+            leaderboard_data.append({
+                "id": member.id,
+                "name": member.name,
+                "score": member.score,
+                "student_id": member.student_id,
+                "gender": member.gender.value if member.gender else None,
+                "position": member.position.value if member.position else None,
+                # 可以在排行榜中省略 join_date, leave_date, notes, is_active 等，除非前端需要
+            })
+        return jsonify(leaderboard_data)
+    except Exception as e:
+        print(f"Error in get_leaderboard: {e}")
+        return jsonify({"error": "An error occurred while fetching the leaderboard."}), 500

@@ -24,7 +24,8 @@ def seed_db_command():
         members_data = [
             {'name': '陳冠宇', 'score': 0, 'student_id': '611460162', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
             {'name': '鍾楊鎧', 'score': 0, 'student_id': 'T002', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
-            {'name': '山嵜一花', 'score': 100, 'student_id': 'F001', 'gender': GenderEnum.MALE, 'position': PositionEnum.VERSATILE},
+            {'name': '山嵜一花', 'score': 100, 'student_id': '410865025', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.VERSATILE},
+            {'name': '黃宇微', 'score': 100, 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.FRONT},
         ]
 
         for member_info in members_data:

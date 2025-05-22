@@ -9,11 +9,11 @@ const routes = [
     name: 'Leaderboard',
     component: LeaderboardView
   },
-  {
-    path: '/match/record',
-    name: 'RecordMatch',
-    component: RecordMatchView
-  }
+  // {
+  //   path: '/match/record',
+  //   name: 'RecordMatch',
+  //   component: RecordMatchView
+  // }
   // 您可以加入其他路由
 ]
 

@@ -6,26 +6,38 @@ from ..models.enums import GenderEnum, PositionEnum
 from sqlalchemy.exc import IntegrityError
 import datetime
 
-@bp.route('/members', methods=['GET'])
-def get_members():
-    """獲取所有活躍球員列表"""
-    members = TeamMember.query.order_by(TeamMember.name).all()
-    member_data = [
-        {
-            "id": member.id,
-            "name": member.name,
-            "score": member.score,
-            "student_id": member.student_id,
-            "organization_id": member.organization_id,
-            "gender": member.gender.value if member.gender else None,
-            "position": member.position.value if member.position else None,
-            "join_date": member.join_date,
-            "leave_date": member.leave_date,
-            "is_active": member.is_active,
-            "racket":member.racket,
-        } for member in members
-    ]
-    return jsonify(member_data)
+
+@bp.route('/members', methods=['GET'])  # 通常用 /members 獲取所有成員列表
+def get_all_members():
+    """獲取所有活躍球員列表，主要用於表單選擇等，按姓名排序"""
+    try:
+        # active_only_str = request.args.get('active_only', 'true', type=str)  # 獲取查詢參數
+        # active_only = active_only_str.lower() == 'true'
+        #
+        query = TeamMember.query
+        # if active_only:
+        #     query = query.filter_by(is_active=True)
+
+        members = query.order_by(TeamMember.name).all()
+
+        member_data = []
+        for member in members:
+            member_data.append({
+                "id": member.id,
+                "name": member.name,
+                "score": member.score,
+                "student_id": member.student_id,
+                "gender": member.gender.value if member.gender else None,  # Enum 的 .value 會回傳設定的值
+                "position": member.position.value if member.position else None,
+                "join_date": member.join_date.isoformat() if member.join_date else None,
+                "leave_date": member.leave_date.isoformat() if member.leave_date else None,
+                "is_active": member.is_active,
+                "notes": member.notes
+            })
+        return jsonify(member_data)
+    except Exception as e:
+        print(f"Error in get_all_members: {e}")  # 伺服器端日誌
+        return jsonify({"error": "An error occurred while fetching members."}), 500
 
 
 @bp.route('/members', methods=['POST'])
