@@ -51,9 +51,6 @@ const memberData = reactive({
   student_id: '',
   gender: '', // 前端將傳送 Enum 的 NAME (大寫)
   position: '', // 前端將傳送 Enum 的 NAME (大寫)
-  score: 0,
-  join_date: new Date().toISOString().split('T')[0], // 預設今天
-  // is_active 和 notes 可以在後端 API 處理預設值或接收
 });
 
 const message = ref('');
@@ -81,7 +78,6 @@ async function submitNewMember() {
     student_id: memberData.student_id || null,
     gender: memberData.gender || null,
     position: memberData.position || null,
-    join_date: memberData.join_date || null,
   };
 
   try {
@@ -92,13 +88,6 @@ async function submitNewMember() {
     });
     message.value = response.data.message || '成員已成功新增！';
     messageType.value = 'success';
-
-    // 清空表單或部分欄位
-    Object.keys(memberData).forEach(key => {
-        if (key === 'join_date') memberData[key] = new Date().toISOString().split('T')[0];
-        else if (key === 'score') memberData[key] = 0;
-        else memberData[key] = '';
-    });
 
     // 可選：延遲後跳轉
     setTimeout(() => {

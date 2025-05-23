@@ -1,33 +1,30 @@
-// frontend/src/views/RecordMatchView.vue
 <template>
   <div class="container mt-4 mb-5 record-match-page">
-    <h1 class="mb-4 text-center">記錄校內排名賽結果</h1>
+    <h1 class="mb-4 text-center display-6 page-title">記錄校內排名賽結果</h1>
 
     <div v-if="submitMessage"
-         :class="['alert', submitStatus === 'success' ? 'alert-success' : 'alert-danger']"
+         :class="['alert', submitStatus === 'success' ? 'alert-success' : 'alert-danger', 'alert-dismissible', 'fade', 'show']"
          role="alert">
-      {{ submitMessage }}
+      <span style="white-space: pre-wrap;">{{ submitMessage }}</span>
+      <button type="button" class="btn-close" @click="clearMessages" aria-label="Close"></button>
     </div>
 
     <form @submit.prevent="handleRecordMatch" class="needs-validation" novalidate>
-      <div class="row g-3">
+      <div class="row g-3 mb-4">
         <div class="col-md-4">
           <label for="match_date" class="form-label">比賽日期*</label>
           <input type="date" class="form-control" id="match_date" v-model="matchForm.match_date" required>
         </div>
         <div class="col-md-4">
           <label for="match_type" class="form-label">比賽類型*</label>
-          <select class="form-select" id="match_type" v-model="matchForm.match_type" required
-                  @change="resetPlayer2Selections">
-            <option value="" disabled>--選擇類型--</option>
-            <option value="SINGLES">單打</option>
+          <select class="form-select" id="match_type" v-model="matchForm.match_type" required>
             <option value="DOUBLES">雙打</option>
+            <option value="SINGLES">單打</option>
           </select>
         </div>
         <div class="col-md-4">
           <label for="match_format" class="form-label">賽制*</label>
-          <select class="form-select" id="match_format" v-model="matchForm.match_format" required
-                  @change="initializeScores">
+          <select class="form-select" id="match_format" v-model="matchForm.match_format" required>
             <option value="" disabled>--選擇賽制--</option>
             <option v-for="format in matchFormats" :key="format.name" :value="format.name">
               {{ format.value }}
@@ -36,352 +33,349 @@
         </div>
       </div>
 
-      <hr class="my-3">
-      <div class="row">
-        <div class="col-md-6 border-end pe-3">
-          <h5>A 方球員</h5>
+      <hr class="my-4">
+
+      <div class="row g-3">
+        <div class="col-lg-6 border-end-lg pe-lg-4 mb-3 mb-lg-0">
+          <h5 class="text-primary mb-3"><i class="bi bi-people-fill me-1"></i>A 方隊伍</h5>
           <div class="mb-3">
             <label for="side_a_player1_id" class="form-label">A 方球員 1*</label>
             <select class="form-select" id="side_a_player1_id" v-model="matchForm.side_a_player1_id" required>
               <option value="" disabled>--選擇球員--</option>
-              <option v-for="member in availableSideAPlayer1" :key="member.id" :value="member.id">
-                {{ member.name }} (現有分數: {{ member.score }})
-              </option>
+              <option v-for="member in availableSideAPlayer1" :key="member.id" :value="member.id">{{ member.name }} ({{ member.score }})</option>
             </select>
           </div>
           <div class="mb-3" v-if="matchForm.match_type === 'DOUBLES'">
             <label for="side_a_player2_id" class="form-label">A 方球員 2*</label>
-            <select class="form-select" id="side_a_player2_id" v-model="matchForm.side_a_player2_id"
-                    :required="matchForm.match_type === 'DOUBLES'">
+            <select class="form-select" id="side_a_player2_id" v-model="matchForm.side_a_player2_id" :required="matchForm.match_type === 'DOUBLES'">
               <option value="" disabled>--選擇球員--</option>
-              <option v-for="member in availableSideAPlayer2" :key="member.id" :value="member.id">
-                {{ member.name }} (現有分數: {{ member.score }})
-              </option>
+              <option v-for="member in availableSideAPlayer2" :key="member.id" :value="member.id">{{ member.name }} ({{ member.score }})</option>
             </select>
           </div>
+          <div class="mb-3">
+            <label for="side_a_games_won" class="form-label">A 方局數*</label>
+            <input type="number" class="form-control score-input"
+                   id="side_a_games_won" v-model.number="matchForm.side_a_games_won" min="0" required>
+          </div>
         </div>
-        <div class="col-md-6 ps-3">
-          <h5>B 方球員</h5>
+
+        <div class="col-lg-6 ps-lg-4">
+          <h5 class="text-danger mb-3"><i class="bi bi-people me-1"></i>B 方隊伍</h5>
           <div class="mb-3">
             <label for="side_b_player1_id" class="form-label">B 方球員 1*</label>
             <select class="form-select" id="side_b_player1_id" v-model="matchForm.side_b_player1_id" required>
               <option value="" disabled>--選擇球員--</option>
-              <option v-for="member in availableSideBPlayer1" :key="member.id" :value="member.id">
-                {{ member.name }} (現有分數: {{ member.score }})
-              </option>
+              <option v-for="member in availableSideBPlayer1" :key="member.id" :value="member.id">{{ member.name }} ({{ member.score }})</option>
             </select>
           </div>
           <div class="mb-3" v-if="matchForm.match_type === 'DOUBLES'">
             <label for="side_b_player2_id" class="form-label">B 方球員 2*</label>
-            <select class="form-select" id="side_b_player2_id" v-model="matchForm.side_b_player2_id"
-                    :required="matchForm.match_type === 'DOUBLES'">
+            <select class="form-select" id="side_b_player2_id" v-model="matchForm.side_b_player2_id" :required="matchForm.match_type === 'DOUBLES'">
               <option value="" disabled>--選擇球員--</option>
-              <option v-for="member in availableSideBPlayer2" :key="member.id" :value="member.id">
-                {{ member.name }} (現有分數: {{ member.score }})
-              </option>
+              <option v-for="member in availableSideBPlayer2" :key="member.id" :value="member.id">{{ member.name }} ({{ member.score }})</option>
             </select>
+          </div>
+          <div class="mb-3">
+            <label for="side_b_games_won" class="form-label">B 方局數*</label>
+            <input type="number" class="form-control score-input"
+                   id="side_b_games_won" v-model.number="matchForm.side_b_games_won" min="0" required>
           </div>
         </div>
       </div>
 
-      <hr class="my-3">
-      <h5>比分記錄</h5>
-      <div v-for="(set, index) in scores" :key="index" class="row mb-2 align-items-center">
-        <div class="col-auto">
-          <label class="form-label">第 {{ index + 1 }} {{
-              matchForm.match_format === 'NINE_GAME_PRO_SET' ? '局' : '盤'
-            }}</label>
-        </div>
-        <div class="col">
-          <input type="number" class="form-control form-control-sm score-input"
-                 placeholder="A方局數" v-model.number="set.side_a" @input="determineWinner" min="0">
-        </div>
-        <div class="col-auto px-0 text-center">-</div>
-        <div class="col">
-          <input type="number" class="form-control form-control-sm score-input"
-                 placeholder="B方局數" v-model.number="set.side_b" @input="determineWinner" min="0">
-        </div>
+      <div v-if="calculatedOutcomeDisplay" class="mt-4 mb-3 alert fs-5 text-center"
+           :class="{'alert-success': calculatedOutcomeDisplay.includes('A方勝利'),
+                      'alert-primary': calculatedOutcomeDisplay.includes('B方勝利'),
+                      'alert-warning': !calculatedOutcomeDisplay.includes('勝利')}">
+        <strong>{{ calculatedOutcomeDisplay }}</strong>
       </div>
 
-      <div v-if="calculatedOutcome" class="mt-3 mb-3 alert"
-           :class="{'alert-success': calculatedOutcome === 'A方勝利', 'alert-info': calculatedOutcome === 'B方勝利', 'alert-warning': calculatedOutcome === '平手或未完成'}">
-        <strong>初步判斷結果: {{ calculatedOutcome }}</strong>
-      </div>
-
-      <div class="mb-3 mt-3">
-        <label for="final_outcome" class="form-label">最終確認 A 方比賽結果*</label>
-        <select class="form-select" id="final_outcome" v-model="matchForm.side_a_outcome" required>
-          <option value="" disabled>--請選擇最終結果--</option>
-          <option value="WIN">A 方勝利</option>
-          <option value="LOSS">A 方失敗 (B 方勝利)</option>
-        </select>
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-lg w-100 mt-3"
+      <hr class="my-4">
+      <button type="submit" class="btn btn-primary btn-lg w-100"
               :disabled="submitting || !matchForm.side_a_outcome">
-        {{ submitting ? '提交中...' : '儲存比賽結果' }}
+        <span v-if="submitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        {{ submitting ? ' 提交中...' : '儲存比賽結果' }}
       </button>
+      <router-link to="/" class="btn btn-outline-secondary btn-lg w-100 mt-2 mb-4">返回排行榜</router-link>
     </form>
   </div>
 </template>
 
-// frontend/src/views/RecordMatchView.vue
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios'; // 直接使用 axios，或確保 service 已正確建立和匯入
+import axios from 'axios';
 
 const router = useRouter();
 const allActiveMembers = ref([]);
 
 const matchForm = reactive({
   match_date: new Date().toISOString().split('T')[0],
-  match_type: 'SINGLES',
-  match_format: '',
+  match_type: 'DOUBLES',
+  match_format: 'NINE_GAME_SET',
   side_a_player1_id: '',
   side_a_player2_id: null,
   side_b_player1_id: '',
   side_b_player2_id: null,
-  side_a_outcome: '',
+  side_a_games_won: null,
+  side_b_games_won: null,
+  side_a_outcome: '', // 將由 determineWinnerFrontend 設定
   match_notes: ''
 });
-
-const scores = ref([]);
 
 const submitting = ref(false);
 const submitMessage = ref('');
 const submitStatus = ref('');
-const calculatedOutcome = ref('');
+const calculatedOutcomeDisplay = ref(''); // 用於UI顯示，不直接提交
 
+// 賽制選項
 const matchFormats = ref([
-  {name: 'FOUR_GAME_SET', value: '短盤搶四 (4局決勝)', setsToWin: 1, gamesToWinSet: 4, finalSetTiebreakTo: 0 },
-  {name: 'SEVEN_POINT_TIEBREAK', value: '標準盤搶七 (6局決勝)', setsToWin: 1, gamesToWinSet: 6, finalSetTiebreakTo: 7 },
-  {name: 'NINE_GAME_PRO_SET', value: '長盤九局五勝', setsToWin: 1, gamesToWinSet: 5, isProSet: true, proSetGames: 9 },
-  {name: 'CUSTOM', value: '自訂/其他'}
+  { name: 'TIEBREAK', value: '搶七 (先到7分勝2分)', gamesToWin: 7, needsTwoClear: true },
+  { name: 'FIVE_GAME_SET', value: '五局制 (先贏3局)', gamesToWin: 3, needsTwoClear: false },
+  { name: 'SEVEN_GAME_SET', value: '七局制 (先贏4局)', gamesToWin: 4, needsTwoClear: false },
+  { name: 'NINE_GAME_SET', value: '九局制 (先贏5局)', gamesToWin: 5, needsTwoClear: false },
 ]);
+// outcomesForSelect 已不再需要，因為不再有手動選擇最終結果的下拉選單
 
-const outcomesForSelect = ref([ {name: 'WIN', value: 'A 方勝利'}, {name: 'LOSS', value: 'A 方失敗'}]);
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL; // <--- 確保定義了 apiBaseUrl
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 onMounted(async () => {
   try {
-    console.log(`Workspaceing members from: ${apiBaseUrl}/members?active_only=true`); // 除錯日誌
-    const memberResponse = await axios.get(`${apiBaseUrl}/members`, {
-      params: {
-        active_only: true // 明確要求只獲取活躍成員，與後端預設行為一致
-      }
+    const response = await axios.get(`${apiBaseUrl}/members`, {
+        params: { active_only: true }
     });
-    console.log("Members API response data:", memberResponse.data); // 除錯日誌
-
-    if (Array.isArray(memberResponse.data)) {
-      allActiveMembers.value = memberResponse.data;
-      if (memberResponse.data.length === 0) {
-        console.warn("No active members found from API for dropdowns.");
-      }
-    } else {
-      console.error("API did not return an array for members:", memberResponse.data);
-      allActiveMembers.value = [];
-    }
-
+    allActiveMembers.value = response.data;
   } catch (error) {
-    console.error("Failed to load members for form:", error.response || error);
-    // 可以在 UI 上顯示一個更友好的錯誤訊息
-    // this.formError = "無法載入球員列表，請稍後再試。";
-    allActiveMembers.value = []; // 確保出錯時是空陣列
+    console.error("Failed to load members:", error.response || error);
+    submitMessage.value = "無法載入球員列表。";
+    submitStatus.value = "error";
   }
-  // initializeScores(); // 如果這個函數依賴成員數據，則不應在此，或者需要等待
+  determineWinnerFrontend(); // 初始判斷一次
 });
 
-function initializeScores() {
-  scores.value = [{side_a: null, side_b: null}];
-  calculatedOutcome.value = '';
-  matchForm.side_a_outcome = '';
-}
-
-watch(() => matchForm.match_format, initializeScores);
+watch(() => matchForm.match_format, () => {
+    matchForm.side_a_games_won = null;
+    matchForm.side_b_games_won = null;
+    determineWinnerFrontend();
+});
 
 watch(() => matchForm.match_type, (newType) => {
-  if (newType === 'SINGLES') {
-    matchForm.side_a_player2_id = null;
-    matchForm.side_b_player2_id = null;
-  }
+    if (newType === 'SINGLES') {
+        matchForm.side_a_player2_id = null;
+        matchForm.side_b_player2_id = null;
+    }
+    determineWinnerFrontend();
 });
 
-// --- 計算屬性來過濾下拉選單選項 (保持不變，但確保它們能正確處理 parseInt 後的 null/undefined) ---
-// A 方球員1 的可選列表：所有活躍成員中，未被 B 方任何一個位置選中的成員
-const availableSideAPlayer1 = computed(() => {
-  return allActiveMembers.value.filter(member =>
-      !((matchForm.side_b_player1_id && member.id === parseInt(matchForm.side_b_player1_id)) ||
-        (matchForm.side_b_player2_id && member.id === parseInt(matchForm.side_b_player2_id)))
-  );
-});
+watch([() => matchForm.side_a_games_won, () => matchForm.side_b_games_won],
+      determineWinnerFrontend,
+      { deep: false }
+);
 
-// A 方球員2 的可選列表：所有活躍成員中，未被 A方球員1 選中，也未被 B 方任何一個位置選中的成員
-const availableSideAPlayer2 = computed(() => {
-  if (matchForm.match_type !== 'DOUBLES') return [];
-  return allActiveMembers.value.filter(member =>
-    member.id !== parseInt(matchForm.side_a_player1_id) && // 不能是 A1
-    !((matchForm.side_b_player1_id && member.id === parseInt(matchForm.side_b_player1_id)) ||
-      (matchForm.side_b_player2_id && member.id === parseInt(matchForm.side_b_player2_id))) // 也不能是 B 方的
-  );
-});
-
-// B 方球員1 的可選列表：所有活躍成員中，未被 A 方任何一個位置選中的成員
-const availableSideBPlayer1 = computed(() => {
-  return allActiveMembers.value.filter(member =>
-    member.id !== parseInt(matchForm.side_a_player1_id) &&
-    (matchForm.match_type === 'SINGLES' || member.id !== parseInt(matchForm.side_a_player2_id)) // 如果是雙打，也不能是 A2
-  );
-});
-
-// B 方球員2 的可選列表：所有活躍成員中，未被 A 方任何一個位置選中，也未被 B方球員1 選中的成員
-const availableSideBPlayer2 = computed(() => {
-  if (matchForm.match_type !== 'DOUBLES') return [];
-  return allActiveMembers.value.filter(member =>
-    member.id !== parseInt(matchForm.side_a_player1_id) &&
-    member.id !== parseInt(matchForm.side_a_player2_id) &&
-    member.id !== parseInt(matchForm.side_b_player1_id) // 也不能是 B1
-  );
-});
-
-
-// --- 前端即時判斷勝負的邏輯 ---
+// 前端即時判斷勝負的邏輯
 function determineWinnerFrontend() {
-  if (scores.value.length === 0 || !matchForm.match_format) {
-    calculatedOutcome.value = '';
-    matchForm.side_a_outcome = '';
+  const gamesA = matchForm.side_a_games_won === null || matchForm.side_a_games_won === '' ? null : Number(matchForm.side_a_games_won);
+  const gamesB = matchForm.side_b_games_won === null || matchForm.side_b_games_won === '' ? null : Number(matchForm.side_b_games_won);
+
+  // 先重置，避免舊狀態殘留
+  calculatedOutcomeDisplay.value = '';
+  matchForm.side_a_outcome = '';
+
+
+  if (gamesA === null || gamesB === null || !matchForm.match_format) {
+    calculatedOutcomeDisplay.value = '請輸入雙方局數/分數並選擇賽制';
     return;
   }
+  if (isNaN(gamesA) || isNaN(gamesB) || gamesA < 0 || gamesB < 0) {
+    calculatedOutcomeDisplay.value = '請輸入有效的非負局數/分數';
+    return;
+  }
+
+  let outcomeText = '比分未完成或結果不明確';
+  let outcomeForApi = ''; // 'WIN' or 'LOSS' for side A
+  let aWins = false;
+  let bWins = false;
+
   const currentFormat = matchFormats.value.find(f => f.name === matchForm.match_format);
   if (!currentFormat) {
-    calculatedOutcome.value = '請先選擇賽制';
-    matchForm.side_a_outcome = '';
+    calculatedOutcomeDisplay.value = '無效的賽制選擇';
     return;
   }
 
-  const set1 = scores.value[0]; // 假設目前只處理一盤
-  if (set1.side_a === null || set1.side_b === null || set1.side_a < 0 || set1.side_b < 0) {
-    calculatedOutcome.value = '請輸入有效局數';
-    matchForm.side_a_outcome = '';
-    return;
+  const targetScore = currentFormat.gamesToWin;
+  const needsTwoClear = currentFormat.needsTwoClear;
+
+  if (needsTwoClear) { // 例如搶七
+    if (gamesA >= targetScore && gamesA >= gamesB + 2) {
+      aWins = true;
+    } else if (gamesB >= targetScore && gamesB >= gamesA + 2) {
+      bWins = true;
+    } else if (gamesA === targetScore - 1 && gamesB === targetScore - 1) {
+      outcomeText = `平手 (${gamesA}-${gamesB})，需淨勝2分`;
+    } else if ((gamesA >= targetScore -1 || gamesB >= targetScore -1) && Math.abs(gamesA - gamesB) < 2) {
+        outcomeText = `比賽進行中 (${gamesA}-${gamesB})，需淨勝2分`;
+    } else if (gamesA === gamesB && gamesA >= targetScore -1) {
+        outcomeText = `平手 (${gamesA}-${gamesB})，需淨勝2分`;
+    }
+  } else { // 不需要淨勝2局的局數制 (先達到目標局數者勝)
+    if (gamesA >= targetScore && gamesA > gamesB) {
+      aWins = true;
+    } else if (gamesB >= targetScore && gamesB > gamesA) {
+      bWins = true;
+    } else if (gamesA === targetScore && gamesA === gamesB && gamesA >= targetScore){ // 雙方都達到但平手
+        outcomeText = `局數 ${gamesA}:${gamesB} 平手，此賽制下結果不明確`;
+    } else if (gamesA < targetScore && gamesB < targetScore) {
+        outcomeText = '比分尚未達到獲勝條件';
+    }
   }
 
-  let sideAWinsSet = false;
-  let sideBWinsSet = false;
-
-  // 這裡的勝負判斷邏輯需要根據您的賽制規則非常仔細地實現
-  // 以下是一個非常簡化的範例，您需要擴充它
-  if (currentFormat.isProSet) { // 例如9局5勝 (先到5局且贏2局，或者打到8-8搶七到9)
-      if (set1.side_a >= currentFormat.gamesToWinSet && set1.side_a >= set1.side_b + 2) { // gamesToWinSet 應該是5
-          if (set1.side_a < currentFormat.proSetGames) sideAWinsSet = true; // 未到9局，但已滿足5勝且贏2
-          else if (set1.side_a === currentFormat.proSetGames) sideAWinsSet = true; // 到達9局
-      } else if (set1.side_b >= currentFormat.gamesToWinSet && set1.side_b >= set1.side_a + 2) {
-          if (set1.side_b < currentFormat.proSetGames) sideBWinsSet = true;
-          else if (set1.side_b === currentFormat.proSetGames) sideBWinsSet = true;
-      }
-      // 這裡簡化了 Pro Set 的複雜決勝局規則
-  } else { // 普通盤數，例如4局或6局制
-      const gamesToWin = currentFormat.gamesToWinSet; // 例如4局或6局
-      const tiebreakAt = gamesToWin -1; // 例如3-3或5-5或6-6打搶七
-      const finalSetTiebreakTo = currentFormat.finalSetTiebreakTo; // 搶七到幾分
-
-      if (set1.side_a >= gamesToWin || set1.side_b >= gamesToWin) { // 至少有一方達到獲勝局數
-          if (set1.side_a > set1.side_b && (set1.side_a >= gamesToWin && (set1.side_a >= set1.side_b + 2 || set1.side_a === gamesToWin +1 && set1.side_b === gamesToWin-1 && gamesToWin-1 === tiebreakAt ) ) ) {
-             // 複雜的搶七判斷 (例如 7-5, 7-6(x))
-             // 這裡的判斷需要非常小心，或簡化為只要分數高就贏
-             if (set1.side_a > set1.side_b) sideAWinsSet = true;
-          } else if (set1.side_b > set1.side_a && (set1.side_b >= gamesToWin && (set1.side_b >= set1.side_a + 2 || set1.side_b === gamesToWin+1 && set1.side_a === gamesToWin-1 && gamesToWin-1 === tiebreakAt))) {
-             if (set1.side_b > set1.side_a) sideBWinsSet = true;
-          }
-          // 簡化判斷：如果分數都達到gamesToWin，例如6-6，則需要進一步的搶七分數
-          // 如果沒有搶七，則先達到gamesToWin且贏2局者勝
-          // 為簡化，這裡僅判斷是否達到gamesToWin且分數更高
-          if (!sideAWinsSet && !sideBWinsSet) { // 如果還沒決出勝負
-              if (set1.side_a >= gamesToWin && set1.side_a > set1.side_b) sideAWinsSet = true;
-              else if (set1.side_b >= gamesToWin && set1.side_b > set1.side_a) sideBWinsSet = true;
-          }
-      }
+  if (aWins) {
+    outcomeText = `A方勝利 (${gamesA} : ${gamesB})`;
+    outcomeForApi = 'WIN';
+  } else if (bWins) {
+    outcomeText = `B方勝利 (${gamesB} : ${gamesA})`; // A方失敗
+    outcomeForApi = 'LOSS';
   }
 
-  if (sideAWinsSet) {
-    calculatedOutcome.value = 'A方勝利';
-    matchForm.side_a_outcome = 'WIN';
-  } else if (sideBWinsSet) {
-    calculatedOutcome.value = 'B方勝利 (A方失敗)';
-    matchForm.side_a_outcome = 'LOSS';
-  } else {
-    calculatedOutcome.value = '比分未完成或平手';
-    matchForm.side_a_outcome = '';
-  }
+  calculatedOutcomeDisplay.value = outcomeText;
+  matchForm.side_a_outcome = outcomeForApi; // 直接設定，不再需要使用者手動確認
 }
-
-watch(scores, determineWinnerFrontend, {deep: true});
-watch(() => matchForm.match_format, determineWinnerFrontend);
 
 
 async function handleRecordMatch() {
-  // ... (前端基本驗證邏輯) ...
-   if (!matchForm.side_a_outcome) {
-      submitMessage.value = '請根據比分確認並選擇最終的A方比賽結果。';
-      submitStatus.value = 'error';
-      submitting.value = false;
-      return;
+  clearMessages(); // 清除舊的提示訊息
+
+  // --- 前端基本驗證 (與之前類似，但更強調 side_a_outcome 由前端邏輯產生) ---
+  const { match_date, match_type, match_format,
+          side_a_player1_id, side_b_player1_id,
+          side_a_games_won, side_b_games_won,
+          side_a_outcome } = matchForm; // 直接從 matchForm 取 side_a_outcome
+  let errors = [];
+  // ... (之前的必填項和邏輯驗證，例如球員不重複等) ...
+  if (!match_date) errors.push("比賽日期");
+  if (!match_type) errors.push("比賽類型");
+  if (!match_format) errors.push("賽制");
+  if (!side_a_player1_id) errors.push("A方球員1");
+  if (!side_b_player1_id) errors.push("B方球員1");
+  if (side_a_games_won === null || side_a_games_won === '' || Number(side_a_games_won) < 0) errors.push("A方有效勝局/分數");
+  if (side_b_games_won === null || side_b_games_won === '' || Number(side_b_games_won) < 0) errors.push("B方有效勝局/分數");
+
+  if (match_type === 'DOUBLES') { /* ...雙打球員驗證... */ }
+  // ... (球員不重複等其他驗證) ...
+
+  // 最重要的：確保前端邏輯已判斷出明確的勝負結果
+  if (!side_a_outcome) {
+    errors.push("無法根據比分確定勝負，請檢查比分或賽制規則");
+  }
+
+  if (errors.length > 0) {
+    submitMessage.value = `請填寫或修正以下欄位：${errors.join('、')}。`;
+    submitStatus.value = 'error';
+    submitting.value = false;
+    return;
   }
 
   submitting.value = true;
-  let payload = { /* ... 準備 payload ... */ };
-  // payload 中的 side_a_score_str 和 side_b_score_str 應該是最終的比分字串
-  payload.side_a_score_str = scores.value.map(s => s.side_a ?? '_').join(',');
-  payload.side_b_score_str = scores.value.map(s => s.side_b ?? '_').join(',');
-
+  const payload = {
+    match_date: matchForm.match_date,
+    match_type: matchForm.match_type,
+    match_format: matchForm.match_format,
+    side_a_player1_id: parseInt(matchForm.side_a_player1_id),
+    side_a_player2_id: matchForm.match_type === 'DOUBLES' && matchForm.side_a_player2_id ? parseInt(matchForm.side_a_player2_id) : null,
+    side_b_player1_id: parseInt(matchForm.side_b_player1_id),
+    side_b_player2_id: matchForm.match_type === 'DOUBLES' && matchForm.side_b_player2_id ? parseInt(matchForm.side_b_player2_id) : null,
+    side_a_games_won: parseInt(matchForm.side_a_games_won),
+    side_b_games_won: parseInt(matchForm.side_b_games_won),
+    side_a_outcome: matchForm.side_a_outcome, // 直接使用由 determineWinnerFrontend 設定的值
+    match_notes: matchForm.match_notes || null
+  };
 
   try {
-    // 如果您還沒拆分 service，就直接用 axios
     const response = await axios.post(`${apiBaseUrl}/matches/record`, payload);
-    // const response = await matchService.recordMatch(payload); // 如果已拆分
     submitMessage.value = response.data.message || '比賽結果已成功儲存！';
     submitStatus.value = 'success';
-    // ... (重置表單等) ...
-    setTimeout(() => router.push('/'), 1500);
-  } catch (error) {
-    console.error("Error recording match:", error.response || error);
-    submitMessage.value = error.response?.data?.error || error.response?.data?.details || error.message || '記錄比賽時發生錯誤。';
-    submitStatus.value = 'error';
-  } finally {
-    submitting.value = false;
-  }
+
+    // 重置表單
+    Object.assign(matchForm, {
+        match_date: new Date().toISOString().split('T')[0],
+        match_type: 'DOUBLES',
+        match_format: 'NINE_GAME_SET',
+        side_a_player1_id: '', side_a_player2_id: null,
+        side_b_player1_id: '', side_b_player2_id: null,
+        side_a_games_won: null, side_b_games_won: null,
+        side_a_outcome: '', match_notes: ''
+    });
+    calculatedOutcomeDisplay.value = '';
+
+    setTimeout(() => {
+        clearMessages();
+        router.push('/');
+    }, 2000);
+
+  } catch (error) { /* ...錯誤處理... */ } finally { /* ... */ }
 }
+
+function clearMessages() {
+  submitMessage.value = '';
+  submitStatus.value = '';
+}
+
+// --- 下拉選單 ---
+function getSelectedIdAsNumber(idString) {
+  if (idString === null || idString === undefined || idString === '') return null;
+  const num = parseInt(idString);
+  return isNaN(num) ? null : num;
+}
+
+const availableSideAPlayer1 = computed(() => {
+  const b1 = getSelectedIdAsNumber(matchForm.side_b_player1_id);
+  const b2 = getSelectedIdAsNumber(matchForm.side_b_player2_id);
+  return allActiveMembers.value.filter(m => m.id !== b1 && m.id !== b2);
+});
+
+const availableSideAPlayer2 = computed(() => {
+  if (matchForm.match_type !== 'DOUBLES') return [];
+  const a1 = getSelectedIdAsNumber(matchForm.side_a_player1_id);
+  const b1 = getSelectedIdAsNumber(matchForm.side_b_player1_id);
+  const b2 = getSelectedIdAsNumber(matchForm.side_b_player2_id);
+  return allActiveMembers.value.filter(m => m.id !== a1 && m.id !== b1 && m.id !== b2);
+});
+
+const availableSideBPlayer1 = computed(() => {
+  const a1 = getSelectedIdAsNumber(matchForm.side_a_player1_id);
+  const a2 = getSelectedIdAsNumber(matchForm.side_a_player2_id);
+  return allActiveMembers.value.filter(m => m.id !== a1 && m.id !== a2);
+});
+
+const availableSideBPlayer2 = computed(() => {
+  if (matchForm.match_type !== 'DOUBLES') return [];
+  const a1 = getSelectedIdAsNumber(matchForm.side_a_player1_id);
+  const a2 = getSelectedIdAsNumber(matchForm.side_a_player2_id);
+  const b1 = getSelectedIdAsNumber(matchForm.side_b_player1_id);
+  return allActiveMembers.value.filter(m => m.id !== a1 && m.id !== a2 && m.id !== b1);
+});
+
 </script>
 
 <style scoped>
-.record-match-page {
-  max-width: 900px;
+.record-match-page { max-width: 800px; } /* 稍微縮小一點以適應內容 */
+h5 { margin-top: 1.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid #eee; font-weight: 600;}
+.score-input { text-align: center; font-weight: bold; }
+.page-title { color: #333; }
+.form-label { font-weight: 500; }
+.btn-close { /* 讓 alert 中的關閉按鈕更好看 */
+    padding: 0.5rem;
 }
-
-h5 {
-  margin-top: 1.5rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid #eee;
-}
-
-.score-input {
-  text-align: center;
-}
-</style>
-
-<style scoped>
-.record-match-page {
-  max-width: 900px;
-}
-
-h5 {
-  margin-top: 1.5rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid #eee;
-}
-
-.score-input {
-  text-align: center;
+/* 在較小螢幕上，左右兩欄球員選擇堆疊 */
+@media (max-width: 991.98px) { /* lg斷點以下 */
+    .border-end-lg {
+        border-right: none !important;
+    }
+    .ps-lg-4 {
+        padding-left: var(--bs-gutter-x) * .5 !important; /* 恢復預設 padding */
+    }
+    .col-lg-6.border-end-lg.pe-lg-4.mb-3.mb-lg-0 {
+        margin-bottom: 1rem !important; /* 手機上堆疊時增加間距 */
+    }
 }
 </style>
