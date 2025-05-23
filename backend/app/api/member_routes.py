@@ -11,9 +11,6 @@ import datetime
 def get_all_members():
     """獲取所有活躍球員列表，主要用於表單選擇等，按姓名排序"""
     try:
-        # active_only_str = request.args.get('active_only', 'true', type=str)  # 獲取查詢參數
-        # active_only = active_only_str.lower() == 'true'
-        #
         query = TeamMember.query
         # if active_only:
         #     query = query.filter_by(is_active=True)
@@ -29,8 +26,6 @@ def get_all_members():
                 "student_id": member.student_id,
                 "gender": member.gender.value if member.gender else None,  # Enum 的 .value 會回傳設定的值
                 "position": member.position.value if member.position else None,
-                "join_date": member.join_date.isoformat() if member.join_date else None,
-                "leave_date": member.leave_date.isoformat() if member.leave_date else None,
                 "is_active": member.is_active,
                 "notes": member.notes
             })
@@ -53,8 +48,6 @@ def create_member():
     student_id = data.get('student_id')
     gender_str = data.get('gender')  # 前端應傳送 Enum 的 NAME，例如 'MALE'
     position_str = data.get('position')  # 前端應傳送 Enum 的 NAME，例如 'SINGLES'
-    score_val = data.get('score', 0)
-    join_date_str = data.get('join_date')
     is_active_val = data.get('is_active', True)  # 如果前端沒給，預設為 True
     notes = data.get('notes')
 
@@ -80,14 +73,6 @@ def create_member():
         errors[
             'position'] = f"Invalid position value: '{position_str}'. Valid are: {[e.name for e in PositionEnum]}."
 
-    join_date_obj = None
-    if join_date_str:
-        try:
-            join_date_obj = datetime.datetime.strptime(join_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            errors['join_date'] = "Invalid join_date format. Expected YYYY-MM-DD."
-    else:  # 如果前端沒傳 join_date，可以設為今天或允許為空
-        join_date_obj = datetime.date.today()
 
     if not isinstance(is_active_val, bool):
         errors['is_active'] = "is_active must be a boolean (true or false)."
@@ -102,8 +87,6 @@ def create_member():
             student_id=student_id,
             gender=gender_enum,
             position=position_enum,
-            score=0,
-            join_date=join_date_obj,
             is_active=is_active_val,
             notes=notes
         )

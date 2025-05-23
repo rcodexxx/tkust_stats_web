@@ -66,6 +66,7 @@ const submitting = ref(false);
 async function submitNewMember() {
   message.value = '';
   messageType.value = '';
+  if (submitting.value) return;
   submitting.value = true;
 
   if (!memberData.name) {

@@ -1,28 +1,12 @@
 # requirements.txt
 
-# Flask 核心框架
 Flask
-
-# 資料庫 ORM 及與 Flask 的整合
 SQLAlchemy
 Flask-SQLAlchemy
-
-# 資料庫遷移工具
 Flask-Migrate
-alembic # Flask-Migrate 的依賴
-
-# PostgreSQL 資料庫驅動程式
+alembic
 psycopg2-binary
-
-# 從 .env 檔案載入環境變數
 python-dotenv
-
-# WSGI HTTP 伺服器 (用於 Docker 生產環境以及 Render 部署)
 gunicorn
-
-# (可選但強烈建議，如果您會用到網頁表單)
-# Flask-WTF # 用於處理網頁表單和 CSRF 保護
-# WTForms
-# email_validator # Flask-WTF 的 email 驗證器可能需要
-
 Flask-CORS
+trueskill

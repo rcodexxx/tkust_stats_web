@@ -2,7 +2,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LeaderboardView from '../views/LeaderboardView.vue'
 import AddMemberView from "../views/AddMemberView.vue";
-// import RecordMatchView from '../views/RecordMatchView.vue'
+import MatchRecordView from "../views/MatchRecordView.vue";
 
 const routes = [
   {
@@ -14,13 +14,12 @@ const routes = [
     path: '/members/add',
     name: 'AddMember',
     component: AddMemberView
+  },
+  {
+    path: '/match/record',
+    name: 'RecordMatch',
+    component: MatchRecordView
   }
-  // {
-  //   path: '/match/record',
-  //   name: 'RecordMatch',
-  //   component: RecordMatchView
-  // }
-  // 您可以加入其他路由
 ]
 
 const router = createRouter({

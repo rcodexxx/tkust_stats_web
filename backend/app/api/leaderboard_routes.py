@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload # 用於預載入關聯數據
 def get_leaderboard():
     """獲取排行榜數據，按分數降序排列 (只包含活躍成員)"""
     try:
-        members = TeamMember.query.order_by(TeamMember.score.desc()).all()
+        members = TeamMember.query.order_by(TeamMember.name.desc()).all()
         leaderboard_data = []
         for member in members:
             leaderboard_data.append({

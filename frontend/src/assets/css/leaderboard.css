@@ -1,241 +1,187 @@
-/* frontend/src/assets/css/leaderboard.css */
+/* frontend/src/assets/css/leaderboard-uenify-style.css */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
-/* 通用頁面和標題樣式 */
-.leaderboard-page {
-  font-family: 'Inter', sans-serif; /* 確保您已引入此字體 */
-  padding-bottom: 3rem;
-  background-color: #f4f6f8; /* 淺灰色背景，讓卡片更突出 */
+body { /* 建議將字體設定移到 App.vue 或全域 CSS */
+  font-family: 'Lexend', 'Helvetica Neue', Arial, sans-serif;
+  background-color: #eef1f7; /* 淺藍灰色背景 */
+  color: #333;
+}
+
+.leaderboard-page-wrapper {
+  /* 這個 wrapper 可以用來設定整個頁面的背景等 */
+}
+
+.leaderboard-header {
+  /* 可以為標題和按鈕區域設定背景或樣式 */
 }
 
 .page-title {
-  color: #2c3e50; /* 深藍灰色 */
-  margin-bottom: 2.5rem !important;
-  font-weight: 700; /* 加粗 */
-  letter-spacing: -0.5px; /* 字間距 */
-}
-
-.custom-btn-green { /* 自訂按鈕樣式 */
-    background-image: linear-gradient(to right, #34d399 0%, #22c55e 51%, #10b981 100%);
-    transition: 0.5s;
-    background-size: 200% auto;
-    color: white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: none;
-    font-weight: 500;
-}
-.custom-btn-green:hover {
-    background-position: right center;
-    color: #fff;
-    text-decoration: none;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-}
-
-
-.leaderboard-container {
-  max-width: 750px;
-  margin: 0 auto;
-}
-
-/* --- 第一名卡片樣式 --- */
-.leaderboard-card-first-place {
-  background: #ffffff; /* 白色背景 */
-  border-radius: 12px; /* 更柔和的圓角 */
-  box-shadow: 0 12px 35px rgba(0, 77, 255, 0.12); /* 藍色調陰影 */
-  padding: 30px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  border: 2px solid #ffd700; /* 更明顯的金色邊框 */
-  margin-top: 1rem; /* 與上方按鈕的間距 */
-}
-
-.banner {
-  background: linear-gradient(45deg, #ffde59, #ffc107); /* 金黃色漸變 */
-  height: 110px; /* 調整高度 */
-  width: calc(100% + 60px); /* 略微超出卡片寬度以獲得更好視覺 */
-  margin-left: -30px; /* 與 padding 匹配 */
-  margin-right: -30px;
-  border-radius: 12px 12px 0 0;
-  position: absolute;
-  top: 0;
-  left: 0; /* 改為 left: 0 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 0;
-}
-
-.trophy-icon {
-  width: 70px; /* 調整獎盃大小 */
-  height: auto;
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));
-}
-
-.first-place-details {
-  position: relative;
-  z-index: 1;
-  margin-top: 80px; /* 調整以適應 banner 高度 */
-}
-
-.leaderboard-card-first-place .name {
-  font-size: 1.9rem; /* 略微調整字體大小 */
   font-weight: 700;
-  color: #1a202c; /* 深灰色 */
-  margin-top: 10px;
-  margin-bottom: 8px;
+  color: #2a3a51; /* 深藍灰色 */
+  letter-spacing: -0.5px;
 }
 
-.leaderboard-card-first-place .score {
-  font-size: 1.4rem;
-  color: #DAA520; /* 金色 */
-  margin-bottom: 12px;
+.btn-custom-action {
+  background-color: #4a76f5; /* 主題藍色 */
+  border-color: #4a76f5;
+  color: white;
+  padding: 0.65rem 1.5rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
 }
-.leaderboard-card-first-place .score strong {
-  font-weight: 700;
-}
-
-.leaderboard-card-first-place .info {
-  font-size: 0.88rem;
-  color: #4a5568; /* 中灰色 */
-  margin-bottom: 4px;
-}
-
-.ribbon {
-  width: 160px;
-  height: 35px;
-  background: #ffd700;
-  position: absolute;
-  top: 25px; /* 調整絲帶位置 */
-  right: -40px;
-  transform: rotate(45deg);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 2;
-}
-
-.ribbon span {
-  color: #533500; /* 深棕色文字 */
-  font-weight: bold;
-  font-size: 1rem;
-  text-transform: uppercase;
-}
-
-/* --- 其他名次列表樣式 --- */
-.leaderboard-item {
-  display: grid; /* 改用 Grid 佈局以更好控制對齊 */
-  grid-template-columns: 50px 1fr auto; /* 排名 | 玩家資訊+組織位置 | 分數 */
-  gap: 15px; /* 列間距 */
-  align-items: center;
-  background-color: #fff;
-  padding: 12px 20px;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.07);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.leaderboard-item:hover {
+.btn-custom-action:hover {
+  background-color: #3a60d4;
+  border-color: #3a60d4;
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4);
+}
+.btn-custom-action i {
+  vertical-align: -0.125em; /* 微調圖示對齊 */
 }
 
-.leaderboard-item .rank {
+
+.leaderboard-content {
+  max-width: 700px; /* 控制排行榜內容最大寬度 */
+}
+
+.leaderboard-list {
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  padding: 10px 0; /* 上下留白給卡片內部 */
+  overflow: hidden; /* 如果 entry 有圓角 */
+}
+
+.leaderboard-entry {
+  display: flex;
+  align-items: center;
+  padding: 15px 25px; /* 調整內邊距 */
+  border-bottom: 1px solid #f0f0f0; /* 分隔線 */
+  transition: background-color 0.2s ease;
+}
+.leaderboard-entry:last-child {
+  border-bottom: none;
+}
+.leaderboard-entry:hover {
+  background-color: #f8f9fa; /* 輕微的懸停效果 */
+}
+
+.entry-rank {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #4a5568; /* 中灰色 */
+  color: #8898aa; /* 排名數字顏色 */
+  min-width: 45px; /* 固定寬度 */
   text-align: center;
+  margin-right: 20px; /* 與玩家資訊的間距 */
 }
 
-.leaderboard-item .player-info .name {
+.rank-icon-wrapper i { /* 包裹圖示的 span */
+  font-size: 1.6rem; /* 調整獎盃/獎牌圖示大小 */
+}
+.rank-icon-first { color: #ffc107; } /* 金色 */
+.rank-icon-second { color: #adb5bd; } /* 銀灰色 */
+.rank-icon-third { color: #cd7f32; } /* 古銅色 */
+
+
+.entry-player {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column; /* 讓名字和組織垂直排列 */
+}
+
+.player-name {
   font-weight: 600;
   font-size: 1.05rem;
-  color: #2d3748; /* 深藍灰色 */
-}
-.leaderboard-item .player-info .student-id {
-  font-size: 0.8em;
-  color: #718096; /* 淺灰色 */
+  color: #33475b; /* 深藍灰色 */
+  margin-bottom: 2px; /* 名字和組織間的微小間距 */
 }
 
-.leaderboard-item .details.org-pos { /* 組織和位置在同一區塊 */
+.player-org {
   font-size: 0.85em;
-  color: #4a5568;
-  text-align: left; /* 改為左對齊以便閱讀 */
-}
-.leaderboard-item .details .organization,
-.leaderboard-item .details .position {
-  display: block; /* 讓它們垂直排列 */
-}
-.leaderboard-item .details .organization {
-  font-weight: 500;
+  color: #6c757d; /* 次要文字顏色 */
 }
 
-
-.leaderboard-item .score {
-  font-size: 1.1rem;
+.entry-score {
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #2b6cb0; /* Bootstrap 藍色系 */
+  color: #4a76f5; /* 主題藍色 */
+  min-width: 80px; /* 給分數足夠空間 */
   text-align: right;
-  justify-self: end; /* Grid 佈局中靠右對齊 */
+}
+.score-label {
+  font-size: 0.8em;
+  font-weight: 400;
+  margin-left: 2px;
+  color: #6c757d;
 }
 
-.leaderboard-item.second-place {
-  border-left: 4px solid #a0aec0; /* 淺灰色 (銀色感) */
+/* 前三名高亮 */
+.leaderboard-entry.rank-first {
+  background-color: rgba(255, 215, 0, 0.08); /* 淡金色背景 */
+  border-left: 5px solid #ffd700;
 }
-.leaderboard-item.second-place .rank {
-  color: #4a5568;
+.leaderboard-entry.rank-second {
+  background-color: rgba(192, 192, 192, 0.08); /* 淡銀色背景 */
+  border-left: 5px solid #c0c0c0;
 }
-.leaderboard-item.third-place {
-  border-left: 4px solid #ed8936; /* 橙色 (古銅色感) */
-}
-.leaderboard-item.third-place .rank {
-  color: #c05621;
+.leaderboard-entry.rank-third {
+  background-color: rgba(205, 127, 50, 0.08); /* 淡古銅色背景 */
+  border-left: 5px solid #cd7f32;
 }
 
 /* 分頁控制樣式 */
-.pagination .page-link {
-  color: #007bff;
-  min-width: 38px; /* 調整按鈕大小 */
-  text-align: center;
-  margin: 0 2px; /* 頁碼按鈕間距 */
-  border-radius: 0.25rem !important; /* 統一圓角 */
+.custom-pagination .page-link {
+  color: #4a76f5; /* 主題藍色 */
+  border: 1px solid #dee2e6;
+  margin: 0 3px;
+  border-radius: 0.3rem;
+  transition: all 0.2s ease;
 }
-.pagination .page-item.active .page-link {
-  background-color: #007bff;
-  border-color: #007bff;
+.custom-pagination .page-link:hover {
+  background-color: #eef1f7;
+  border-color: #adb5bd;
+}
+.custom-pagination .page-item.active .page-link {
+  background-color: #4a76f5;
+  border-color: #4a76f5;
   color: white;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(74, 118, 245, 0.3);
 }
-.pagination .page-item.disabled .page-link {
-  color: #6c757d;
+.custom-pagination .page-item.disabled .page-link {
+  color: #adb5bd;
+  background-color: #f8f9fa;
 }
- .pagination .page-link i { /* 箭頭圖示 */
-  font-size: 0.9em;
-  vertical-align: middle;
+.custom-pagination .page-link .dots {
+    cursor: default;
 }
 
 
 /* 響應式調整 */
-@media (max-width: 768px) {
-  .leaderboard-item .details.org-pos {
-    display: none !important;
-  }
-  .leaderboard-item {
-    grid-template-columns: 40px 1fr auto; /* 調整小螢幕的列定義 */
-  }
-  .page-title {
-    font-size: 2rem;
-  }
-}
-
 @media (max-width: 576px) {
-    .pagination .page-item:not(.active):not(.disabled):not(:first-child):not(:last-child) .page-link {
-        /* 在極小螢幕上，除了首尾和當前頁，其他數字頁碼可以考慮隱藏或減少顯示 */
-    }
-    .leaderboard-item .player-info .name {
-        font-size: 1rem;
-    }
-    .leaderboard-item .score {
-        font-size: 1rem;
-    }
+  .page-title {
+    font-size: 1.8rem;
+  }
+  .leaderboard-entry {
+    padding: 12px 15px; /* 縮小手機上的內邊距 */
+    grid-template-columns: 40px 1fr auto; /* 調整 grid */
+  }
+  .entry-rank {
+    min-width: 35px;
+    margin-right: 10px;
+  }
+  .player-name {
+    font-size: 0.95rem;
+  }
+  .entry-score {
+    font-size: 1.1rem;
+    min-width: auto; /* 允許分數收縮 */
+  }
+  .player-org {
+      display: none; /* 在非常小的螢幕上可以考慮隱藏組織名 */
+  }
+  .custom-pagination .page-item:not(.active):not(.disabled) {
+      /* 在手機上，可以只顯示當前頁，首尾頁，和省略號 */
+  }
 }

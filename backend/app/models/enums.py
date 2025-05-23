@@ -42,7 +42,7 @@ class MatchTypeEnum(StrEnum):
         except KeyError:
             return None
 
-class OverallMatchNatureEnum(StrEnum):
+class MatchNatureEnum(StrEnum):
     FRIENDLY = "友誼賽"
     INTERNAL_RANKING = "隊內排名賽"
     PRACTISE = "練習賽"
@@ -70,3 +70,15 @@ class OutcomeEnum(StrEnum):
             return cls[name_str.upper()]
         except KeyError:
             return None
+
+class MatchFormatEnum(StrEnum):
+    TIEBREAK = "搶七"
+    FIVE_GAME_SET = "五局制"
+    SEVEN_GAME_SET = "七局制"
+    NINE_GAME_SET = "九局制"
+
+    @classmethod
+    def get_by_name(cls, name_str: str):
+        if not name_str: return None
+        try: return cls[name_str.upper()]
+        except KeyError: return None

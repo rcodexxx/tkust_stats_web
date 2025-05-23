@@ -1,10 +1,11 @@
 # backend/app/__init__.py
 
 import os
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv  # 通常在 config.py 或 run.py 更早載入，但這裡確保一下
 from datetime import datetime  # 用於 footer 的年份
+import logging
 
 # 匯入設定 (假設您有 config.py 和 config_by_name 字典)
 from .config import config_by_name
@@ -17,15 +18,6 @@ def create_app(config_name=None):
     """
     應用程式工廠函數。
     """
-    # 如果 .env 檔案與 run.py 在同一層 (專案根目錄)，
-    # 且 run.py 是啟動點，它通常會先載入 .env。
-    # 如果直接測試或從不同入口點啟動，確保 .env 被載入。
-    # 假設 dotenv_path 指向 backend/.env (如果 create_app 從 backend/run.py 調用)
-    # 或者，如果您總是透過 docker-compose 啟動，環境變數會被注入，這裡的 load_dotenv 可能不是絕對必要。
-    # 但為了本地直接執行 `flask` 命令的方便性，可以保留。
-    # dotenv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-    # load_dotenv(dotenv_path=dotenv_path)
-    # 更簡單的方式是假設 .env 在當前工作目錄或上層目錄，load_dotenv() 會嘗試尋找。
     load_dotenv()  # 會嘗試尋找 .env
 
     if config_name is None:
@@ -41,48 +33,63 @@ def create_app(config_name=None):
         print(f" * ERROR: Invalid FLASK_CONFIG '{config_name}'. Using 'default' config.")
         app.config.from_object(config_by_name['default'])
 
-    # (可選) 嘗試從 instance/config.py 覆蓋設定 (如果 instance 資料夾存在且有 config.py)
-    # app.config.from_pyfile('config.py', silent=True) # 'silent=True' 表示如果檔案不存在則不報錯
+    # 設定 Flask logger，使其輸出更詳細的資訊到控制台
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":  # 避免在重載時重複設定
+        app.logger.setLevel(logging.DEBUG)  # 設定日誌級別為 DEBUG
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        # 可以加入更詳細的 formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        if not app.logger.handlers:  # 避免重複加入 handler
+            app.logger.addHandler(handler)
+        app.logger.info("Flask logger configured for DEBUG level.")
 
     # 檢查 DATABASE_URL 是否成功載入 (非常重要)
     if not app.config.get('SQLALCHEMY_DATABASE_URI'):
         print(
             " * FATAL ERROR: SQLALCHEMY_DATABASE_URI is not set. Please check your environment variables (.env) or config files.")
-        # 可以選擇在這裡拋出錯誤或退出
-        # raise RuntimeError("SQLALCHEMY_DATABASE_URI is not set!")
 
     # 2. 初始化擴充套件
     db.init_app(app)
     migrate.init_app(app, db)
 
     # 設定 CORS
-    allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS')
+    allowed_origins_str = os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost:5173,http://127.0.0.1:5173")
+    allowed_origins_list = [origin.strip() for origin in allowed_origins_str.split(',')]
 
-    if allowed_origins_str:
-        allowed_origins_list = [origin.strip() for origin in allowed_origins_str.split(',')]
-        # 確保 resources 參數正確應用到所有 API 路由
-        # supports_credentials=True 允許 cookies/authorization headers (如果未來需要)
-        # Flask-CORS 預設會處理 OPTIONS 請求，並允許常見的 methods (GET, POST, PUT, DELETE 等) 和 headers
-        CORS(app, resources={r"/api/*": {"origins": allowed_origins_list}}, supports_credentials=True)
-        print(f" * CORS configured for specific origins: {allowed_origins_list}")
-    else:
-        CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-        print(" * WARNING: CORS_ALLOWED_ORIGINS not set, defaulting to '*' (allow all).")
+    CORS(app,
+         resources={r"/api/*": {"origins": allowed_origins_list}},
+         supports_credentials=True,
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"]
+         )
+    app.logger.info(f"CORS configured for API. Origins: {allowed_origins_list}")
+
+    @app.before_request
+    def log_request_info():
+        app.logger.debug('Request Headers: %s', request.headers)
+        app.logger.debug('Request Method: %s', request.method)
+        app.logger.debug('Request Path: %s', request.path)
+        app.logger.debug('Request Data: %s', request.get_data(as_text=True))
+
+    @app.after_request
+    def log_response_info(response):
+        app.logger.debug('Response Status: %s', response.status)
+        app.logger.debug('Response Headers: %s', response.headers)
+        return response
 
     # 3. 註冊藍圖 (Blueprints)
-    # 從 app.api 套件的 __init__.py 中匯入 bp 實例 (我們之前將其命名為 bp，但叫 api_bp 可能更清晰)
     from .api import bp as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')
     print(" * Registered API blueprint at /api")  # 除錯用
-
-    # 如果您未來有其他藍圖，例如管理後台等，也可以在這裡註冊
-    # from .admin import bp as admin_blueprint
-    # app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
     # 4. (可選) 註冊全域錯誤處理器 (如果需要回傳 JSON 格式的錯誤)
     # def handle_validation_error(e):
     #     return jsonify(error=str(e)), 400
     # app.register_error_handler(ValidationError, handle_validation_error) # 假設您有自訂的 ValidationError
+    with app.app_context():  # 將命令的匯入和註冊放在 app_context 內確保 current_app 可用
+        from .commands import seed  # 假設您的檔案是 app/commands/seed.py
 
     # 5. (可選) 註冊上下文處理器
     @app.context_processor
@@ -103,7 +110,7 @@ def create_app(config_name=None):
             'TeamMember': TeamMember,
             'TeamEvent': TeamEvent,
             'MatchRecord': MatchRecord,
-            'PlayerMatchStats': PlayerStats
+            'PlayerStats': PlayerStats
             # 您也可以將 app 實例加入，方便測試
             # 'app': app
         }

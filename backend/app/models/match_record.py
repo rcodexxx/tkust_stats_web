@@ -1,46 +1,53 @@
+# backend/app/models/match_record.py
 from ..extensions import db
-from .enums import MatchTypeEnum, OutcomeEnum, SQLAlchemyEnum
+from ..models.enums import MatchTypeEnum, OutcomeEnum, MatchFormatEnum # <--- 加入 MatchFormatEnum
+from sqlalchemy import Enum as SQLAlchemyEnum
 import datetime
 
-
 class MatchRecord(db.Model):
-    """
-    記錄每一場單獨的比賽 (可能是某個 TeamEvent 下的一點，或獨立的比賽)
-    """
     __tablename__ = 'match_records'
     id = db.Column(db.Integer, primary_key=True)
 
-    # 外鍵: 可選地關聯到一個 TeamEvent
-    team_event_id = db.Column(db.Integer, db.ForeignKey('team_events.id'), nullable=True, comment="所屬團隊賽事ID")
+    match_date = db.Column(db.Date, nullable=False, default=datetime.date.today)
+    match_type = db.Column(SQLAlchemyEnum(MatchTypeEnum, name="match_type_enum_mr", create_type=False), nullable=False)
+    match_format = db.Column(SQLAlchemyEnum(MatchFormatEnum, name="match_format_enum_mr", create_type=False), nullable=False, comment="賽制") # <--- 新增賽制欄位
 
-    # 我方球員 (單打則 player2_id 為空)
-    player1_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=False, comment="我方球員1 ID")
-    player1 = db.relationship('TeamMember', foreign_keys=[player1_id],
-                              backref=db.backref('matches_as_player1', lazy='dynamic'))
+    side_a_player1_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=False)
+    side_a_player1 = db.relationship('TeamMember', foreign_keys=[side_a_player1_id], backref='matches_as_side_a_p1_mr') # 調整 backref 名稱
 
-    player2_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=True, comment="我方球員2 ID (雙打時)")
-    player2 = db.relationship('TeamMember', foreign_keys=[player2_id],
-                              backref=db.backref('matches_as_player2', lazy='dynamic'))
+    side_a_player2_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=True)
+    side_a_player2 = db.relationship('TeamMember', foreign_keys=[side_a_player2_id], backref='matches_as_side_a_p2_mr')
 
-    # 對方球員
-    opponent_player1_name = db.Column(db.String(100), nullable=True, comment="對方球員1姓名")
-    opponent_player2_name = db.Column(db.String(100), nullable=True, comment="對方球員2姓名 (雙打時)")
+    side_b_player1_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=False)
+    side_b_player1 = db.relationship('TeamMember', foreign_keys=[side_b_player1_id], backref='matches_as_side_b_p1_mr')
 
-    match_date = db.Column(db.Date, nullable=False, default=datetime.date.today, comment="單場比賽日期")
-    match_type = db.Column(SQLAlchemyEnum(MatchTypeEnum), nullable=False, comment="單打/雙打")
+    side_b_player2_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=True)
+    side_b_player2 = db.relationship('TeamMember', foreign_keys=[side_b_player2_id], backref='matches_as_side_b_p2_mr')
 
-    our_score_str = db.Column(db.String(50), nullable=True, comment="我方得分 (例: 6,6 / 7-5,6-2)")
-    opponent_score_str = db.Column(db.String(50), nullable=True, comment="對方得分 (例: 2,3 / 6-7,2-6)")
-    outcome = db.Column(SQLAlchemyEnum(OutcomeEnum), nullable=True, comment="比賽結果 (勝/負)")
+    side_a_games_won = db.Column(db.Integer, nullable=False, comment="A方贏得的總局數")
+    side_b_games_won = db.Column(db.Integer, nullable=False, comment="B方贏得的總局數")
 
-    point_order_in_event = db.Column(db.String(50), nullable=True,
-                                     comment="在團隊賽中的點數/順序 (例: 第一點單打, 第二點雙打)")
-    match_notes = db.Column(db.Text, nullable=True, comment="單場比賽備註")
+    side_a_outcome = db.Column(SQLAlchemyEnum(OutcomeEnum, name="outcome_enum_mr", create_type=False), nullable=False, comment="A方視角的比賽結果")
 
-    # 反向關聯: 一場比賽可以有多個球員的統計數據 (我方球員)
-    player_stats = db.relationship('PlayerStats', backref='match_record_parent', lazy='dynamic',
-                                   cascade="all, delete-orphan")
+    match_notes = db.Column(db.Text, nullable=True)
 
-    def __repr__(self):
-        p1_name = self.player1.name if self.player1 else 'N/A'
-        return f"<MatchRecord ID {self.id} featuring {p1_name} on {self.match_date}>"
+    # PlayerMatchStats 關聯 (為未來做準備)
+    # 一場 MatchRecord 可以對應到多個 PlayerMatchStats (例如雙打時，side_a_player1, side_a_player2, side_b_player1, side_b_player2 各一條)
+    player_stats = db.relationship('PlayerStats', backref='match', lazy='dynamic', cascade="all, delete-orphan")
+
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "match_date": self.match_date.isoformat() if self.match_date else None,
+            "match_type": self.match_type.value if self.match_type else None,
+            "match_format": self.match_format.value if self.match_format else None,
+            "side_a_player1": {"id": self.side_a_player1_id, "name": self.side_a_player1.name} if self.side_a_player1 else None,
+            "side_a_player2": {"id": self.side_a_player2_id, "name": self.side_a_player2.name} if self.side_a_player2 else None,
+            "side_b_player1": {"id": self.side_b_player1_id, "name": self.side_b_player1.name} if self.side_b_player1 else None,
+            "side_b_player2": {"id": self.side_b_player2_id, "name": self.side_b_player2.name} if self.side_b_player2 else None,
+            "side_a_games_won": self.side_a_games_won,
+            "side_b_games_won": self.side_b_games_won,
+            "side_a_outcome": self.side_a_outcome.value if self.side_a_outcome else None,
+            "match_notes": self.match_notes
+        }
