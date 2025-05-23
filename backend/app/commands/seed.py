@@ -11,14 +11,25 @@ def seed_db_command():
     """填充資料庫的種子數據"""
     print("Seeding database...")
     try:
-        # 清除現有數據 (可選，小心使用)
-        # TeamMember.query.delete()
+        # TeamMember.query.delete()ㄥㄥ
 
         members_data = [
             {'name': '陳冠宇', 'student_id': '611460162', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
-            {'name': '鍾楊鎧', 'student_id': 'T002', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
+            {'name': '鍾楊鎧', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
+            {'name': '白芳維', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
+            {'name': '楊承恩', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.FRONT},
+            {'name': '簡宏洲', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.VERSATILE},
+            {'name': '曾彥綸', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
+            {'name': '周俊瑋', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.BACK},
+            {'name': 'Angus', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.FRONT},
+            {'name': '詹貴翔', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.FRONT},
+            {'name': '許朝凱', 'student_id': '', 'gender': GenderEnum.MALE, 'position': PositionEnum.FRONT},
             {'name': '山嵜一花', 'student_id': '410865025', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.VERSATILE},
             {'name': '黃宇微', 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.FRONT},
+            {'name': '徐欣妘', 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.FRONT},
+            {'name': '邱筣穎', 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.BACK},
+            {'name': '吳柏萱', 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.BACK},
+            {'name': '胡育慈', 'student_id': '411530636', 'gender': GenderEnum.FEMALE, 'position': PositionEnum.FRONT},
         ]
 
         for member_info in members_data:
