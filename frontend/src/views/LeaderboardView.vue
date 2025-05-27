@@ -83,11 +83,9 @@
 </template>
 
 <script setup>
-// JavaScript (<script setup>) 部分與您上一版包含並列排名邏輯的幾乎相同
-// 只需要確保 getRankHighlightClass 和 getRankIconClass 是新的，或者調整現有的 getRankClass/getRankIcon
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-import '../assets/css/leaderboard.css'; // <--- 將新的 CSS 檔案命名為這個
+import '../assets/css/leaderboard.css';
 
 const allMembersWithRank = ref([]);
 const loading = ref(true);
@@ -101,6 +99,26 @@ onMounted(async () => {
   error.value = null;
   try {
     const response = await axios.get(`${apiBaseUrl}/leaderboard`);
+    if (!response) {
+      console.error("LeaderboardView: API response object is undefined!");
+      error.value = 'API 未返回有效的回應物件。';
+      allMembersWithRank.value = [];
+      loading.value = false;
+      return; // 提前退出
+    }
+    if (typeof response.data === 'undefined') {
+        console.error("LeaderboardView: response.data is undefined!");
+        error.value = 'API 回應中缺少 data 屬性。';
+        allMembersWithRank.value = [];
+        loading.value = false;
+        return; // 提前退出
+    }
+
+    console.log("LeaderboardView: API response object:", response);
+    console.log("LeaderboardView: response.data raw content:", response.data);
+    console.log("LeaderboardView: typeof response.data:", typeof response.data);
+    console.log("LeaderboardView: Array.isArray(response.data):", Array.isArray(response.data));
+
     let members = response.data.map(m => ({ ...m, score: Number(m.score) }))
                                .sort((a, b) => b.score - a.score);
     if (members.length > 0) {

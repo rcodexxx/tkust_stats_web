@@ -18,11 +18,11 @@
 <!--            <li class="nav-item">-->
 <!--              <router-link class="nav-link" active-class="active" to="/members/add">新增成員</router-link>-->
 <!--            </li>-->
-            <li class="nav-item">
-              <router-link to="/match/record" class="btn btn-lg btn-success shadow-sm custom-btn-green">
-                <i class="bi bi-plus-circle-fill me-4"></i>Record Match
-              </router-link>
-            </li>
+<!--            <li class="nav-item">-->
+<!--              <router-link to="/match/record" class="btn btn-lg btn-success shadow-sm custom-btn-green">-->
+<!--                <i class="bi bi-plus-circle-fill me-4"></i>Record Match-->
+<!--              </router-link>-->
+<!--            </li>-->
           </ul>
         </div>
       </div>
