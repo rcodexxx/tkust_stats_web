@@ -49,6 +49,8 @@ class TeamMember(db.Model):
         data = {
             "id": self.id,
             "name": self.name,
+            "display_name": self.display_name,
+            "organization": self.organization,
             "score": self.score,
             "mu": round(self.mu, 2),
             "sigma": round(self.sigma, 2),

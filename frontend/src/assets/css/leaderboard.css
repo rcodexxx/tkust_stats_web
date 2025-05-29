@@ -2,157 +2,187 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
 body { /* 建議將字體設定移到 App.vue 或全域 CSS */
-  font-family: 'Lexend', 'Helvetica Neue', Arial, sans-serif;
-  background-color: #eef1f7; /* 淺藍灰色背景 */
-  color: #333;
+    font-family: 'Lexend', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #eef1f7; /* 淺藍灰色背景 */
+    color: #333;
 }
 
 .leaderboard-page-wrapper {
-  /* 這個 wrapper 可以用來設定整個頁面的背景等 */
+    /* 這個 wrapper 可以用來設定整個頁面的背景等 */
 }
 
 .leaderboard-header {
-  /* 可以為標題和按鈕區域設定背景或樣式 */
+    /* 可以為標題和按鈕區域設定背景或樣式 */
 }
 
 .page-title {
-  font-weight: 700;
-  color: #2a3a51; /* 深藍灰色 */
-  letter-spacing: -0.5px;
+    font-weight: 700;
+    color: #2a3a51; /* 深藍灰色 */
+    letter-spacing: -0.5px;
 }
 
 .btn-custom-action {
-  background-color: #4a76f5; /* 主題藍色 */
-  border-color: #4a76f5;
-  color: white;
-  padding: 0.65rem 1.5rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
-  transition: all 0.3s ease;
+    background-color: #4a76f5; /* 主題藍色 */
+    border-color: #4a76f5;
+    color: white;
+    padding: 0.65rem 1.5rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
 }
+
 .btn-custom-action:hover {
-  background-color: #3a60d4;
-  border-color: #3a60d4;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4);
+    background-color: #3a60d4;
+    border-color: #3a60d4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4);
 }
+
 .btn-custom-action i {
-  vertical-align: -0.125em; /* 微調圖示對齊 */
+    vertical-align: -0.125em; /* 微調圖示對齊 */
 }
 
 
 .leaderboard-content {
-  max-width: 700px; /* 控制排行榜內容最大寬度 */
+    max-width: 700px; /* 控制排行榜內容最大寬度 */
 }
 
 .leaderboard-list {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  padding: 10px 0; /* 上下留白給卡片內部 */
-  overflow: hidden; /* 如果 entry 有圓角 */
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    padding: 10px 0; /* 上下留白給卡片內部 */
+    overflow: hidden; /* 如果 entry 有圓角 */
 }
 
 .leaderboard-entry {
-  display: flex;
-  align-items: center;
-  padding: 15px 25px; /* 調整內邊距 */
-  border-bottom: 1px solid #f0f0f0; /* 分隔線 */
-  transition: background-color 0.2s ease;
+    display: grid;
+    /* 更新 grid 佈局: # | 暱稱/組織 | 勝率(W-L) | 分數 */
+    grid-template-columns: 50px minmax(150px, 2fr) minmax(100px, 1fr) minmax(80px, 1fr);
+    /* 排名 | 球員&組織 | 勝率 | 分數 */
+    /* 您可以根據內容調整 fr 單位和 minmax */
+    gap: 10px; /* 列間距 */
+    align-items: center;
+    padding: 12px 20px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .leaderboard-entry:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
+
 .leaderboard-entry:hover {
-  background-color: #f8f9fa; /* 輕微的懸停效果 */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .entry-rank {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #8898aa; /* 排名數字顏色 */
-  min-width: 45px; /* 固定寬度 */
-  text-align: center;
-  margin-right: 20px; /* 與玩家資訊的間距 */
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #8898aa; /* 排名數字顏色 */
+    min-width: 45px; /* 固定寬度 */
+    text-align: center;
+    margin-right: 20px; /* 與玩家資訊的間距 */
 }
 
 .rank-icon-wrapper i { /* 包裹圖示的 span */
-  font-size: 1.6rem; /* 調整獎盃/獎牌圖示大小 */
+    font-size: 1.6rem; /* 調整獎盃/獎牌圖示大小 */
+    vertical-align: middle;
 }
-.rank-icon-first { color: #ffc107; } /* 金色 */
-.rank-icon-second { color: #adb5bd; } /* 銀灰色 */
-.rank-icon-third { color: #cd7f32; } /* 古銅色 */
+
+.rank-icon-first {
+    color: #ffd700 !important;
+}
+
+.rank-icon-second {
+    color: #c0c0c0 !important;
+}
+
+.rank-icon-third {
+    color: #cd7f32 !important;
+}
 
 
 .entry-player {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column; /* 讓名字和組織垂直排列 */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* 讓名字和組織垂直排列 */
 }
 
 .player-name {
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: #33475b; /* 深藍灰色 */
-  margin-bottom: 2px; /* 名字和組織間的微小間距 */
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #33475b; /* 深藍灰色 */
+    margin-bottom: 2px; /* 名字和組織間的微小間距 */
 }
 
 .player-org {
-  font-size: 0.85em;
-  color: #6c757d; /* 次要文字顏色 */
+    font-size: 0.85em;
+    color: #6c757d; /* 次要文字顏色 */
 }
 
 .entry-score {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #4a76f5; /* 主題藍色 */
-  min-width: 80px; /* 給分數足夠空間 */
-  text-align: right;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #4a76f5; /* 主題藍色 */
+    min-width: 80px; /* 給分數足夠空間 */
+    text-align: right;
 }
+
 .score-label {
-  font-size: 0.8em;
-  font-weight: 400;
-  margin-left: 2px;
-  color: #6c757d;
+    font-size: 0.8em;
+    font-weight: 400;
+    margin-left: 2px;
+    color: #6c757d;
 }
 
 /* 前三名高亮 */
 .leaderboard-entry.rank-first {
-  background-color: rgba(255, 215, 0, 0.08); /* 淡金色背景 */
-  border-left: 5px solid #ffd700;
+    background-color: rgba(255, 215, 0, 0.08); /* 淡金色背景 */
+    border-left: 5px solid #ffd700;
 }
+
 .leaderboard-entry.rank-second {
-  background-color: rgba(192, 192, 192, 0.08); /* 淡銀色背景 */
-  border-left: 5px solid #c0c0c0;
+    background-color: rgba(192, 192, 192, 0.08); /* 淡銀色背景 */
+    border-left: 5px solid #c0c0c0;
 }
+
 .leaderboard-entry.rank-third {
-  background-color: rgba(205, 127, 50, 0.08); /* 淡古銅色背景 */
-  border-left: 5px solid #cd7f32;
+    background-color: rgba(205, 127, 50, 0.08); /* 淡古銅色背景 */
+    border-left: 5px solid #cd7f32;
 }
 
 /* 分頁控制樣式 */
 .custom-pagination .page-link {
-  color: #4a76f5; /* 主題藍色 */
-  border: 1px solid #dee2e6;
-  margin: 0 3px;
-  border-radius: 0.3rem;
-  transition: all 0.2s ease;
+    color: #4a76f5; /* 主題藍色 */
+    border: 1px solid #dee2e6;
+    margin: 0 3px;
+    border-radius: 0.3rem;
+    transition: all 0.2s ease;
 }
+
 .custom-pagination .page-link:hover {
-  background-color: #eef1f7;
-  border-color: #adb5bd;
+    background-color: #eef1f7;
+    border-color: #adb5bd;
 }
+
 .custom-pagination .page-item.active .page-link {
-  background-color: #4a76f5;
-  border-color: #4a76f5;
-  color: white;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(74, 118, 245, 0.3);
+    background-color: #4a76f5;
+    border-color: #4a76f5;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(74, 118, 245, 0.3);
 }
+
 .custom-pagination .page-item.disabled .page-link {
-  color: #adb5bd;
-  background-color: #f8f9fa;
+    color: #adb5bd;
+    background-color: #f8f9fa;
 }
+
 .custom-pagination .page-link .dots {
     cursor: default;
 }
@@ -160,28 +190,34 @@ body { /* 建議將字體設定移到 App.vue 或全域 CSS */
 
 /* 響應式調整 */
 @media (max-width: 576px) {
-  .page-title {
-    font-size: 1.8rem;
-  }
-  .leaderboard-entry {
-    padding: 12px 15px; /* 縮小手機上的內邊距 */
-    grid-template-columns: 40px 1fr auto; /* 調整 grid */
-  }
-  .entry-rank {
-    min-width: 35px;
-    margin-right: 10px;
-  }
-  .player-name {
-    font-size: 0.95rem;
-  }
-  .entry-score {
-    font-size: 1.1rem;
-    min-width: auto; /* 允許分數收縮 */
-  }
-  .player-org {
-      display: none; /* 在非常小的螢幕上可以考慮隱藏組織名 */
-  }
-  .custom-pagination .page-item:not(.active):not(.disabled) {
-      /* 在手機上，可以只顯示當前頁，首尾頁，和省略號 */
-  }
+    .page-title {
+        font-size: 1.8rem;
+    }
+
+    .leaderboard-entry {
+        padding: 12px 15px; /* 縮小手機上的內邊距 */
+        grid-template-columns: 40px 1fr auto; /* 調整 grid */
+    }
+
+    .entry-rank {
+        min-width: 35px;
+        margin-right: 10px;
+    }
+
+    .player-name {
+        font-size: 0.95rem;
+    }
+
+    .entry-score {
+        font-size: 1.1rem;
+        min-width: auto; /* 允許分數收縮 */
+    }
+
+    .player-org {
+        display: none; /* 在非常小的螢幕上可以考慮隱藏組織名 */
+    }
+
+    .custom-pagination .page-item:not(.active):not(.disabled) {
+        /* 在手機上，可以只顯示當前頁，首尾頁，和省略號 */
+    }
 }

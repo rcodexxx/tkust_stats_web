@@ -1,8 +1,12 @@
-// frontend/src/views/LeaderboardView.vue
 <template>
   <div class="leaderboard-page-wrapper">
     <div class="leaderboard-header container pt-4 pb-3">
-      <h1 class="text-center page-title">積分排行榜</h1>
+      <h1 class="text-center page-title">排行榜</h1>
+      <!--      <div class="d-flex justify-content-center mt-3 mb-4">-->
+      <!--        <router-link to="/match/record" class="btn btn-lg btn-custom-action shadow-sm">-->
+      <!--          <i class="bi bi-pencil-square me-2"></i>記錄比賽結果-->
+      <!--        </router-link>-->
+      <!--      </div>-->
     </div>
 
     <div class="leaderboard-content container">
@@ -16,19 +20,22 @@
       </div>
 
       <div v-if="!loading && !error">
-        <div v-if="paginatedMembers.length === 0 && allMembersWithRank.length > 0" class="alert alert-info text-center my-4">
-          此頁無資料。
-        </div>
         <div v-if="allMembersWithRank.length === 0" class="alert alert-light text-center my-4 text-muted">
           目前排行榜尚無資料，快去記錄第一場比賽吧！
         </div>
 
         <div class="leaderboard-list" v-if="paginatedMembers.length > 0">
+          <div class="leaderboard-entry leaderboard-header-row d-none d-md-flex">
+            <!--            <div class="entry-rank text-muted">#</div>-->
+            <!--            <div class="entry-player text-muted">名稱</div>-->
+            <!--            <div class="entry-score text-muted">分數</div>-->
+          </div>
+
           <div
-            v-for="(member, indexOnPage) in paginatedMembers"
-            :key="member.id"
-            class="leaderboard-entry"
-            :class="getRankHighlightClass(member.rank)"
+              v-for="(member) in paginatedMembers"
+              :key="member.id"
+              class="leaderboard-entry"
+              :class="getRankHighlightClass(member.rank)"
           >
             <div class="entry-rank">
               <span v-if="member.rank <= 3 && member.rank > 0" class="rank-icon-wrapper">
@@ -37,10 +44,12 @@
               <span v-else>{{ member.rank }}</span>
             </div>
             <div class="entry-player">
-              <div class="player-name">{{ member.name }}</div>
-              <div class="player-org text-muted" v-if="member.organization_name">
-                {{ member.organization_name }}
-              </div>
+              <div class="player-name">{{ member.display_name || member.name }}</div>
+              <div class="player-org text-muted">{{ member.organization || '-' }}</div>
+            </div>
+            <div class="entry-record">
+              <span class="wins">{{ member.wins }} W</span> - <span class="losses">{{ member.losses }} L</span>
+              <!--              <small class="total-matches d-block text-muted">({{ member.total_matches }} 場)</small>-->
             </div>
             <div class="entry-score">
               {{ member.score }} <span class="score-label">分</span>
@@ -61,7 +70,10 @@
                 :key="pageNumber"
                 class="page-item"
                 :class="{ active: pageNumber === currentPage, disabled: pageNumber === '...' }">
-              <button v-if="pageNumber !== '...'" class="page-link" @click="goToPage(pageNumber)">{{ pageNumber }}</button>
+              <button v-if="pageNumber !== '...'" class="page-link" @click="goToPage(pageNumber)">{{
+                  pageNumber
+                }}
+              </button>
               <span v-else class="page-link dots">...</span>
             </li>
             <li class="page-item" :class="{ disabled: currentPage === totalPages }">
@@ -75,7 +87,7 @@
       <div v-if="allMembersWithRank.length > 0 && totalPages > 1" class="text-center mt-2 text-muted">
         <small>第 {{ currentPage }} / {{ totalPages }} 頁 (共 {{ allMembersWithRank.length }} 位球員)</small>
       </div>
-       <div v-if="allMembersWithRank.length > 0 && totalPages <=1 && !loading" class="text-center mt-3 text-muted">
+      <div v-if="allMembersWithRank.length > 0 && totalPages <=1 && !loading" class="text-center mt-3 text-muted">
         <small>共 {{ allMembersWithRank.length }} 位球員</small>
       </div>
     </div>
@@ -83,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import axios from 'axios';
 import '../assets/css/leaderboard.css';
 
@@ -107,11 +119,11 @@ onMounted(async () => {
       return; // 提前退出
     }
     if (typeof response.data === 'undefined') {
-        console.error("LeaderboardView: response.data is undefined!");
-        error.value = 'API 回應中缺少 data 屬性。';
-        allMembersWithRank.value = [];
-        loading.value = false;
-        return; // 提前退出
+      console.error("LeaderboardView: response.data is undefined!");
+      error.value = 'API 回應中缺少 data 屬性。';
+      allMembersWithRank.value = [];
+      loading.value = false;
+      return; // 提前退出
     }
 
     console.log("LeaderboardView: API response object:", response);
@@ -119,13 +131,13 @@ onMounted(async () => {
     console.log("LeaderboardView: typeof response.data:", typeof response.data);
     console.log("LeaderboardView: Array.isArray(response.data):", Array.isArray(response.data));
 
-    let members = response.data.map(m => ({ ...m, score: Number(m.score) }))
-                               .sort((a, b) => b.score - a.score);
+    let members = response.data.map(m => ({...m, score: Number(m.score)}))
+        .sort((a, b) => b.score - a.score);
     if (members.length > 0) {
       let rank = 1;
       members[0].rank = rank;
       for (let i = 1; i < members.length; i++) {
-        if (members[i].score < members[i-1].score) {
+        if (members[i].score < members[i - 1].score) {
           rank = i + 1;
         }
         members[i].rank = rank;
@@ -152,8 +164,14 @@ const paginatedMembers = computed(() => {
   return allMembersWithRank.value.slice(startIndex, endIndex);
 });
 
-function nextPage() { if (currentPage.value < totalPages.value) currentPage.value++; }
-function prevPage() { if (currentPage.value > 1) currentPage.value--; }
+function nextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value++;
+}
+
+function prevPage() {
+  if (currentPage.value > 1) currentPage.value--;
+}
+
 function goToPage(pageNumber) {
   if (pageNumber !== '...' && pageNumber >= 1 && pageNumber <= totalPages.value) {
     currentPage.value = pageNumber;
@@ -203,8 +221,8 @@ function getRankHighlightClass(memberRank) {
 // 根據排名給予不同的圖示 class (如果需要圖示)
 function getRankIconClass(memberRank) {
   if (memberRank === 1) return 'bi bi-trophy-fill rank-icon-first';
-  if (memberRank === 2) return 'bi bi-award-fill rank-icon-second';
-  if (memberRank === 3) return 'bi bi-medal-fill rank-icon-third';
+  if (memberRank === 2) return 'bi bi-shield-fill rank-icon-second';
+  if (memberRank === 3) return 'bi bi-award-fill rank-icon-third';
   return ''; // 其他排名不顯示圖示
 }
 </script>
