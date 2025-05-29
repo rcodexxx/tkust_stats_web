@@ -1,5 +1,5 @@
 from enum import StrEnum
-from sqlalchemy import Enum as SQLAlchemyEnum
+
 
 class GenderEnum(StrEnum):
     MALE = "男"
@@ -13,6 +13,7 @@ class GenderEnum(StrEnum):
             return cls[name_str.upper()]  # 透過成員名稱 (key) 獲取 Enum 成員
         except KeyError:
             return None
+
 
 class PositionEnum(StrEnum):
     BACK = "後排"
@@ -28,6 +29,7 @@ class PositionEnum(StrEnum):
         except KeyError:
             return None
 
+
 class MatchTypeEnum(StrEnum):
     SINGLES = "單打"
     DOUBLES = "雙打"
@@ -42,11 +44,12 @@ class MatchTypeEnum(StrEnum):
         except KeyError:
             return None
 
+
 class MatchNatureEnum(StrEnum):
     FRIENDLY = "友誼賽"
     INTERNAL_RANKING = "隊內排名賽"
     PRACTISE = "練習賽"
-    NIAG = "全大運" #National Intercollegiate Athletic Games
+    NIAG = "全大運"  # National Intercollegiate Athletic Games
 
     @classmethod
     def get_by_name(cls, name_str: str):
@@ -56,6 +59,7 @@ class MatchNatureEnum(StrEnum):
             return cls[name_str.upper()]
         except KeyError:
             return None
+
 
 class OutcomeEnum(StrEnum):
     WIN = "勝"
@@ -71,6 +75,7 @@ class OutcomeEnum(StrEnum):
         except KeyError:
             return None
 
+
 class MatchFormatEnum(StrEnum):
     TIEBREAK = "搶七"
     FIVE_GAME_SET = "五局制"
@@ -79,6 +84,24 @@ class MatchFormatEnum(StrEnum):
 
     @classmethod
     def get_by_name(cls, name_str: str):
-        if not name_str: return None
-        try: return cls[name_str.upper()]
-        except KeyError: return None
+        if not name_str:
+            return None
+        try:
+            return cls[name_str.upper()]
+        except KeyError:
+            return None
+
+
+class UserRoleEnum(StrEnum):
+    MEMBER = "成員"
+    CADRE = "幹部"
+    ADMIN = "管理員"
+
+    @classmethod
+    def get_by_name(cls, name_str: str):
+        if not name_str:
+            return None
+        try:
+            return cls[name_str.upper()]
+        except KeyError:
+            return None

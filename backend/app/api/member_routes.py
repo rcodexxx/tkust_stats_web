@@ -1,108 +1,164 @@
-from flask import request, jsonify
-from . import bp
-from ..extensions import db
-from ..models.team_member import TeamMember
-from ..models.enums import GenderEnum, PositionEnum
-from sqlalchemy.exc import IntegrityError
 import datetime
 
+from flask import current_app, jsonify, request
+from sqlalchemy.exc import IntegrityError
 
-@bp.route('/members', methods=['GET'])  # 通常用 /members 獲取所有成員列表
-def get_all_members():
+from . import bp
+from ..auth_utils import admin_required
+from ..extensions import db
+from ..models.enums import GenderEnum, PositionEnum, UserRoleEnum
+from ..models.member import TeamMember
+from ..services.member_service import create_member
+
+
+@bp.route("/members", methods=["GET"])  # 通常用 /members 獲取所有成員列表
+def get_all_members(active_only=None):
     """獲取所有活躍球員列表，主要用於表單選擇等，按姓名排序"""
     try:
         query = TeamMember.query
-        # if active_only:
-        #     query = query.filter_by(is_active=True)
+        if active_only:
+            query = query.filter_by(is_active=True)
 
         members = query.order_by(TeamMember.name).all()
 
         member_data = []
         for member in members:
-            member_data.append({
-                "id": member.id,
-                "name": member.name,
-                "score": member.score,
-                "student_id": member.student_id,
-                "gender": member.gender.value if member.gender else None,  # Enum 的 .value 會回傳設定的值
-                "position": member.position.value if member.position else None,
-                "is_active": member.is_active,
-                "notes": member.notes
-            })
+            member_data.append(
+                {
+                    "id": member.id,
+                    "name": member.name,
+                    "display_name": member.display_name,
+                    "organization": member.organization,
+                    "score": member.score,
+                    "student_id": member.student_id,
+                    "gender": (member.gender.value if member.gender else None),
+                    "position": member.position.value if member.position else None,
+                    "is_active": member.is_active,
+                    "notes": member.notes,
+                }
+            )
         return jsonify(member_data)
     except Exception as e:
         print(f"Error in get_all_members: {e}")  # 伺服器端日誌
         return jsonify({"error": "An error occurred while fetching members."}), 500
 
 
-@bp.route('/members', methods=['POST'])
-# @jwt_required() # 如果未來加入 JWT 認證，取消註解此行
-def create_member():
+@bp.route("/members", methods=["POST"])
+@admin_required  # 只有管理員可以執行這個完整的成員新增
+def admin_create_full_member():
     data = request.get_json()
-
     if not data:
         return jsonify({"error": "Request payload must be JSON"}), 400
 
-    # 1. 提取資料
-    name = data.get('name')
-    student_id = data.get('student_id')
-    gender_str = data.get('gender')  # 前端應傳送 Enum 的 NAME，例如 'MALE'
-    position_str = data.get('position')  # 前端應傳送 Enum 的 NAME，例如 'SINGLES'
-    is_active_val = data.get('is_active', True)  # 如果前端沒給，預設為 True
-    notes = data.get('notes')
+    # 從 payload 提取所有 User 和 TeamMember 的欄位
+    # User fields
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
+    role_str = data.get("role", "PLAYER")
+    is_active_user = data.get("is_active_user", True)
 
-    # 2. 後端資料驗證
+    # TeamMember fields
+    name = data.get("name")
+    display_name = data.get("display_name")
+    student_id = data.get("student_id")
+    gender_str = data.get("gender")
+    position_str = data.get("position")
+    mu_str = data.get("mu")
+    sigma_str = data.get("sigma")
+    join_date_str = data.get("join_date")
+    is_active_member = data.get("is_active_member", True)
+    notes = data.get("notes")
+
+    # --- 基本驗證 (您可以做得更詳細) ---
     errors = {}
+    if not username:
+        errors["username"] = "Username for login is required."
     if not name:
-        errors['name'] = "Name is required."
-    elif len(name) > 100:
-        errors['name'] = "Name cannot exceed 100 characters."
+        errors["name"] = "Member's real name is required."
 
-    if student_id:
-        if len(student_id) > 20:
-            errors['student_id'] = "Student ID cannot exceed 20 characters."
-        if TeamMember.query.filter_by(student_id=student_id).first():
-            errors['student_id'] = f"Student ID '{student_id}' already exists."
+    role_enum = UserRoleEnum.get_by_name(role_str)
+    if not role_enum:
+        errors["role"] = f"Invalid role: {role_str}."
 
-    gender_enum = GenderEnum.get_by_name(gender_str)  # 使用 classmethod 轉換
-    if gender_str and gender_enum is None:  # 如果前端傳了值但無法轉換
-        errors['gender'] = f"Invalid gender value: '{gender_str}'. Valid are: {[e.name for e in GenderEnum]}."
+    gender_enum = GenderEnum.get_by_name(gender_str) if gender_str else None
+    if gender_str and not gender_enum:
+        errors["gender"] = f"Invalid gender: {gender_str}."
 
-    position_enum = PositionEnum.get_by_name(position_str)  # 使用 classmethod 轉換
-    if position_str and position_enum is None:
-        errors[
-            'position'] = f"Invalid position value: '{position_str}'. Valid are: {[e.name for e in PositionEnum]}."
+    position_enum = PositionEnum.get_by_name(position_str) if position_str else None
+    if position_str and not position_enum:
+        errors["position"] = f"Invalid position: {position_str}."
 
+    join_date_obj = None
+    if join_date_str:
+        try:
+            join_date_obj = datetime.datetime.strptime(join_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            errors["join_date"] = "Invalid date format for join_date."
 
-    if not isinstance(is_active_val, bool):
-        errors['is_active'] = "is_active must be a boolean (true or false)."
+    mu_val = None
+    if mu_str is not None:
+        try:
+            mu_val = float(mu_str)
+        except ValueError:
+            errors["mu"] = "Mu must be a number."
+
+    sigma_val = None
+    if sigma_str is not None:
+        try:
+            sigma_val = float(sigma_str)
+        except ValueError:
+            errors["sigma"] = "Sigma must be a number."
 
     if errors:
-        return jsonify({"error": "Input validation failed", "details": errors}), 400
+        return jsonify({"message": "Input validation failed", "errors": errors}), 400
 
-    # 3. 創建模型實例
     try:
-        new_member = TeamMember(
+        new_user, new_member, actual_password = create_member(
+            username=username,
             name=name,
+            password=password,  # 傳給輔助函數，如果為 None，輔助函數會用預設
+            # email=email,
+            role=role_enum,
+            display_name=display_name,
             student_id=student_id,
             gender=gender_enum,
             position=position_enum,
-            is_active=is_active_val,
-            notes=notes
+            mu=mu_val,
+            sigma=sigma_val,
+            join_date=join_date_obj,
+            is_active_user=is_active_user,
+            is_active_member=is_active_member,
+            notes=notes,
         )
-
-        db.session.add(new_member)
         db.session.commit()
 
-        return jsonify({
-            "message": "Team member created successfully!",
-            "member": new_member.to_dict()  # 使用 to_dict()
-        }), 201
+        return (
+            jsonify(
+                {
+                    "message": "User and TeamMember created successfully by admin.",
+                    "user": new_user.to_dict(),
+                    "member": new_member.to_dict(),
+                    "initial_password_if_default": (
+                        actual_password if not password else "Set by admin"
+                    ),
+                }
+            ),
+            201,
+        )
 
-    except IntegrityError:  # 主要由 student_id unique 約束觸發
+    except ValueError as ve:
         db.session.rollback()
-        return jsonify({"error": "Database integrity error. Student ID might already exist if it's unique."}), 409
+        return jsonify({"error": str(ve)}), 409
+    except IntegrityError as ie:
+        db.session.rollback()
+        current_app.logger.error(
+            f"Admin create member IntegrityError: {str(ie.orig)}", exc_info=True
+        )
+        return jsonify({"error": "Database integrity error."}), 409
     except Exception as e:
         db.session.rollback()
-        print(f"Unexpected error creating member: {str(e)}")  # 伺服器日誌
-        return jsonify({"error": "An unexpected error occurred on the server."}), 500
+        current_app.logger.error(
+            f"Admin create member unexpected error: {str(e)}", exc_info=True
+        )
+        return jsonify({"error": "An unexpected server error occurred."}), 500

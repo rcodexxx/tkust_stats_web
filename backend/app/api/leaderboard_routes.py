@@ -1,26 +1,89 @@
 # backend/app/api/member_routes.py
-from flask import jsonify
-from . import bp # 假設從 app.api.__init__ 匯入
-from ..models.team_member import TeamMember
-from sqlalchemy.orm import joinedload # 用於預載入關聯數據
+from flask import jsonify, current_app
+from sqlalchemy import func
 
-@bp.route('/leaderboard', methods=['GET'])
+from . import bp
+from ..extensions import db
+from ..models.enums import OutcomeEnum
+from ..models.match_record import MatchRecord
+from ..models.member import TeamMember
+
+
+@bp.route("/leaderboard", methods=["GET"])
 def get_leaderboard():
-    """獲取排行榜數據，按分數降序排列 (只包含活躍成員)"""
+    """
+    獲取排行榜數據。
+    只包含至少參與過一場有效比賽的活躍成員。
+    回傳成員的姓名、組織、計算後的積分(score)等，並嚴格按照 score (mu - 3*sigma) 降序排列。
+    """
     try:
-        members = TeamMember.query.order_by(TeamMember.name.desc()).all()
+        active_members_query = TeamMember.query.filter_by(is_active=True)
+        potential_members = active_members_query.order_by(
+            TeamMember.mu.desc(), TeamMember.sigma.asc()
+        ).all()
+
         leaderboard_data = []
-        for member in members:
-            leaderboard_data.append({
-                "id": member.id,
-                "name": member.name,
-                "score": member.score,
-                "student_id": member.student_id,
-                "gender": member.gender.value if member.gender else None,
-                "position": member.position.value if member.position else None,
-                # 可以在排行榜中省略 join_date, leave_date, notes, is_active 等，除非前端需要
-            })
+        for member in potential_members:
+            member_id = member.id
+
+            # 計算勝負場次 (與之前邏輯相同)
+            wins = (
+                db.session.query(func.count(MatchRecord.id))
+                .filter(
+                    (
+                        (
+                            (MatchRecord.side_a_player1_id == member_id)
+                            | (MatchRecord.side_a_player2_id == member_id)
+                        )
+                        & (MatchRecord.side_a_outcome == OutcomeEnum.WIN)
+                    ),
+                    (
+                        (
+                            (MatchRecord.side_b_player1_id == member_id)
+                            | (MatchRecord.side_b_player2_id == member_id)
+                        )
+                        & (MatchRecord.side_a_outcome == OutcomeEnum.LOSS)
+                    ),
+                )
+                .scalar()
+                or 0
+            )
+
+            losses = (
+                db.session.query(func.count(MatchRecord.id))
+                .filter(
+                    (
+                        (
+                            (MatchRecord.side_a_player1_id == member_id)
+                            | (MatchRecord.side_a_player2_id == member_id)
+                        )
+                        & (MatchRecord.side_a_outcome == OutcomeEnum.LOSS)
+                    ),
+                    (
+                        (
+                            (MatchRecord.side_b_player1_id == member_id)
+                            | (MatchRecord.side_b_player2_id == member_id)
+                        )
+                        & (MatchRecord.side_a_outcome == OutcomeEnum.WIN)
+                    ),
+                )
+                .scalar()
+                or 0
+            )
+
+            total_matches = wins + losses
+
+            if total_matches > 0:
+                member_dict = member.to_dict()
+                member_dict["wins"] = wins
+                member_dict["losses"] = losses
+                member_dict["total_matches"] = total_matches
+                leaderboard_data.append(member_dict)
+
+        leaderboard_data.sort(key=lambda m: m["score"], reverse=True)
+
         return jsonify(leaderboard_data)
+
     except Exception as e:
-        print(f"Error in get_leaderboard: {e}")
-        return jsonify({"error": "An error occurred while fetching the leaderboard."}), 500
+        current_app.logger.error(f"Error in get_leaderboard: {str(e)}", exc_info=True)
+        return jsonify({"error": "獲取排行榜時發生錯誤。"}), 500

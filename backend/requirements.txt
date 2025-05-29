@@ -4,6 +4,8 @@ Flask
 SQLAlchemy
 Flask-SQLAlchemy
 Flask-Migrate
+flask_jwt_extended
+flask_cors
 alembic
 psycopg2-binary
 python-dotenv
