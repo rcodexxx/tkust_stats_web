@@ -39,3 +39,5 @@ frontend/.pnp.js
 .idea/
 .vscode/
 # !.vscode/settings.json # 如果你想共享 VSCode 設定
+
+pyproject.toml
