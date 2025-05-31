@@ -2,7 +2,12 @@
 import re
 
 from flask import current_app, jsonify, request
-from flask_jwt_extended import create_access_token, create_refresh_token
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+)
 from sqlalchemy.exc import IntegrityError
 
 from . import bp
@@ -90,9 +95,10 @@ def login():
         if not user.is_active:
             return jsonify({"msg": "此帳號已被停用。"}), 401
 
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
-        user_info = user.to_dict(include_member_info=True)
+        identity = str(user.id)
+        access_token = create_access_token(identity=identity)
+        refresh_token = create_refresh_token(identity=identity)
+        user_info = user.to_dict()
 
         current_app.logger.info(f"User '{username}' logged in successfully.")
         return (
@@ -106,3 +112,85 @@ def login():
         f"Login failed for username: '{username}' - Bad username or password."
     )
     return jsonify({"msg": "使用者名稱或密碼錯誤"}), 401
+
+
+@bp.route("/auth/refresh", methods=["POST"])
+@jwt_required(refresh=True)  # <--- 這個端點需要一個有效的 Refresh Token
+def refresh_access():
+    current_user_id_str = get_jwt_identity()  # Identity 已經是字串了
+    # 可以選擇性地檢查 current_user_id_str 對應的 User 是否仍然有效
+    # user = db.session.get(User, int(current_user_id_str))
+    # if not user or not user.is_active:
+    #     return jsonify({"msg": "User not found or inactive"}), 401
+
+    new_access_token = create_access_token(
+        identity=current_user_id_str, fresh=False
+    )  # 新的 token 不是 fresh 的
+    current_app.logger.info(
+        f"Access token refreshed for user_id (str): {current_user_id_str}"
+    )
+    return jsonify(access_token=new_access_token), 200
+
+
+@bp.route("/auth/change-password", methods=["POST"])
+@jwt_required()  # 必須登入才能修改密碼
+def change_password():
+    """
+    允許已登入使用者修改自己的密碼。
+    需要 'old_password' 和 'new_password' 在請求的 JSON body 中。
+    """
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, current_user_id)
+
+    if not user or not user.is_active:
+        current_app.logger.warning(
+            f"Change password attempt for non-existent or inactive user ID: {current_user_id}"
+        )
+        return jsonify({"msg": "User not found or account disabled."}), 404  # 或者 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"msg": "Missing JSON in request"}), 400
+
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+    # confirm_new_password = data.get('confirm_new_password') # 確認通常由前端處理，但後端也可以再做一次
+
+    if not old_password or not new_password:
+        return jsonify({"msg": "Old password and new password are required."}), 400
+
+    # 基本密碼策略驗證 (範例：至少6位)
+    if len(new_password) < 6:
+        return jsonify({"msg": "New password must be at least 6 characters long."}), 400
+
+    # (可選) 檢查新舊密碼是否相同
+    if old_password == new_password:
+        return (
+            jsonify({"msg": "New password cannot be the same as the old password."}),
+            400,
+        )
+
+    if not user.check_password(old_password):
+        current_app.logger.warning(
+            f"Incorrect old password attempt for user: {user.username}"
+        )
+        return (
+            jsonify({"msg": "Incorrect old password."}),
+            401,
+        )  # 401 Unauthorized 更適合密碼錯誤
+
+    # 設定新密碼
+    user.set_password(new_password)
+
+    try:
+        db.session.commit()
+        current_app.logger.info(
+            f"Password changed successfully for user: {user.username}"
+        )
+        return jsonify({"msg": "Password updated successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(
+            f"Error changing password for user {user.username}: {str(e)}", exc_info=True
+        )
+        return jsonify({"msg": "Failed to update password due to a server error."}), 500

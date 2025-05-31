@@ -1,17 +1,21 @@
 from datetime import datetime
 
-from flask import (current_app,  # <--- 加入 current_app (如果您想用 app.logger)
-                   jsonify, request)
+from flask import (
+    current_app,  # <--- 加入 current_app (如果您想用 app.logger)
+    jsonify,
+    request,
+)
 from sqlalchemy.exc import IntegrityError
 
-from ..extensions import db  # <--- 之前是 from ..extensions import db
-from ..models.enums import (GenderEnum, MatchFormatEnum, MatchTypeEnum,
-                            OutcomeEnum)
-from ..models.match_record import MatchRecord
-from ..models.member import TeamMember
-from ..services.rating_service import (calculate_new_ratings_1v1,
-                                       calculate_new_ratings_2v2)
 from . import bp
+from ..extensions import db  # <--- 之前是 from ..extensions import db
+from ..models.enums import MatchFormatEnum, MatchTypeEnum, OutcomeEnum
+from ..models.match_record import MatchRecord
+from ..models.member import Member
+from ..services.rating_service import (
+    calculate_new_ratings_1v1,
+    calculate_new_ratings_2v2,
+)
 
 
 @bp.route("/matches/record", methods=["POST"])
@@ -129,14 +133,14 @@ def record_match():
 
     # 確保在嘗試 .id 之前，這些物件不是 None
     if side_a_p1_id:
-        side_a_p1 = db.session.get(TeamMember, side_a_p1_id)
+        side_a_p1 = db.session.get(Member, side_a_p1_id)
         if not side_a_p1:
             errors.setdefault("side_a_player1_id", []).append(
                 f"Side A Player 1 (ID: {side_a_p1_id}) not found."
             )
 
     if side_b_p1_id:
-        side_b_p1 = db.session.get(TeamMember, side_b_p1_id)
+        side_b_p1 = db.session.get(Member, side_b_p1_id)
         if not side_b_p1:
             errors.setdefault("side_b_player1_id", []).append(
                 f"Side B Player 1 (ID: {side_b_p1_id}) not found."
@@ -158,7 +162,7 @@ def record_match():
                 "Side A players must be different."
             )
         else:
-            side_a_p2 = db.session.get(TeamMember, side_a_p2_id)
+            side_a_p2 = db.session.get(Member, side_a_p2_id)
             if not side_a_p2:
                 errors.setdefault("side_a_player2_id", []).append(
                     f"Side A Player 2 (ID: {side_a_p2_id}) not found."
@@ -175,7 +179,7 @@ def record_match():
                 "Side B players must be different."
             )
         else:
-            side_b_p2 = db.session.get(TeamMember, side_b_p2_id)
+            side_b_p2 = db.session.get(Member, side_b_p2_id)
             if not side_b_p2:
                 errors.setdefault("side_b_player2_id", []).append(
                     f"Side B Player 2 (ID: {side_b_p2_id}) not found."

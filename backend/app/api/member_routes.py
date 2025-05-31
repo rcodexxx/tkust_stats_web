@@ -7,7 +7,7 @@ from . import bp
 from ..auth_utils import admin_required
 from ..extensions import db
 from ..models.enums import GenderEnum, PositionEnum, UserRoleEnum
-from ..models.member import TeamMember
+from ..models.member import Member
 from ..services.member_service import create_member
 
 
@@ -15,11 +15,11 @@ from ..services.member_service import create_member
 def get_all_members(active_only=None):
     """獲取所有活躍球員列表，主要用於表單選擇等，按姓名排序"""
     try:
-        query = TeamMember.query
+        query = Member.query
         if active_only:
             query = query.filter_by(is_active=True)
 
-        members = query.order_by(TeamMember.name).all()
+        members = query.order_by(Member.name).all()
 
         member_data = []
         for member in members:

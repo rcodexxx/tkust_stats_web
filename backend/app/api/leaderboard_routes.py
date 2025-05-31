@@ -6,7 +6,7 @@ from . import bp
 from ..extensions import db
 from ..models.enums import OutcomeEnum
 from ..models.match_record import MatchRecord
-from ..models.member import TeamMember
+from ..models.member import Member
 
 
 @bp.route("/leaderboard", methods=["GET"])
@@ -21,8 +21,8 @@ def get_leaderboard():
     try:
         # 1. 獲取所有活躍的球隊成員，並進行初步的 TrueSkill 排序
         active_members = (
-            TeamMember.query.filter_by(is_active=True)
-            .order_by(TeamMember.mu.desc(), TeamMember.sigma.asc())
+            Member.query.filter_by(is_active=True)
+            .order_by(Member.mu.desc(), Member.sigma.asc())
             .all()
         )
 

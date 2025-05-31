@@ -3,15 +3,11 @@ import os
 
 
 class Config:
-    SECRET_KEY = (
-        os.environ.get("SECRET_KEY") or "a_very_default_and_insecure_secret_key"
-    )
+    SECRET_KEY = os.environ.get("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")  # 必須由環境變數提供
 
-    JWT_SECRET_KEY = (
-        os.environ.get("JWT_SECRET_KEY") or "your-super-secret-jwt-key-please-change"
-    )
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(
         hours=1
     )  # Access Token 有效期，例如 1 小時

@@ -5,7 +5,7 @@ from flask.cli import with_appcontext
 
 from ..extensions import db
 from ..models.enums import GenderEnum, PositionEnum, UserRoleEnum
-from ..models.member import TeamMember
+from ..models.member import Member
 from ..models.user import User
 
 INITIAL_PASSWORD = "password"
@@ -19,7 +19,7 @@ def seed_db_command():
         "Starting database seeding process (add new members only)..."
     )
 
-    TeamMember.query.delete()
+    Member.query.delete()
     User.query.delete()
     db.session.commit()
     current_app.logger.info("Old data deleted.")
@@ -78,7 +78,7 @@ def seed_db_command():
                     )
                     new_user.set_password(user_data["username"])
 
-                    new_member = TeamMember(
+                    new_member = Member(
                         name=member_data["name"],
                         display_name=member_data.get("display_name"),
                         student_id=(

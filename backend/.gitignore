@@ -88,3 +88,5 @@ secrets.json
 # Specific to your project if any
 # e.g., data_exports/
 # e.g., local_reports/
+
+migrations

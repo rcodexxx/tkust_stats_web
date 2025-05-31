@@ -30,7 +30,7 @@ class MatchRecord(db.Model):
         db.Integer, db.ForeignKey("members.id"), nullable=False
     )
     side_a_player1 = db.relationship(
-        "TeamMember",
+        "Member",
         foreign_keys=[side_a_player1_id],
         backref="matches_as_side_a_p1_mr",
     )  # 調整 backref 名稱
@@ -39,7 +39,7 @@ class MatchRecord(db.Model):
         db.Integer, db.ForeignKey("members.id"), nullable=True
     )
     side_a_player2 = db.relationship(
-        "TeamMember",
+        "Member",
         foreign_keys=[side_a_player2_id],
         backref="matches_as_side_a_p2_mr",
     )
@@ -48,7 +48,7 @@ class MatchRecord(db.Model):
         db.Integer, db.ForeignKey("members.id"), nullable=False
     )
     side_b_player1 = db.relationship(
-        "TeamMember",
+        "Member",
         foreign_keys=[side_b_player1_id],
         backref="matches_as_side_b_p1_mr",
     )
@@ -57,7 +57,7 @@ class MatchRecord(db.Model):
         db.Integer, db.ForeignKey("members.id"), nullable=True
     )
     side_b_player2 = db.relationship(
-        "TeamMember",
+        "Member",
         foreign_keys=[side_b_player2_id],
         backref="matches_as_side_b_p2_mr",
     )

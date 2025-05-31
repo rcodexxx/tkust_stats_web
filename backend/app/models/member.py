@@ -7,7 +7,7 @@ from .enums import GenderEnum, PositionEnum
 from ..extensions import db
 
 
-class TeamMember(db.Model):
+class Member(db.Model):
     __tablename__ = "members"
     # Basic data
     id = db.Column(db.Integer, primary_key=True)
@@ -45,6 +45,13 @@ class TeamMember(db.Model):
     def score(self):
         return int((self.mu - 3 * self.sigma) * 100)
 
+    def get_display_name(self):
+        return (
+            self.display_name
+            if self.display_name and self.display_name.strip()
+            else self.name
+        )
+
     def to_dict(self):
         data = {
             "id": self.id,
@@ -55,8 +62,8 @@ class TeamMember(db.Model):
             "mu": round(self.mu, 2),
             "sigma": round(self.sigma, 2),
             "student_id": self.student_id,
-            "gender": self.gender.value if self.gender else None,
-            "position": self.position.value if self.position else None,
+            "gender": self.gender.name if self.gender else None,
+            "position": self.position.name if self.position else None,
         }
         return data
 

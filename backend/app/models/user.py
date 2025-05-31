@@ -11,7 +11,7 @@ from ..extensions import db
 class User(db.Model):
     __tablename__ = "users"
     id = db.Column(Integer, primary_key=True)
-    email = db.Column(db.String, unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=True)
     username = db.Column(
         String(30), unique=True, nullable=False, index=True, comment="帳號"
     )
@@ -35,7 +35,7 @@ class User(db.Model):
 
     # 與 TeamMember 的一對一反向關聯
     team_member_profile = db.relationship(
-        "TeamMember",
+        "Member",
         back_populates="user_account",
         uselist=False,
         cascade="all, delete-orphan",
@@ -56,15 +56,23 @@ class User(db.Model):
     def is_cadre(self):
         return self.role == UserRoleEnum.CADRE
 
-    def to_dict(self):
+    def is_coach(self):
+        return self.role == UserRoleEnum.COACH
+
+    def to_dict(self):  # 新增一個參數控制是否包含成員資訊
+        member_profile = self.team_member_profile
         data = {
             "id": self.id,
             "username": self.username,
             "email": self.email,
-            "role": self.role.name if self.role else None,  # PLAYER, CADRE, ADMIN
+            "role": self.role.name if self.role else None,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "display_name": (
+                member_profile.display_name if member_profile.display_name else None
+            ),
         }
+
         return data
 
     def __repr__(self):

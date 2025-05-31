@@ -8,13 +8,13 @@ from .enums import (
     UserRoleEnum,
 )
 from .match_record import MatchRecord
-from .member import TeamMember
+from .member import Member
 from .player_stats import PlayerStats
 from .user import User
 
 __all__ = [
     "User",
-    "TeamMember",
+    "Member",
     "MatchRecord",
     "PlayerStats",
     "PositionEnum",

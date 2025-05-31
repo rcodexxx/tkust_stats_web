@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 from dotenv import load_dotenv
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -99,12 +99,51 @@ def create_app(config_name=None):
     app.register_blueprint(api_blueprint, url_prefix="/api")
     print(" * Registered API blueprint at /api")  # 除錯用
 
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        # jwt_payload 包含過期 token 的內容，例如 'sub', 'type'
+        token_type = jwt_payload.get("type", "unknown")
+        app.logger.info(
+            f"{token_type.capitalize()} token has expired for sub: {jwt_payload.get('sub')}"
+        )
+        return (
+            jsonify(
+                {
+                    "message": f"您的 {token_type} token 已過期，請重新整理或登入。",
+                    "error": "token_expired",
+                }
+            ),
+            401,
+        )
+
+    @jwt.invalid_token_loader  # Token 格式錯誤或簽名無效
+    def invalid_token_callback(error_string):
+        app.logger.warning(f"Invalid token encountered: {error_string}")
+        return (
+            jsonify({"message": "提供的認證 Token 無效。", "error": "invalid_token"}),
+            422,
+        )  # 通常是 422 Unprocessable Entity
+
+    @jwt.unauthorized_loader  # 未提供 Token
+    def missing_token_callback(error_string):
+        app.logger.warning(f"Missing token: {error_string}")
+        return (
+            jsonify(
+                {
+                    "message": "請求缺少有效的認證 Token。",
+                    "error": "authorization_required",
+                }
+            ),
+            401,
+        )
+
     # 4. (可選) 註冊全域錯誤處理器 (如果需要回傳 JSON 格式的錯誤)
     # def handle_validation_error(e):
     #     return jsonify(error=str(e)), 400
     # app.register_error_handler(ValidationError, handle_validation_error) # 假設您有自訂的 ValidationError
     with app.app_context():  # 將命令的匯入和註冊放在 app_context 內確保 current_app 可用
         from .commands import seed  # 假設您的檔案是 app/commands/seed.py
+        from .commands import init_users
 
     # 5. (可選) 註冊上下文處理器
     @app.context_processor
@@ -116,15 +155,16 @@ def create_app(config_name=None):
     @app.shell_context_processor
     def make_shell_context():
         from .models.match_record import MatchRecord
-        from .models.member import TeamMember
+        from .models.member import Member
         from .models.player_stats import PlayerStats
 
         # 匯入所有模型和 db 實例
         return {
             "db": db,
-            "TeamMember": TeamMember,
+            "TeamMember": Member,
             "MatchRecord": MatchRecord,
             "PlayerStats": PlayerStats,
+            "User": User,
             # 您也可以將 app 實例加入，方便測試
             # 'app': app
         }
@@ -137,14 +177,12 @@ def create_app(config_name=None):
     with app.app_context():
         # 匯入模型模組以確保它們被 SQLAlchemy 註冊
         from .models.match_record import MatchRecord
-        from .models.member import TeamMember
+        from .models.member import Member
         from .models.player_stats import PlayerStats
+        from .models.user import User
 
         # print(" * Models loaded within app_context for SQLAlchemy registration.") # 除錯用
 
     print(f" * Flask App '{app.name}' created with config '{config_name}'")
-    print(
-        f" * SQLALCHEMY_DATABASE_URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}"
-    )  # 除錯用
-
+    print(f" * SQLALCHEMY_DATABASE_URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
     return app

@@ -2,7 +2,7 @@ import datetime
 
 from ..extensions import db
 from ..models.enums import GenderEnum, PositionEnum, UserRoleEnum
-from ..models.member import TeamMember
+from ..models.member import Member
 from ..models.user import User
 
 
@@ -49,25 +49,25 @@ def create_member(
     processed_student_id = student_id if student_id and student_id.strip() else None
     if (
         processed_student_id
-        and TeamMember.query.filter_by(student_id=processed_student_id).first()
+        and Member.query.filter_by(student_id=processed_student_id).first()
     ):
         raise ValueError(f"學號 '{processed_student_id}' 已被其他成員使用。")
 
     final_display_name = display_name if display_name and display_name.strip() else name
 
-    default_mu = TeamMember.mu.default.arg if TeamMember.mu.default else 25.0
+    default_mu = Member.mu.default.arg if Member.mu.default else 25.0
     default_sigma = (
-        TeamMember.sigma.default.arg
-        if TeamMember.sigma.default
+        Member.sigma.default.arg
+        if Member.sigma.default
         else round(25.0 / 3.0, 4)
     )
     default_join_date = (
-        TeamMember.join_date.default.arg
-        if TeamMember.join_date.default
+        Member.join_date.default.arg
+        if Member.join_date.default
         else datetime.date.today()
     )
 
-    new_member = TeamMember(
+    new_member = Member(
         name=name,
         display_name=final_display_name,
         student_id=processed_student_id,

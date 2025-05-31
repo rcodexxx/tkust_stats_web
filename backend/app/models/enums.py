@@ -95,6 +95,7 @@ class MatchFormatEnum(StrEnum):
 class UserRoleEnum(StrEnum):
     MEMBER = "成員"
     CADRE = "幹部"
+    COACH = "教練"
     ADMIN = "管理員"
 
     @classmethod

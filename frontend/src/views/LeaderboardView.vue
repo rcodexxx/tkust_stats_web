@@ -182,12 +182,12 @@ const visiblePageNumbers = computed(() => {
   const total = totalPages.value;
   const current = currentPage.value;
   if (total <= 1) return [];
-  const delta = 2; // 當前頁碼左右各顯示2個頁碼（不含當前頁）
+  const delta = 2;
   const range = [];
   const rangeWithDots = [];
   let l;
 
-  range.push(1); // 總是顯示第一頁
+  range.push(1);
   for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
     range.push(i);
   }
