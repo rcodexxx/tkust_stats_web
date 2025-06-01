@@ -9,6 +9,7 @@ from .enums import (
 )
 from .match_record import MatchRecord
 from .member import Member
+from .organization import Organization
 from .player_stats import PlayerStats
 from .user import User
 
@@ -24,4 +25,5 @@ __all__ = [
     "MatchNatureEnum",
     "MatchFormatEnum",
     "UserRoleEnum",
+    "Organization",
 ]

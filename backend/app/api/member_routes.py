@@ -1,6 +1,7 @@
 import datetime
 
 from flask import current_app, jsonify, request
+from flask_jwt_extended import jwt_required
 from sqlalchemy.exc import IntegrityError
 
 from . import bp
@@ -11,36 +12,24 @@ from ..models.member import Member
 from ..services.member_service import create_member
 
 
-@bp.route("/members", methods=["GET"])  # 通常用 /members 獲取所有成員列表
-def get_all_members(active_only=None):
-    """獲取所有活躍球員列表，主要用於表單選擇等，按姓名排序"""
+@bp.route("/members", methods=["GET"])
+@jwt_required(optional=True)
+def get_members_list():  # 此路由與 /api/leaderboard 功能重疊，需釐清用途
+    """獲取成員列表，可篩選。與排行榜類似但可能用於不同目的。"""
+    # 此處邏輯可以與 get_leaderboard 非常相似，或者更通用
+    # 為了範例，我們假設它回傳所有成員（不論是否活躍，除非有參數）
+    # 並且可能用於管理介面中的成員列表，而不僅僅是排行榜
     try:
+        show_all = request.args.get("all", "false", type=str).lower() == "true"
         query = Member.query
-        if active_only:
+        if not show_all:
             query = query.filter_by(is_active=True)
 
         members = query.order_by(Member.name).all()
-
-        member_data = []
-        for member in members:
-            member_data.append(
-                {
-                    "id": member.id,
-                    "name": member.name,
-                    "display_name": member.display_name,
-                    "organization": member.organization,
-                    "score": member.score,
-                    "student_id": member.student_id,
-                    "gender": (member.gender.value if member.gender else None),
-                    "position": member.position.value if member.position else None,
-                    "is_active": member.is_active,
-                    "notes": member.notes,
-                }
-            )
-        return jsonify(member_data)
+        return jsonify([member.to_dict() for member in members])  # 獲取完整資訊
     except Exception as e:
-        print(f"Error in get_all_members: {e}")  # 伺服器端日誌
-        return jsonify({"error": "An error occurred while fetching members."}), 500
+        current_app.logger.error(f"Error in get_members_list: {str(e)}", exc_info=True)
+        return jsonify({"error": "獲取成員列表時發生錯誤。"}), 500
 
 
 @bp.route("/members", methods=["POST"])
@@ -127,8 +116,8 @@ def admin_create_full_member():
             mu=mu_val,
             sigma=sigma_val,
             join_date=join_date_obj,
-            is_active_user=is_active_user,
-            is_active_member=is_active_member,
+            # is_active_user=is_active_user,
+            # is_active_member=is_active_member,
             notes=notes,
         )
         db.session.commit()
@@ -160,5 +149,74 @@ def admin_create_full_member():
         db.session.rollback()
         current_app.logger.error(
             f"Admin create member unexpected error: {str(e)}", exc_info=True
+        )
+        return jsonify({"error": "An unexpected server error occurred."}), 500
+
+
+@bp.route("/members/<int:member_id>", methods=["DELETE"])
+@admin_required
+def delete_member_by_admin(member_id):
+    member_to_delete = db.session.get(Member, member_id)
+    if not member_to_delete:
+        return jsonify({"error": "Member not found"}), 404
+
+    user_to_delete = member_to_delete.user_account  # 獲取關聯的 User
+
+    try:
+        # 由於 User.team_member_profile 的 cascade="all, delete-orphan"
+        # 且 TeamMember.user_id 的 ondelete="CASCADE"
+        # 理論上刪除 User 會自動刪除 TeamMember，反之亦然（如果關聯是雙向強依賴）
+        # 為了確保乾淨，可以選擇先刪除 User (如果 User 是「主」) 或 TeamMember
+        # 這裡我們假設刪除 TeamMember 會因為 User 模型的 cascade 設定而級聯刪除 User
+        # 或者，如果 User 是主體，應該透過 User ID 刪除 User，然後 TeamMember 會被級聯刪除。
+        # 讓我們明確一點：如果刪除 TeamMember，也刪除其 User 帳號。
+
+        # 注意：如果 MatchRecord 或 PlayerStats 中有外鍵嚴格指向 TeamMember 的 id
+        # 並且沒有設定 ON DELETE SET NULL 或 ON DELETE CASCADE，直接刪除 TeamMember 可能會失敗。
+        # 您需要先處理這些依賴，或設定資料庫的級聯刪除規則。
+        # 為了範例，我們先假設可以直接刪除。
+
+        if user_to_delete:
+            # 先解除關聯 (可選，但有時有助於避免某些 cascade 問題)
+            # member_to_delete.user_account = None
+            # db.session.flush()
+            db.session.delete(user_to_delete)  # 刪除 User
+
+        db.session.delete(member_to_delete)  # 刪除 TeamMember
+
+        db.session.commit()
+        current_app.logger.info(
+            f"Admin deleted TeamMember (ID: {member_id}) and associated User (ID: {user_to_delete.id if user_to_delete else 'N/A'})."
+        )
+        return (
+            jsonify(
+                {
+                    "message": "Team member and associated user account deleted successfully."
+                }
+            ),
+            200,
+        )
+        # 或者返回 204 No Content
+        # return '', 204
+
+    except IntegrityError as ie:  # 通常是外鍵約束導致無法刪除
+        db.session.rollback()
+        current_app.logger.error(
+            f"Delete member IntegrityError for ID {member_id}: {str(ie.orig)}",
+            exc_info=True,
+        )
+        return (
+            jsonify(
+                {
+                    "error": "Cannot delete member due to existing references (e.g., in match records)."
+                }
+            ),
+            409,
+        )
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(
+            f"Delete member unexpected error for ID {member_id}: {str(e)}",
+            exc_info=True,
         )
         return jsonify({"error": "An unexpected server error occurred."}), 500
