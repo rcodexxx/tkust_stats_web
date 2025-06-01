@@ -45,7 +45,7 @@ def admin_create_full_member():
     email = data.get("email")
     password = data.get("password")
     role_str = data.get("role", "PLAYER")
-    is_active_user = data.get("is_active_user", True)
+    # is_active_user = data.get("is_active_user", True)
 
     # TeamMember fields
     name = data.get("name")
@@ -56,7 +56,7 @@ def admin_create_full_member():
     mu_str = data.get("mu")
     sigma_str = data.get("sigma")
     join_date_str = data.get("join_date")
-    is_active_member = data.get("is_active_member", True)
+    # is_active_member = data.get("is_active_member", True)
     notes = data.get("notes")
 
     # --- 基本驗證 (您可以做得更詳細) ---

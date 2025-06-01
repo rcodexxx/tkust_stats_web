@@ -1,17 +1,17 @@
 import {createApp} from 'vue'
-import {createPinia} from "pinia";
-
+import {createPinia} from 'pinia'
 import App from './App.vue'
 import router from './router'
+import naive from 'naive-ui'
 
-import 'bootstrap/dist/css/bootstrap.min.css' // 匯入 Bootstrap CSS
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'
-
+import 'vfonts/Lato.css'
+import 'vfonts/FiraCode.css'
 
 const app = createApp(App)
 const pinia = createPinia()
 
-app.use(pinia);
+app.use(pinia)
 app.use(router)
+app.use(naive) // 全局註冊 Naive UI
 
 app.mount('#app')

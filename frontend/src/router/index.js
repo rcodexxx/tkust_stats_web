@@ -6,6 +6,7 @@ import MatchRecordView from "../views/MatchRecordView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import EditProfileView from "../views/EditProfileView.vue";
+import ManagementCenterView from "@/views/ManagementCenterView.vue";
 
 const routes = [
     {path: '/', name: 'Leaderboard', component: LeaderboardView},
@@ -21,6 +22,11 @@ const routes = [
         component: RegisterView,
         meta: {guestOnly: true} // 只允許未登入使用者訪問
     }, {
+        path: '/management',
+        name: 'ManagementCenter',
+        component: ManagementCenterView,
+    },
+    {
         path: '/', name: 'Leaderboard', component: LeaderboardView
     }, {
         path: '/members/add', name: 'AddMember', component: AddMemberView

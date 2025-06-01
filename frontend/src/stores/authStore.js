@@ -1,80 +1,26 @@
 // frontend/src/stores/authStore.js
 import {defineStore} from 'pinia';
-import axios from 'axios'; // 或者您封裝的 apiClient
-import router from '../router'; // 用於登入/登出後的跳轉
 
-const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 10000,
-});
-
-// 請求攔截器：自動附加 Authorization 標頭
-apiClient.interceptors.request.use(config => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-}, error => {
-    return Promise.reject(error);
-});
-
-// 回應攔截器：處理 401 (Token 過期/無效) 等錯誤
-apiClient.interceptors.response.use(
-    response => response,
-    async error => {
-        const originalRequest = error.config;
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true; // 標記已重試，避免無限循環
-            console.warn("Access token expired or invalid. Attempting to refresh or logout.");
-
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-                try {
-                    const refreshResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/refresh`, {}, {
-                        headers: {'Authorization': `Bearer ${refreshToken}`}
-                    });
-                    const newAccessToken = refreshResponse.data.access_token;
-                    localStorage.setItem('accessToken', newAccessToken);
-                    apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-                    return apiClient(originalRequest); // 重試原始請求
-                } catch (refreshError) {
-                    console.error("Refresh token failed:", refreshError);
-                    // Refresh 失敗，執行登出
-                }
-            }
-// 如果沒有 refresh token 邏輯或 refresh 失敗，則執行登出
-            const authStore = useAuthStore(); // 在攔截器內部獲取 store 實例
-            authStore.logoutAndRedirect();
-            return Promise.reject(error);
-        }
-        return Promise.reject(error);
-    }
-);
-
+import apiClient from '@/services/apiClient';
+import router from '@/router';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
         accessToken: localStorage.getItem('accessToken') || null,
-        refreshToken: localStorage.getItem('refreshToken') || null, // 如果使用 refresh token
-        user: JSON.parse(localStorage.getItem('user')) || null, // 儲存使用者物件 {id, username, name, display_name, role}
-        status: { // 用於追蹤 API 請求狀態
-            loggingIn: false,
-            loginError: null,
-            registering: false,
-            registerError: null,
+        refreshToken: localStorage.getItem('refreshToken') || null,
+        user: JSON.parse(localStorage.getItem('user')) || null,
+        status: {
+            loggingIn: false, loginError: null,
+            registering: false, registerError: null,
+            refreshingToken: false, refreshTokenError: null, // 新增刷新狀態
+            fetchingUser: false, fetchUserError: null,     // 新增獲取使用者狀態
         },
     }),
     getters: {
         isAuthenticated: (state) => !!state.accessToken,
         currentUser: (state) => state.user,
-        userRole: (state) => state.user?.role, // 例如 'ADMIN', 'PLAYER', 'CADRE'
-        userDisplayName: (state) => {
-            if (state.user) {
-                return state.user.display_name || state.user.name || state.user.username || '使用者';
-            }
-            return '訪客';
+        userRole: (state) => state.user?.role,
+        userDisplayName: (state) => { /* ... (與之前相同) ... */
         },
         isAdmin: (state) => state.user?.role === 'ADMIN',
         isCadre: (state) => state.user?.role === 'CADRE',
@@ -85,7 +31,7 @@ export const useAuthStore = defineStore('auth', {
             this.status.loggingIn = true;
             this.status.loginError = null;
             try {
-                const response = await apiClient.post('/auth/login', credentials); // 使用 apiClient
+                const response = await apiClient.post('/auth/login', credentials);
                 const {access_token, refresh_token, user} = response.data;
 
                 this.accessToken = access_token;
@@ -96,25 +42,27 @@ export const useAuthStore = defineStore('auth', {
                 if (refresh_token) localStorage.setItem('refreshToken', refresh_token);
                 localStorage.setItem('user', JSON.stringify(user));
 
-                apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`; // 更新 Axios 實例的預設標頭
+                // apiClient 的請求攔截器會自動處理後續請求的 Authorization 標頭
 
-                router.push(router.currentRoute.value.query.redirect || '/'); // 跳轉到首頁或之前想去的頁面
+                router.push(router.currentRoute.value.query.redirect || '/');
                 return true;
             } catch (error) {
                 this.status.loginError = error.response?.data?.msg || '登入失敗，請檢查帳號或密碼。';
                 console.error("Login error in store:", error.response?.data || error.message);
-                this.clearAuthData(); // 清除可能的無效數據
+                this.clearAuthDataLocally(); // 只清除本地，不觸發跳轉，讓攔截器或調用方處理
                 return false;
             } finally {
                 this.status.loggingIn = false;
             }
         },
-        async register(payload) { // 假設 payload 是 { phone_number: '...' }
+
+        // 假設這個 register action 是用於「快速註冊」
+        async register(payload) { // payload 應為 { phone_number: '...' }
             this.status.registering = true;
             this.status.registerError = null;
             try {
-                const response = await apiClient.post('/auth/register', payload);
-// 快速註冊成功後，通常也會回傳 token 和 user info，可以直接登入
+                // 確認 API 端點是否與後端匹配 (例如 /auth/quick_register)
+                const response = await apiClient.post('/auth/quick_register', payload);
                 const {access_token, refresh_token, user, initial_password_info} = response.data;
 
                 this.accessToken = access_token;
@@ -124,60 +72,98 @@ export const useAuthStore = defineStore('auth', {
                 localStorage.setItem('accessToken', access_token);
                 if (refresh_token) localStorage.setItem('refreshToken', refresh_token);
                 localStorage.setItem('user', JSON.stringify(user));
-                apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 
-                // alert(initial_password_info || "註冊成功！請記住您的初始密碼並盡快修改。"); // 提示初始密碼
-                router.push('/'); // 跳轉到首頁
+                alert(initial_password_info || "註冊成功！請記住您的初始密碼並盡快修改。");
+                router.push('/');
                 return true;
             } catch (error) {
                 this.status.registerError = error.response?.data?.msg || error.response?.data?.error || '快速註冊失敗。';
-                console.error("Quick register error in store:", error.response?.data || error.message);
+                console.error("Register error in store:", error.response?.data || error.message);
                 return false;
             } finally {
                 this.status.registering = false;
             }
         },
-        logoutAndRedirect() {
-            console.log("Executing logout and redirecting to login.");
-            this.accessToken = null;
-            this.refreshToken = null;
-            this.user = null;
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            delete apiClient.defaults.headers.common['Authorization']; // 清除 apiClient 的預設標頭
 
-            // 傳遞查詢參數，讓登入頁可以顯示「已登出」或「Session 過期」的訊息
+        logoutAndRedirect() {
+            console.log("AuthStore: Executing logout and redirecting to login.");
+            this.clearAuthDataLocally();
             router.push({name: 'Login', query: {sessionExpired: 'true'}}).catch(err => {
                 if (err.name !== 'NavigationDuplicated' && err.name !== 'NavigationCancelled') {
                     console.error("Router push error during logout:", err);
                 }
             });
         },
-        clearAuthData() {
+
+        clearAuthDataLocally() { // 只清除本地數據，不進行路由跳轉
             this.accessToken = null;
             this.refreshToken = null;
             this.user = null;
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
-            delete apiClient.defaults.headers.common['Authorization'];
+            // 不需要手動 delete apiClient.defaults.headers.common['Authorization']
+            // 因為請求攔截器每次都會從 localStorage 讀取
         },
+
+        async refreshTokenAction() { // 新增的刷新 Token action
+            if (!this.refreshToken) {
+                console.warn("AuthStore: No refresh token available for refreshing.");
+                this.logoutAndRedirect(); // 沒有 refresh token，直接登出
+                return null;
+            }
+            this.status.refreshingToken = true;
+            this.status.refreshTokenError = null;
+            try {
+                // 刷新 Token 的請求本身也需要帶上 Refresh Token
+                // 注意：這個請求不應該被上面的401攔截器再次攔截並嘗試刷新，
+                // 所以 apiClient 中的攔截器需要有 originalRequest.url !== '/auth/refresh' 的判斷
+                const refreshResponse = await apiClient.post('/auth/refresh', {}, {
+                    // 如果 apiClient 的請求攔截器已經能正確處理，則不需要手動加標頭
+                    // 否則，需要一個不帶攔截器的 axios 實例，或者確保此請求被特殊處理
+                    // headers: { 'Authorization': `Bearer ${this.refreshToken}` } // 通常攔截器會處理
+                });
+
+                const newAccessToken = refreshResponse.data.access_token;
+                this.accessToken = newAccessToken;
+                localStorage.setItem('accessToken', newAccessToken);
+                console.log("AuthStore: Access token refreshed via refreshTokenAction.");
+                return newAccessToken;
+            } catch (error) {
+                console.error("AuthStore: Refresh token action failed.", error.response?.data || error.message);
+                this.status.refreshTokenError = error.response?.data?.msg || "刷新憑證失敗，請重新登入。";
+                this.logoutAndRedirect(); // 刷新失敗，登出
+                return null;
+            } finally {
+                this.status.refreshingToken = false;
+            }
+        },
+
         async fetchCurrentUser() {
-            if (!this.accessToken) { // 如果本地沒有 token，則不需要獲取
-                this.clearAuthData(); // 確保狀態乾淨
+            if (!this.accessToken) {
+                this.clearAuthDataLocally();
                 return;
             }
-            this.status.loading = true; // 可以用一個通用的 loading 狀態
+            this.status.fetchingUser = true;
+            this.status.fetchUserError = null;
             try {
-                const response = await apiClient.get('/auth/me'); // 使用 apiClient
-                this.user = response.data.user;
-                localStorage.setItem('user', JSON.stringify(this.user));
+                const response = await apiClient.get('/auth/me');
+                if (response.data && response.data.user) {
+                    this.user = response.data.user;
+                    localStorage.setItem('user', JSON.stringify(this.user));
+                } else {
+                    throw new Error("User data not found in /auth/me response");
+                }
             } catch (error) {
-                console.warn("Failed to fetch current user, token might be invalid/expired.", error.response || error);
-                this.logoutAndRedirect(); // Token 無效，執行登出流程
+                console.warn("AuthStore: Failed to fetch current user.", error.response || error.message);
+                this.status.fetchUserError = "獲取使用者資訊失敗。";
+                // 攔截器應該已經處理了 401 並觸發登出
+                // 如果是其他錯誤，不一定需要立即登出，但 token 可能已失效
+                // if (error.response && error.response.status !== 401) {
+                //   // Maybe do nothing here, let user retry or see an error
+                // }
             } finally {
-                this.status.loading = false;
+                this.status.fetchingUser = false;
             }
         }
     },

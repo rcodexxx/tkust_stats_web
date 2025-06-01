@@ -8,4 +8,5 @@ from . import (
     member_routes,
     auth_routes,
     profile_routes,
+    organization_routes,
 )
