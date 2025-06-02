@@ -30,13 +30,13 @@ def seed_db_command():
             {
                 "user": {
                     "username": "0976060398",
+                    "password": "0976060398",
                     "email": "",
                     "role": UserRoleEnum.ADMIN,
                 },
                 "member": {
                     "name": "陳冠宇",
                     "display_name": "-_-yu",
-                    "organization": "淡江大學",
                     "student_id": "611460162",
                     "gender": GenderEnum.MALE,
                     "position": PositionEnum.BACK,

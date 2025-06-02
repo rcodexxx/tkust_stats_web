@@ -1,7 +1,6 @@
 <template>
   <div class="member-management-section">
-    <div
-        class="table-actions-header d-flex flex-column flex-sm-row justify-content-sm-end align-items-stretch align-items-sm-center mb-3 gap-2">
+    <div class="table-actions-header d-flex justify-content-end mb-3">
       <router-link :to="{ name: 'AddMember' }" v-slot="{ navigate }">
         <n-button type="primary" size="small" @click="navigate" :disabled="loadingMembers">
           <template #icon>
@@ -28,8 +27,7 @@
         :single-line="false"
         size="small"
         flex-height
-        style="min-height: 450px; max-height: 70vh;"
-        :scroll-x="tableScrollXWidth"
+        style="min-height: 400px; max-height: 70vh;" :scroll-x="tableScrollXWidth"
         :resizable="true"
         @update:sorter="handleMemberSortChange"
         :row-key="row => row.id"
@@ -321,15 +319,12 @@ function editMember(memberId) {
 
 <style scoped>
 .member-management-section {
-  /* background-color: #fff; */
-  padding: 15px;
-  border-radius: 8px;
-  /* box-shadow: 0 1px 3px rgba(0,0,0,0.05); */
+  /* padding: 15px; */ /* 由父組件 .management-content-area 控制 */
+  /* border-radius: 8px; */ /* 由父組件 .management-content-area 控制 */
 }
 
-.table-actions-header {
-  /* 樣式微調 */
-}
+/* .table-actions-header { */ /* 如果沒有特殊樣式，可以移除 */
+/* } */
 
 /* Naive UI 表格的 sticky column 背景通常由其主題控制，
    如果需要覆蓋，可以使用 :deep() 選擇器 */
@@ -349,9 +344,8 @@ function editMember(memberId) {
 }
 
 /* 如果您在 App.vue 中為 table-dark 設定了更深的顏色，這裡也需要對應 */
-.table-dark :deep(.n-data-table-th--fixed-left), /* 針對 .table-dark 容器內的 n-data-table */
-.table-dark :deep(.n-data-table-th--fixed-right) {
-  background-color: #2a3a51 !important; /* 您的深色表頭背景 */
+.table-dark :deep(.n-data-table .n-data-table-th--fixed-left),
+.table-dark :deep(.n-data-table .n-data-table-th--fixed-right) {
+  background-color: #2a3a51 !important; /* 您的深色表頭背景 (示例) */
 }
-
 </style>

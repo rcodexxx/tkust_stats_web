@@ -1,7 +1,6 @@
 <template>
   <div class="management-center-page container-fluid mt-4 mb-5 px-md-4">
     <n-h1 align="center" class="page-main-title mb-4">
-      <!--      <n-icon :component="TeamManagementIcon" size="30" style="vertical-align: -4px; margin-right: 10px;"/>-->
       團隊管理中心
     </n-h1>
 
@@ -20,7 +19,7 @@
       </n-tab-pane>
     </n-tabs>
 
-    <div class="common-search-bar mb-4 mx-auto">
+    <div class="common-search-bar mb-4">
       <n-input
           v-model:value="searchTerm"
           :placeholder="searchPlaceholder"
@@ -77,6 +76,9 @@ const searchPlaceholder = computed(() => {
 
 .common-search-bar {
   max-width: 450px; /* 搜尋框最大寬度 */
+  /* ***** 新增/修改的樣式 ***** */
+  margin-left: auto; /* 使其靠右 */
+  margin-right: 0; /* 確保右側沒有額外 margin */
 }
 
 .management-tabs {

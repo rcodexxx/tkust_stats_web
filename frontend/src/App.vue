@@ -100,10 +100,10 @@ import {
 import {
   ChevronDownOutline as ChevronDownIcon,
   ClipboardOutline as RecordMatchIcon,
-  HomeOutline as HomeIcon,
   LogOutOutline as LogoutIcon,
   PeopleOutline as TeamManagementIcon,
   PersonCircleOutline as PersonCircleOutlineIcon,
+  PodiumOutline as HomeIcon,
   SettingsOutline as SettingsIcon
 } from '@vicons/ionicons5';
 
@@ -223,7 +223,14 @@ const themeOverrides = {
 </script>
 
 <style>
-/* 全域樣式 */
+html {
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
 html, body, #app {
   height: 100%;
   margin: 0;

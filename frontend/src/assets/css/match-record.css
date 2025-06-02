@@ -1,0 +1,236 @@
+/* === record-match.css (或您的外部CSS文件名) === */
+
+/* CSS 變數定義 */
+:root { /* 或者定義在 .record-match-page 或更合適的範圍 */
+    --record-match-cell-max-width: 230px; /* 每個單元格的最大寬度，您可以調整這個值 */
+    --record-match-grid-gap: 16px; /* 網格間隙，應與 n-grid 的 x-gap 一致 */
+}
+
+/* 頁面與卡片懸浮感 (保持不變或按需調整) */
+.record-match-page {
+    max-width: 1000px; /* 頁面內容的最大寬度，可調整 */
+    margin: 2rem auto 3rem auto;
+}
+
+.form-card.n-card {
+    margin-top: 1.5rem;
+    border-radius: var(--n-border-radius);
+    box-shadow: var(--n-box-shadow2);
+    background-color: var(--n-card-color);
+}
+
+.page-main-title.n-h1 { /* ... */
+}
+
+.title-icon { /* ... */
+}
+
+
+/* 新增：用於置中 match-details-grid 的包裹器 */
+.match-details-grid-wrapper {
+    display: flex;
+    justify-content: center; /* 水平置中內部的 n-grid */
+    width: 100%;
+    padding: 0 16px; /* 可選：給 wrapper 左右一點 padding，避免網格在極窄時貼邊 */
+    box-sizing: border-box;
+}
+
+/* 比賽細節網格 (n-grid) */
+.match-details-grid.n-grid {
+    width: 100%; /* 網格本身佔滿 wrapper */
+    max-width: calc(
+            (var(--record-match-cell-max-width) * 4) +
+            (var(--record-match-grid-gap) * 3)
+    );
+    /* margin: 0 auto; /* 已由 wrapper 的 justify-content: center 處理 */
+}
+
+/* 網格單元格 (n-gi 上的 .grid-cell) */
+.match-details-grid .grid-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 單元格內部元素水平置中 */
+
+    width: 100%; /* 在堆疊時（手機），佔滿其 n-gi 父級（span=12）*/
+    max-width: var(--record-match-cell-max-width); /* 在並列時（桌面），限制其最大寬度 */
+
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 單元格標題 */
+.match-details-grid .grid-cell .cell-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--n-label-text-color);
+    margin-bottom: 12px;
+    width: 100%; /* 標題佔滿其 (已限制max-width的) .grid-cell 的寬度 */
+}
+
+.match-details-grid .grid-cell .cell-title.text-center {
+    text-align: center;
+}
+
+.match-details-grid .grid-cell .cell-title.text-right {
+    text-align: right;
+}
+
+.team-a-players-cell .cell-title {
+    text-align: left;
+}
+
+/* 球員選擇單元格內的表單項 */
+.team-players-cell .player-select-form-item.n-form-item {
+    width: 100%; /* 表單項佔滿其 .grid-cell 的寬度 (已限制max-width) */
+}
+
+.team-players-cell .player-select-form-item.mt-2 {
+    margin-top: 10px;
+}
+
+.team-players-cell .player-select-control.n-select {
+    width: 100%;
+}
+
+.score-input-number.winning-score { /* 直接在 n-input-number 上覆寫變量 */
+    --n-border: 1px solid var(--n-warning-color) !important;
+    --n-border-hover: 1px solid var(--n-warning-color-hover) !important;
+    --n-border-focus: 1px solid var(--n-warning-color-focus) !important; /* Naive UI 可能用 --n-border-active */
+    --n-box-shadow-focus: 0 0 0 2px var(--n-color-focus-warning) !important; /* Naive UI 可能用 --n-box-shadow-focus-warning */
+    --n-text-color: var(--n-warning-color-active) !important; /* 或 --n-text-color-input */
+    --n-caret-color: var(--n-warning-color-active) !important;
+    /* ... 其他可能需要覆寫的變數 ... */
+}
+
+/* 得分輸入單元格內的表單項 */
+.score-input-cell .score-form-item-wrapper.n-form-item {
+    width: 100%;
+}
+
+.score-input-cell .score-form-item-wrapper.n-form-item .n-form-item-blank {
+    width: 100%;
+}
+
+.score-input-cell .score-form-item-wrapper.n-form-item .n-form-item-feedback-wrapper {
+    min-height: auto;
+    padding-top: 2px;
+    text-align: center;
+}
+
+.score-input-slider-group .score-input-number.n-input-number .n-input__input-el {
+    font-size: 2.2em !important; /* 或者您喜歡的“大數字”大小 */
+    font-weight: bold;
+    text-align: center;
+    height: auto !important;
+    padding: 4px 0 !important;
+    /* 確保輸入框本身的背景色是正常的，除非您也想改它 */
+    background-color: var(--n-color); /* Naive UI 輸入框背景色變量 */
+    color: var(--n-text-color); /* Naive UI 輸入框文字顏色變量 */
+    border-radius: var(--n-border-radius); /* 確保內部 input 也有圓角 */
+}
+
+/* --- 勝利方分數高亮 --- */
+
+/* 針對 n-input-number 的 winning-score class */
+.score-input-slider-group .score-input-number.winning-score.n-input-number {
+    /* 改變組件的邊框顏色 */
+    border-color: var(--n-warning-color, #FFC107) !important; /* Naive UI 警告色 */
+    /* box-shadow: 0 0 0 1px var(--n-warning-color, #FFC107) !important; /* 可選：用 box-shadow 模擬邊框 */
+}
+
+/* 勝利方輸入框的文字顏色 */
+/* !!! 確認 .n-input__input-el !!! */
+.score-input-slider-group .score-input-number.winning-score.n-input-number .n-input__input-el {
+    color: var(--n-warning-color-active, #D97706) !important; /* Naive UI 警告相關色或自定義深黃/橙色 */
+}
+
+/* 勝利方輸入框 Hover 狀態的邊框 */
+.score-input-slider-group .score-input-number.winning-score.n-input-number:not(.n-input--disabled):hover {
+    border-color: var(--n-warning-color-hover, #F59E0B) !important;
+}
+
+/* 勝利方輸入框 Focus 狀態的邊框和陰影 */
+/* n-input--focus 通常是 n-input-number 聚焦時會添加的 class */
+.score-input-slider-group .score-input-number.winning-score.n-input-number.n-input--focus {
+    border-color: var(--n-warning-color-active, #D97706) !important;
+    box-shadow: 0 0 0 2px var(--n-color-embedded-warning, rgba(245, 158, 11, 0.2)) !important; /* Naive UI 警告色的 focus 陰影 */
+}
+
+/* 勝利方輸入框的光標顏色 */
+.score-input-slider-group .score-input-number.winning-score.n-input-number .n-input__input-el::selection {
+    background-color: var(--n-warning-color-active, #D97706);
+    color: var(--n-text-color-on-primary); /* 或其他高對比顏色 */
+}
+
+/* 對於 Firefox */
+.score-input-slider-group .score-input-number.winning-score.n-input-number .n-input__input-el::-moz-selection {
+    background-color: var(--n-warning-color-active, #D97706);
+    color: var(--n-text-color-on-primary);
+}
+
+
+/* 可選：勝利方 n-slider 顏色同步 */
+.score-input-slider-group .winning-score-slider.n-slider .n-slider-rail__fill {
+    background-color: var(--n-warning-color-pressed, #D97706) !important;
+}
+
+.score-input-slider-group .winning-score-slider.n-slider .n-slider-handle {
+    border-color: var(--n-warning-color-pressed, #D97706) !important;
+    box-shadow: 0 0 0 2px var(--n-warning-color-hover, #F59E0B) !important;
+}
+
+/* --- 按鈕樣式 --- */
+.action-buttons .n-button {
+    min-width: 160px;
+    font-weight: 500;
+}
+
+.player-entry {
+    display: flex; /* 使選擇器和分數顯示水平排列 */
+    align-items: center; /* 垂直居中對齊 */
+    gap: 8px; /* 選擇器和分數之間的間距 */
+    width: 100%; /* 佔滿其父容器 (.grid-cell / player-select-form-item 的空間) */
+}
+
+.player-entry .player-select-form-item.n-form-item {
+    flex-grow: 1; /* 讓選擇器佔據主要空間 */
+    margin-bottom: 0; /* 移除 n-form-item 可能的預設底部外邊距 */
+    min-width: 0; /* 允許選擇器縮小 */
+}
+
+/* .player-select-control (n-select) 應已設為 width: 100% */
+
+.player-score-display {
+    flex-shrink: 0; /* 不壓縮分數顯示區域 */
+    /* background-color: #f4f4f5; /* 可選：淺灰色背景 (var(--n-action-color)) */
+    border: 1px solid var(--n-border-color, #e0e0e0); /* 使用 Naive UI 邊框顏色變數 */
+    border-radius: var(--n-border-radius);
+    padding: 0px 10px; /* 調整內邊距使文字垂直居中，並有左右空間 */
+    min-width: 65px; /* 分數顯示的最小寬度 */
+    height: var(--n-height-m, 34px); /* 嘗試與 n-select 的高度一致 (中等尺寸) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-size: 0.9em;
+}
+
+.player-score-display .score-value {
+    font-weight: 600;
+    color: var(--n-primary-color); /* 使用主題主要顏色顯示積分 */
+}
+
+.player-score-display .score-placeholder {
+    color: var(--n-placeholder-color);
+}
+
+.player-score-display .score-unit {
+    font-size: 0.9em;
+    margin-left: 3px;
+    color: var(--n-text-color-3); /* 使用 Naive UI 較淺的文字顏色 */
+}
+
+/* 用於雙打時第二個球員輸入項的上邊距 */
+.player-entry.mt-2 {
+    margin-top: 10px;
+}

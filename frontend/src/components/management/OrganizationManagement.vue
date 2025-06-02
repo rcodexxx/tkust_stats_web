@@ -15,23 +15,17 @@
         {{ orgError }}
       </n-alert>
     </div>
-    <div v-if="orgSubmitMessage"
-         :class="['mb-3', 'alert', orgSubmitStatus === 'success' ? 'alert-success' : 'alert-danger']" role="alert">
-      {{ orgSubmitMessage }}
-    </div>
-
     <n-data-table
         :columns="organizationTableColumns"
         :data="filteredOrganizationData"
         :loading="loadingOrgs"
         :pagination="organizationPaginationReactive"
         :bordered="false"
-        :single-line="false"
+        :bottom-bordered="true" સલામત :single-line="false"
         size="small"
         flex-height
         style="min-height: 400px; max-height: 70vh;"
-        scroll-x="600"
-        resizable
+        :scroll-x="organizationTableScrollXWidth" :resizable="true"
         @update:sorter="handleOrgSortChange"
         :row-key="row => row.id"
     />
@@ -106,6 +100,7 @@ import {
   TrashBinOutline as DeleteIcon
 } from '@vicons/ionicons5';
 
+// ... (props, dialog, message, allFetchedOrganizations, loadingOrgs, orgError, etc. remain the same) ...
 const props = defineProps({
   searchTermProp: {type: String, default: ''}
 });
@@ -117,7 +112,6 @@ const allFetchedOrganizations = ref([]);
 const loadingOrgs = ref(true);
 const orgError = ref(null);
 
-// Pagination state
 const organizationPaginationReactive = reactive({
   page: 1, pageSize: 10, itemCount: 0, showSizePicker: true, pageSizes: [10, 20, 50],
   onChange: (page) => organizationPaginationReactive.page = page,
@@ -127,39 +121,25 @@ const organizationPaginationReactive = reactive({
   }
 });
 
-// Sort state
 const orgTableSortState = ref(null);
 
 function handleOrgSortChange(sorter) {
   orgTableSortState.value = sorter;
 }
 
-// Modal and Form state
 const showOrgFormModal = ref(false);
 const isEditingOrg = ref(false);
 const orgFormSubmitting = ref(false);
-const orgFormValidationError = ref(null); // 其實 Naive Form 有自己的驗證顯示
-const orgFormRef = ref(null); // Ref for NForm instance
+const orgFormRef = ref(null);
 const currentOrganization = reactive({id: null, name: '', short_name: '', city: '', notes: ''});
-const orgToDelete = ref(null);
+const orgToDelete = ref(null); // Used to store the org object for deletion
 
 const orgFormRules = {
   name: [{required: true, message: '組織全名為必填', trigger: ['input', 'blur']}],
-  // short_name, city, notes 設為非必填
 };
 
-// Column Definitions
 const organizationTableColumns = computed(() => [
   {title: "組織全名", key: "name", sorter: 'default', resizable: true, width: 200, ellipsis: {tooltip: true}},
-  {
-    title: "簡稱",
-    key: "short_name",
-    sorter: 'default',
-    resizable: true,
-    width: 120,
-    ellipsis: {tooltip: true},
-    render: (row) => row.short_name || '-'
-  },
   {
     title: "城市",
     key: "city",
@@ -176,7 +156,7 @@ const organizationTableColumns = computed(() => [
     resizable: true,
     width: 90,
     align: 'right',
-    render: (row) => row.member_count || 0
+    render: (row) => row.member_count === undefined ? '-' : row.member_count // Handle undefined
   },
   {
     title: "操作", key: "actions", width: 100, align: 'center', fixed: 'right', resizable: false,
@@ -199,24 +179,33 @@ const organizationTableColumns = computed(() => [
                 circle: true,
                 quaternary: true,
                 type: 'error',
+                // Disable delete if member_count > 0
+                disabled: row.member_count > 0,
                 onClick: () => confirmDeleteOrganization(row)
               },
               {icon: () => h(NIcon, {component: DeleteIcon})}
           ),
-          default: () => '刪除組織'
+          default: () => row.member_count > 0 ? `組織尚有 ${row.member_count} 位成員，無法刪除` : '刪除組織'
         })
       ]);
     }
   }
 ]);
 
+// Variable to allow deletion even if members exist (for admin override, if needed in future)
+// For now, we disable based on member_count directly in button
+// const allowDeleteOrgWithMembers = ref(false);
+
 async function fetchOrganizations() {
   loadingOrgs.value = true;
   orgError.value = null;
   try {
-    const response = await organizationService.getOrganizations(); // 假設可以接受搜尋參數
+    const response = await organizationService.getOrganizations();
     allFetchedOrganizations.value = response.data || [];
-  } catch (err) { /* ... */
+  } catch (err) {
+    console.error("Error fetching organizations:", err.response || err);
+    orgError.value = err.response?.data?.error || err.message || "無法載入組織列表。";
+    allFetchedOrganizations.value = [];
   } finally {
     loadingOrgs.value = false;
   }
@@ -245,7 +234,6 @@ watch(() => props.searchTermProp, () => {
 });
 
 function openOrgFormModal(org = null) {
-  // orgFormValidationError.value = null; // Naive Form 會自己處理
   if (org) {
     isEditingOrg.value = true;
     Object.assign(currentOrganization, org);
@@ -260,7 +248,6 @@ async function handleOrgFormSubmit() {
   orgFormRef.value?.validate(async (errors) => {
     if (!errors) {
       orgFormSubmitting.value = true;
-      orgSubmitMessage.value = ''; // 清除列表上方的訊息
       const payload = {
         name: currentOrganization.name.trim(),
         short_name: currentOrganization.short_name?.trim() || null,
@@ -284,46 +271,83 @@ async function handleOrgFormSubmit() {
         orgFormSubmitting.value = false;
       }
     } else {
-      console.log('Organization form validation errors:', errors);
       message.error('請檢查表單輸入。');
     }
   });
 }
 
 function confirmDeleteOrganization(org) {
-  orgToDelete.value = org;
+  if (org.member_count > 0) {
+    dialog.warning({ // Changed to warning, as it's more of a pre-condition failure
+      title: '無法刪除',
+      content: () => `組織 "${org.name}" 尚有關聯 ${org.member_count} 位成員，請先將成員移至其他組織或處理後再嘗試刪除。`,
+      positiveText: '知道了',
+      maskClosable: false,
+    });
+    return;
+  }
+
+  orgToDelete.value = org; // Store the org to delete
   dialog.error({
     title: '確認刪除組織',
-    content: () => `您確定要刪除組織 "${org.name}" (ID: ${org.id}) 嗎？${org.member_count > 0 ? `\n注意：此組織尚有關聯 ${org.member_count} 位成員！刪除前請先處理這些成員。` : '\n此操作無法復原！'}`,
+    content: () => `您確定要刪除組織 "${org.name}" (ID: ${org.id}) 嗎？此操作無法復原！`,
     positiveText: '確認刪除',
     negativeText: '取消',
     maskClosable: false,
-    positiveButtonProps: {disabled: org.member_count > 0 && !allowDeleteOrgWithMembers.value},
-    onPositiveClick: async () => { /* ... executeDeleteOrganization ... */
+    onPositiveClick: async () => {
+      await executeDeleteOrganization(); // Call the actual delete function
     },
     onNegativeClick: () => {
-      orgToDelete.value = null;
+      orgToDelete.value = null; // Clear if cancelled
+      message.info('已取消刪除操作');
     }
   });
 }
 
-async function executeDeleteOrganization() { /* ... (與 Member 類似，調用 org service) ... */
+// ****** 這裏是完成的 executeDeleteOrganization 函數 ******
+async function executeDeleteOrganization() {
+  if (!orgToDelete.value?.id) {
+    message.error('沒有選中要刪除的組織。');
+    return;
+  }
+  try {
+    await organizationService.deleteOrganization(orgToDelete.value.id);
+    message.success(`組織 "${orgToDelete.value.name}" 已成功刪除。`);
+    fetchOrganizations(); // Refresh the list
+  } catch (err) {
+    console.error("Error deleting organization:", err.response || err);
+    message.error(`刪除組織 "${orgToDelete.value.name}" 失敗: ${err.response?.data?.error || err.message}`);
+  } finally {
+    orgToDelete.value = null; // Clear after attempting delete
+  }
 }
-
-// 清除訊息
-const orgSubmitMessage = ref('');
-const orgSubmitStatus = ref(''); // 'success' or 'error'
-
 </script>
 
 <style scoped>
-/* OrganizationManagement.vue 特有的樣式 */
-.table-actions-header {
-  /* 可以調整按鈕和搜尋框的對齊 */
+/* .organization-management-section { } */ /* 如果沒有特殊樣式，可以移除 */
+/* .table-actions-header { } */ /* 如果沒有特殊樣式，可以移除 */
+
+/* .table-sm th, .table-sm td { } */ /* Naive UI Table size="small" 已很緊湊, 通常不需額外設定 */
+
+
+/* 新增：與 MemberManagement.vue 一致的固定列背景樣式 */
+:deep(.n-data-table .n-data-table-th--fixed-left),
+:deep(.n-data-table .n-data-table-td--fixed-left) {
+  background-color: var(--card-color, #fff) !important;
 }
 
-.table-sm th, .table-sm td { /* Naive UI Table size="small" 已經很緊湊 */
-  /* padding: 0.5rem; */
-  /* font-size: 0.85rem; */
+:deep(.n-data-table .n-data-table-th--fixed-right),
+:deep(.n-data-table .n-data-table-td--fixed-right) {
+  background-color: var(--card-color, #fff) !important;
+}
+
+:deep(.n-data-table thead .n-data-table-th--fixed-left),
+:deep(.n-data-table thead .n-data-table-th--fixed-right) {
+  background-color: var(--th-color, #fafafc) !important;
+}
+
+.table-dark :deep(.n-data-table .n-data-table-th--fixed-left),
+.table-dark :deep(.n-data-table .n-data-table-th--fixed-right) {
+  background-color: #2a3a51 !important; /* 您的深色表頭背景 (示例) */
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="edit-profile-page container-fluid mt-4 mb-5 px-md-4">
     <n-h1 align="center" class="page-main-title mb-4">
       <n-icon :component="SettingsIcon" size="30" class="title-icon"/>
-      編輯個人資料與帳號設定
+      帳號設定
     </n-h1>
 
     <div v-if="loading" class="text-center my-5">
@@ -12,9 +12,9 @@
       {{ fetchError }}
     </n-alert>
 
-    <n-grid x-gap="24" y-gap="16" :cols="12" item-responsive
-            v-if="!loading && !fetchError && profileData.user && profileData.member">
-      {/* --- 左側：基本及球員資料編輯 --- */}
+    <n-grid x-gap="24" y-gap="20" col="1 s:2" item-responsive responsive="screen"
+            v-if="!loading && !fetchError && profileData.user">
+
       <n-gi :span="12" :md="7">
         <n-card title="基本及球員資料" :bordered="false" class="form-section-card">
           <n-form
@@ -37,67 +37,75 @@
             </n-alert>
 
             <n-h6 class="form-section-subtitle">帳號資訊</n-h6>
-            <n-form-item-gi :span="12" label="登入帳號 (手機號碼)">
-              <n-input :value="profileData.user?.username" readonly disabled/>
-            </n-form-item-gi>
-            <n-form-item-gi :span="12" label="電子郵件" path="user.email">
-              <n-input v-model:value="editableProfile.user.email" placeholder="example@example.com" clearable/>
-            </n-form-item-gi>
-            <n-form-item-gi :span="12" label="目前角色">
+            <n-form-item label="登入帳號 (手機號碼)">
+              <n-input :value="profileData.user?.username" readonly disabled style="width: 100%;"/>
+            </n-form-item>
+            <n-form-item label="電子郵件" path="user.email">
+              <n-input v-model:value="editableProfile.user.email" placeholder="example@example.com" clearable
+                       style="width: 100%;"/>
+            </n-form-item>
+            <n-form-item label="目前角色">
               <n-tag v-if="profileData.user?.role" :type="getRoleNaiveType(profileData.user.role)" round>
                 {{ getRoleDisplay(profileData.user.role) }}
               </n-tag>
               <span v-else>未設定</span>
-            </n-form-item-gi>
+            </n-form-item>
 
+            <n-h6 v-if="profileData.member" class="form-section-subtitle">球員資料</n-h6>
 
-            <n-divider/>
-            <n-h6 class="form-section-subtitle">球員資料</n-h6>
-            <n-form-item-gi :span="12" label="真實姓名">
-              <n-input :value="profileData.member?.name" readonly disabled/>
-            </n-form-item-gi>
-            <n-form-item-gi :span="12" label="學號">
-              <n-input :value="profileData.member?.student_id || ''" readonly disabled/>
-            </n-form-item-gi>
+            <template v-if="profileData.member">
+              <n-form-item label="真實姓名">
+                <n-input :value="profileData.member?.name" readonly disabled style="width: 100%;"/>
+              </n-form-item>
+              <n-form-item label="學號">
+                <n-input :value="profileData.member?.student_id || ''" readonly disabled style="width: 100%;"/>
+              </n-form-item>
 
-            <n-form-item-gi :span="12" label="顯示名稱/綽號*" path="member.display_name">
-              <n-input v-model:value="editableProfile.member.display_name" placeholder="您希望顯示的名稱"/>
-            </n-form-item-gi>
+              <n-form-item label="顯示名稱/綽號*" path="member.display_name">
+                <n-input v-model:value="editableProfile.member.display_name" placeholder="您希望顯示的名稱"
+                         style="width: 100%;"/>
+              </n-form-item>
 
-            <n-grid :x-gap="16" :cols="2" :collapsed="isMobile" :collapsed-rows="2">
-              <n-form-item-gi label="性別" path="member.gender">
-                <n-select v-model:value="editableProfile.member.gender" :options="genderOptions" placeholder="選擇性別"
-                          clearable/>
-              </n-form-item-gi>
-              <n-form-item-gi label="習慣位置" path="member.position">
-                <n-select v-model:value="editableProfile.member.position" :options="positionOptions"
-                          placeholder="選擇位置" clearable/>
-              </n-form-item-gi>
-            </n-grid>
+              <n-grid :x-gap="16" :cols="2" :collapsed="isMobile" :collapsed-rows="2" responsive="screen">
+                <n-form-item-gi label="性別" path="member.gender">
+                  <n-select v-model:value="editableProfile.member.gender" :options="genderOptions"
+                            placeholder="選擇性別"
+                            clearable/>
+                </n-form-item-gi>
+                <n-form-item-gi label="習慣位置" path="member.position">
+                  <n-select v-model:value="editableProfile.member.position" :options="positionOptions"
+                            placeholder="選擇位置" clearable/>
+                </n-form-item-gi>
+              </n-grid>
 
-            <n-form-item-gi :span="12" label="所屬組織" path="member.organization_id">
-              <n-select
-                  v-model:value="editableProfile.member.organization_id"
-                  :options="organizationOptions"
-                  placeholder="選擇組織"
-                  clearable
-                  filterable
-                  label-field="label"
-                  value-field="value"/>
-            </n-form-item-gi>
+              <n-form-item label="所屬組織" path="member.organization_id">
+                <n-select
+                    v-model:value="editableProfile.member.organization_id"
+                    :options="organizationOptions"
+                    placeholder="選擇組織"
+                    clearable
+                    filterable
+                    label-field="label"
+                    value-field="value"
+                    style="width: 100%;"
+                />
+              </n-form-item>
+            </template>
 
-            <n-button type="primary" attr-type="submit" :loading="savingProfile" strong block class="mt-3">
+            <n-button type="primary" attr-type="submit" :loading="savingProfile" strong block
+                      class="mt-4 form-submit-button">
               {{ savingProfile ? '儲存中...' : '儲存個人資料' }}
             </n-button>
           </n-form>
         </n-card>
       </n-gi>
+
       <n-gi :span="12" :md="5">
         <ChangePasswordForm @password-changed-status="handlePasswordChangedStatusMessage" class="form-section-card"/>
       </n-gi>
     </n-grid>
 
-    <div v-else-if="!loading && !fetchError && !profileData.member" class="mt-4">
+    <div v-else-if="!loading && !fetchError && !profileData.member && profileData.user" class="mt-4">
       <n-alert title="提示" type="info">
         您的帳號尚未關聯球隊成員資料，部分個人資料功能可能不可用。請聯繫管理員。
       </n-alert>
@@ -116,7 +124,6 @@ import {
   NAlert,
   NButton,
   NCard,
-  NDivider,
   NForm,
   NFormItemGi,
   NGi,
@@ -368,61 +375,110 @@ function getRoleNaiveType(roleName) {
 
 <style scoped>
 .edit-profile-page {
-  max-width: 1000px; /* 調整以容納兩欄 */
-  margin: auto;
+  max-width: 1000px;
+  margin: 2rem auto 3rem auto; /* 統一頁面上下外邊距 */
 }
 
 .page-main-title.n-h1 {
   font-weight: 600;
-  color: var(--text-color-1);
+  color: var(--n-title-text-color); /* Naive UI 標題文字顏色 */
+  /* display: flex; align-items: center; */ /* 如果標題內有返回按鈕可以啟用 */
 }
 
 .title-icon {
-  color: var(--primary-color);
+  color: var(--n-primary-color);
   margin-right: 10px;
   vertical-align: -4px;
 }
 
 .form-section-card.n-card {
-  margin-top: 0;
-  box-shadow: var(--box-shadow-1); /* 使用主題中較淺的陰影 */
+  margin-top: 0; /* grid 的 y-gap 會處理間距 */
+  border-radius: var(--n-border-radius);
+  box-shadow: var(--n-box-shadow2); /* Naive UI 二級陰影 */
+  background-color: var(--n-card-color);
+  height: 100%; /* 如果希望左右兩欄卡片等高 */
 }
 
-.form-section-card .n-card-header {
-  padding-bottom: 12px;
+/* 覆蓋 Naive UI Card 預設的 header 和 content padding 以實現更細緻的控制 */
+.form-section-card :deep(.n-card-header) {
+  padding-top: 16px; /* 調整標題區域的上padding */
+  padding-bottom: 12px; /* 標題和內容之間的padding */
+  padding-left: 20px;
+  padding-right: 20px;
+  font-size: 1.2rem; /* 標題字體略大 */
   font-weight: 600;
 }
 
-.form-section-card .n-card__content {
-  padding-top: 20px; /* 增加卡片內容的上邊距 */
+.form-section-card :deep(.n-card__content) {
+  padding: 0 20px 20px 20px; /* 內容區域的padding，頂部padding已由header的padding-bottom控制 */
 }
 
-
+/* 表單內子標題 */
 .form-section-subtitle.n-h6 {
   font-weight: 600;
   margin-top: 1.5rem;
   margin-bottom: 1rem;
-  color: var(--primary-color);
-  border-bottom: 1px solid #efefef;
-  padding-bottom: 0.5rem;
-  font-size: 1.1em;
+  color: var(--n-primary-color);
+  /* border-bottom: 1px solid var(--n-divider-color); */ /* 考慮移除邊框，讓 n-divider 組件處理 */
+  /* padding-bottom: 0.5rem; */
+  font-size: 1.05em;
 }
 
 .form-section-subtitle:first-of-type {
-  margin-top: 0.5rem; /* 第一個子標題的上邊距小一點 */
+  margin-top: 0.5rem; /* 第一個子標題與卡片標題的間距 */
 }
 
-.n-form-item .n-form-item-label {
+/* 表單中使用的 n-divider */
+.section-divider-form.n-divider:not(.n-divider--vertical) {
+  margin-top: 1.75rem; /* 調整分隔線的上下間距 */
+  margin-bottom: 0.25rem; /* 與下方子標題的間距更緊湊 */
+}
+
+
+/* 表單項標籤 */
+.n-form-item :deep(.n-form-item-label) {
   font-weight: 500 !important;
-  color: var(--text-color-2) !important; /* 標籤使用次要文字顏色 */
+  color: var(--n-text-color-2) !important; /* 使用 Naive UI 次要文字顏色 */
+  padding-bottom: 6px !important; /* 標籤和輸入框之間的距離 */
 }
 
-.form-text.text-muted {
-  font-size: 0.8em;
-  color: var(--text-color-3) !important; /* 更淺的輔助文字 */
+/* 表單底部提交按鈕 */
+.form-submit-button.n-button {
+  margin-top: 1.5rem;
+  /* height: var(--n-height-l); */ /* 改用 Naive UI 按鈕的 size prop 來控制高度 */
+  /* font-size: 1rem; */ /* Naive UI Button size prop 會影響字體大小 */
+  /* 使用 Naive UI 的 size="large" prop 可以達到類似效果 */
 }
 
-.n-button[block] {
-  margin-top: 0.5rem; /* 按鈕與上方元素的間距 */
+/* 為了讓 strong block 按鈕更好看，可以微調 */
+.n-button--block.n-button--strong {
+  font-weight: 500;
 }
+
+
+/* 確保 n-grid 的 y-gap 生效，如果 form-item 有自己的 margin-bottom，可能會導致雙倍間距 */
+/* Naive UI n-form-item 預設的 margin-bottom 在 n-grid 中通常能良好配合 y-gap */
+/* 如果需要微調，可以針對性地調整 n-form-item 的 margin */
+.n-form .n-form-item { /* 更精確的選擇器 */
+  margin-bottom: var(--n-form-item-margin-bottom, 20px); /* 使用 Naive UI 變數或自訂值 */
+}
+
+.n-grid .n-form-item { /* 在 grid 內的 form-item，可能不需要底部 margin，由 grid gap 控制 */
+  margin-bottom: 0;
+}
+
+
+/* 針對 read-only input 的樣式，使其看起來更像純文字 (可選) */
+.n-input.n-input--disabled :deep(input),
+.n-input.n-input--readonly :deep(input) {
+  color: var(--n-text-color-base) !important;
+  cursor: default !important;
+  background-color: var(--n-color-disabled) !important; /* 使用disabled背景色使其看起來不可編輯但仍清晰 */
+  border-color: var(--n-border-color) !important; /* 保持與普通輸入框相似的邊框 */
+  opacity: 1 !important; /* 確保文字清晰 */
+}
+
+/* 如果您不希望 disabled input 有明顯的背景色，可以設為 transparent 或 card color */
+/* .n-input.n-input--disabled :deep(input) { background-color: transparent !important; } */
+
 </style>

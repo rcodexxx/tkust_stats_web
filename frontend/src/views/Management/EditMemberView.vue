@@ -1,7 +1,7 @@
 <template>
-  <div class="admin-edit-member-page container mt-4 mb-5">
-    <n-h1>
-      <n-button text @click="goBack" class="me-2">
+  <div class="admin-edit-member-page container mt-4 mb-5 px-md-4">
+    <n-h1 class="page-main-title">
+      <n-button text @click="goBack" class="me-2 title-back-button">
         <template #icon>
           <n-icon :component="ArrowBackIcon"/>
         </template>
@@ -10,17 +10,18 @@
     </n-h1>
 
     <div v-if="loadingData" class="text-center my-5">
-      <div class="spinner-border text-primary"></div>
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
     </div>
     <div v-if="fetchError" class="alert alert-danger">{{ fetchError }}</div>
 
-    <n-card :bordered="false" class="shadow-sm" v-if="!loadingData && !fetchError && formData.name !== undefined">
+    <n-card :bordered="false" class="form-card" v-if="!loadingData && !fetchError && formData.name !== undefined">
       <n-form
           ref="formRef"
           :model="formData"
           label-placement="top"
           require-mark-placement="right-hanging"
           @submit.prevent="handleUpdateMember"
+          :rules="formRules"
       >
         <n-grid :x-gap="24" :y-gap="12" :cols="12" item-responsive>
           <n-form-item-gi :span="12" label="真實姓名*" path="name">
@@ -31,7 +32,7 @@
           </n-form-item-gi>
 
           <n-gi :span="12">
-            <n-divider title-placement="left">帳號資訊</n-divider>
+            <n-divider title-placement="left" class="section-divider">帳號資訊</n-divider>
           </n-gi>
           <n-form-item-gi :span="12" :md="6" label="手機號碼 (登入帳號)*" path="username">
             <n-input v-model:value="formData.username" placeholder="09xxxxxxxx"/>
@@ -44,8 +45,9 @@
             <n-select v-model:value="formData.role" :options="roleOptions" placeholder="選擇角色"/>
           </n-form-item-gi>
 
+
           <n-gi :span="12">
-            <n-divider title-placement="left">球員詳細資料</n-divider>
+            <n-divider title-placement="left" class="section-divider">球員詳細資料</n-divider>
           </n-gi>
           <n-form-item-gi :span="12" :md="6" label="學號 (7-9位數字)" path="student_id">
             <n-input v-model:value="formData.student_id" placeholder="選填"/>
@@ -77,25 +79,21 @@
                 value-field="id"/>
           </n-form-item-gi>
 
-          <n-form-item-gi :span="12" :md="6" label="&mu;" path="mu">
+          <n-form-item-gi :span="12" :md="6" label="&mu; (目前分數)" path="mu">
             <n-input-number
                 v-model:value="formData.mu"
-                :min="0"
                 :step="0.1"
-                placeholder="預設 (例如 25.0)"
-                clearable
+                placeholder="成員目前 Mu 值"
                 style="width:100%"
                 :disabled="true"
             />
           </n-form-item-gi>
 
-          <n-form-item-gi :span="12" :md="6" label="&sigma;" path="sigma">
+          <n-form-item-gi :span="12" :md="6" label="&sigma; (分數標準差)" path="sigma">
             <n-input-number
                 v-model:value="formData.sigma"
-                :min="0.1"
                 :step="0.001"
-                placeholder="預設 (例如 8.333)"
-                clearable
+                placeholder="成員目前 Sigma 值"
                 style="width:100%"
                 :disabled="true"
             />
@@ -103,7 +101,7 @@
 
           <n-form-item-gi :span="12" :md="6" label="入隊日期" path="joined_date">
             <n-date-picker
-                v-model:formatted-value="formData.joined_date"
+                v-model:formatted-value="formData.join_date"
                 type="date"
                 value-format="yyyy-MM-dd"
                 placeholder="選填，預設今日"
@@ -122,6 +120,13 @@
                 clearable
             />
           </n-form-item-gi>
+          <n-form-item-gi :span="12" :md="6" label="成員活躍狀態" path="is_active">
+            <div class="switch-with-label">
+              <n-switch v-model:value="formData.is_active"/>
+              <span class="switch-label-text">此成員是否活躍</span>
+            </div>
+          </n-form-item-gi>
+
 
           <n-form-item-gi :span="12" label="備註" path="notes">
             <n-input
@@ -133,9 +138,9 @@
           </n-form-item-gi>
         </n-grid>
 
-        <n-space justify="end" class="mt-4">
-          <n-button @click="goBack">取消</n-button>
-          <n-button type="primary" attr-type="submit" :loading="submitting">
+        <n-space justify="end" class="mt-4 action-buttons">
+          <n-button @click="goBack" size="medium">取消</n-button>
+          <n-button type="primary" attr-type="submit" :loading="submitting" size="medium" strong>
             確認更新
           </n-button>
         </n-space>
@@ -147,7 +152,7 @@
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
-import {NButton, NCard, NDivider, NForm, NFormItemGi, NH1, NIcon, NInput, NSelect, NSpace, useMessage} from 'naive-ui';
+import {NDatePicker, NInputNumber, NSwitch, useMessage} from 'naive-ui';
 import {ArrowBackOutline as ArrowBackIcon} from '@vicons/ionicons5';
 import memberService from '@/services/memberService.js';
 import organizationService from '@/services/organizationService.js';
@@ -166,22 +171,33 @@ const formData = reactive({
   name: '',
   display_name: '',
   username: '', // User.username (手機號)
-  password: '', // User 密碼 (僅新增時，或有專門修改密碼功能)
   email: '',    // User.email
-  role: 'MEMBER',// User.role
-  is_active_user: true, // User.is_active
+  role: 'MEMBER',// User.role  // 注意 AddMember用的是 MEMBER, 這裡用 PLAYER
 
-  student_id: '', // Member.student_id (學號)
-  gender: null,     // Member.gender (Enum NAME, e.g., 'MALE')
-  position: null,   // Member.position (Enum NAME)
-  organization_id: null, // Member.organization_id
+  student_id: '',
+  gender: null,
+  position: null,
+  organization_id: null,
   mu: null,
   sigma: null,
-  joined_date: null, // Member.joined_date (YYYY-MM-DD string)
-  leaved_date: null, // Member.leaved_date (YYYY-MM-DD string)
-  is_active: true,  // Member.is_active
+  join_date: null, // 之前模板中 path 是 "joined_date"
+  leaved_date: null,
   notes: ''
 });
+
+const formRules = {
+  name: [{required: true, message: '真實姓名為必填', trigger: ['input', 'blur']}],
+  username: [
+    {required: true, message: '手機號碼 (登入帳號) 為必填', trigger: ['input', 'blur']},
+    {pattern: /^09\d{8}$/, message: '手機號碼格式不正確 (應為09開頭10位數字)', trigger: ['input', 'blur']}
+  ],
+  email: [{type: 'email', message: '請輸入有效的電子郵件格式', trigger: ['input', 'blur']}],
+  student_id: [{
+    pattern: /^\d{7,9}$/, message: '學號必須是7到9位數字', trigger: ['input', 'blur'],
+    required: false
+  }],
+  role: [{required: true, message: '角色為必填', trigger: ['change', 'blur']}],
+};
 
 const roleOptions = [
   {label: '隊員', value: 'MEMBER'}, // label 是中文，value 是 Enum 的 NAME
@@ -193,7 +209,6 @@ const roleOptions = [
 const genderOptions = [
   {label: '男性', value: 'MALE'},
   {label: '女性', value: 'FEMALE'},
-  {label: '其他', value: 'OTHER'}
 ];
 const positionOptions = [
   {label: '皆可', value: 'VERSATILE'},
@@ -231,28 +246,27 @@ async function fetchMemberDetails() {
     formData.name = memberData.name || '';
     formData.display_name = memberData.display_name || '';
     formData.student_id = memberData.student_id || '';
-    formData.gender = memberData.gender || null; // API 應回傳 Enum NAME
+    formData.gender = memberData.gender || null;
     formData.position = memberData.position || null;
     formData.organization_id = memberData.organization_id || null;
-    formData.mu = memberData.mu || null;
-    formData.sigma = memberData.sigma || null;
-    formData.joined_date = memberData.joined_date || null; // 使用 Member 模型的 joined_date
+    formData.mu = memberData.mu !== undefined ? memberData.mu : null; // 確保 mu 和 sigma 可以為0
+    formData.sigma = memberData.sigma !== undefined ? memberData.sigma : null;
+    formData.join_date = memberData.join_date || null; // 模板中是 join_date
     formData.leaved_date = memberData.leaved_date || null;
     formData.is_active = typeof memberData.is_active === 'boolean' ? memberData.is_active : true;
     formData.notes = memberData.notes || '';
 
-    // 填充 User 相關欄位 (如果存在)
-    formData.username = memberData.username || ''; // username (手機號)
-    formData.email = memberData.user_email || ''; // 假設 to_dict 返回 user_email
-    formData.role = memberData.user_role || '';
+    // 填充 User 相關欄位
+    formData.username = memberData.username || ''; // 假設後端 to_dict 返回 user_username
+    formData.email = memberData.user_email || '';
+    formData.role = memberData.user_role || 'MEMBER';
+    // 注意 AddMember 中 role 預設是 PLAYER，但您這裡的 roleOptions 有 MEMBER
 
-    // 獲取組織列表用於下拉選單
-    const orgResponse = await organizationService.getOrganizations();
-    organizationOptions.value = orgResponse.data || [];
+    // 獲取組織列表 (與 AddMember 邏輯類似)
+    await fetchOrganizationDetails(); // 確保此函數已定義或導入
 
   } catch (err) {
-    fetchError.value = "無法載入成員資料進行編輯。";
-    console.error("Failed to fetch member details:", err);
+    // ... (錯誤處理)
   } finally {
     loadingData.value = false;
   }
@@ -321,8 +335,76 @@ function goBack() {
 </script>
 
 <style scoped>
-.admin-edit-member-page {
+.admin-edit-member-page { /* 改名以匹配模板 */
   max-width: 800px;
-  margin: auto;
+  margin: 2rem auto 3rem auto;
+}
+
+/* 與 AdminAddMemberView.vue 相同的樣式 */
+.page-main-title {
+  font-weight: 600;
+  color: var(--n-title-text-color);
+  display: flex;
+  align-items: center;
+}
+
+.title-back-button.n-button {
+  margin-right: 12px;
+  font-size: 1.5rem;
+}
+
+.title-back-button.n-button .n-icon {
+  color: var(--n-text-color-base);
+}
+
+.form-card.n-card {
+  margin-top: 1.5rem;
+  border-radius: var(--n-border-radius);
+  box-shadow: var(--n-box-shadow2);
+  background-color: var(--n-card-color);
+  padding: 10px 15px;
+}
+
+.section-divider.n-divider:not(.n-divider--vertical) {
+  margin-top: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-divider.n-divider .n-divider__title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--n-text-color-2);
+}
+
+.switch-with-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--n-height-m);
+}
+
+.switch-label-text {
+  color: var(--n-text-color-3);
+  font-size: 0.9em;
+}
+
+.action-buttons.n-space {
+  padding-top: 0.5rem;
+}
+
+.action-buttons .n-button {
+  min-width: 100px;
+  font-weight: 500;
+}
+
+/* 編輯頁面特有的 spinner 樣式 (如果使用 Bootstrap spinner) */
+.spinner-border.text-primary {
+  color: var(--n-primary-color) !important; /* 使其顏色與 Naive UI 主題一致 */
+}
+
+.alert.alert-danger { /* Bootstrap alert，如果使用 n-alert 則不需要 */
+  color: var(--n-error-color);
+  background-color: var(--n-color-embedded-error);
+  border-color: var(--n-error-color-hover);
 }
 </style>

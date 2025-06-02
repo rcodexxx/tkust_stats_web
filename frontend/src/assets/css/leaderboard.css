@@ -1,241 +1,199 @@
-.leaderboard-page-wrapper {
-    /* background-color: #eef1f7; 由 App.vue 的 themeOverrides.common.bodyColor 控制 */
+/* --- General Page Elements --- */
+.leaderboard-page .page-main-title {
+    color: #333;
+    font-weight: 600;
 }
 
-.leaderboard-header {
-    /* 樣式 */
-}
-
-.page-main-title.n-h1 { /* Naive UI H1 的樣式 */
-    font-weight: 700 !important; /* 覆蓋 Naive UI 預設 */
-    color: #2a3a51 !important; /* 深藍灰色 */
-    letter-spacing: -0.5px;
-}
-
-.title-icon {
-    color: var(--primary-color, #4a76f5); /* 使用 Naive UI 主題色 */
-}
-
-.record-match-button.n-button { /* Naive UI Button 的樣式 */
-    /* 顏色和邊框由 type="primary" 和 themeOverrides 控制 */
-    /* padding: 0.65rem 1.5rem; */ /* Naive UI Button 有自己的 padding 控制 */
-    font-weight: 500 !important;
-    /* border-radius: 0.5rem; */ /* 由 round prop 和 themeOverrides 控制 */
-    /* transition: all 0.3s ease; */ /* Naive UI Button 有自己的 transition */
-}
-
-.record-match-button.n-button:hover {
-    /* transform: translateY(-2px); */ /* Naive UI hover 效果 */
-    /* box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4); */
-}
-
-.leaderboard-content-naive {
-    max-width: 750px; /* 控制排行榜內容最大寬度，比之前略寬以適應卡片 */
-}
-
-.leaderboard-cards-container.n-list {
-    background-color: transparent; /* List 背景透明，讓卡片自己顯示背景 */
-    padding: 0;
-}
-
-.leaderboard-cards-container .n-list-item {
-    padding: 0 0 10px 0 !important; /* 調整 list item 之間的間距 */
-    background-color: transparent !important;
-    border: none !important; /* 移除 list item 預設邊框 */
-}
-
-.leaderboard-card.n-card {
-    border-radius: 10px; /* 來自 uenify */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07); /* 柔和陰影 */
-    /* :content-style="{ padding: '0' }" 已在模板中設定 */
-}
-
-.leaderboard-card.n-card > .n-card__content { /* 確保 padding 為 0 */
+/* --- Naive UI Component Overrides & List Structure --- */
+.leaderboard-cards-list .n-list-item,
+.leaderboard-cards-list .n-list-item .n-list-item__content {
     padding: 0 !important;
 }
 
+.leaderboard-cards-list .n-list-item .n-card.leaderboard-card-entry {
+    margin-bottom: 8px;
+}
 
-.leaderboard-card-grid { /* 替代 .leaderboard-entry */
-    display: grid;
-    grid-template-columns: 50px minmax(0, 2.5fr) minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
-    /* # | 球員/組織 | 牌位 | 勝-敗 | 分數 */
-    gap: 10px;
+.leaderboard-card-entry.n-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out !important;
+    border: 1px solid transparent; /* For layout stability on hover if transform is used */
+}
+
+.leaderboard-card-entry.n-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    transform: translateY(-2px);
+}
+
+.n-card > .n-card__content {
+    padding: 0 !important;
+}
+
+/* --- Desktop Header Row Styling --- */
+.leaderboard-header-row-naive {
+    display: flex;
     align-items: center;
-    padding: 15px 20px; /* 卡片內部的 padding */
+    padding: 10px 8px; /* MODIFIED: Reduced horizontal padding */
+    font-weight: 600;
+    color: #4a5568;
+    background-color: #f7fafc;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 0.5rem; /* MODIFIED: Reduced gap */
+    border-radius: 6px 6px 0 0;
+    box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
+    width: 100%; /* ADDED: Ensure it tries to fit its container */
 }
 
-/* 卡片內的各個部分樣式 */
-.card-rank {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #8898aa;
+.leaderboard-header-row-naive .entry-rank {
+    flex-shrink: 0;
+    width: 35px; /* MODIFIED: Reduced width */
     text-align: center;
+    font-size: 0.9em;
 }
 
-.rank-icon-display .n-icon { /* 確保圖示正確顯示 */
-}
-
-.rank-number-display { /* ... */
-}
-
-
-.card-player-info {
+.leaderboard-header-row-naive .entry-player {
+    flex-grow: 1;
     min-width: 0;
-    overflow: hidden;
+    text-align: left;
 }
 
-.player-name-display { /* 類似 .player-name */
+.leaderboard-header-row-naive .entry-record {
+    flex-shrink: 0;
+    min-width: 60px; /* MODIFIED: Reduced min-width */
+    text-align: center;
+    font-size: 0.9em;
+}
+
+.leaderboard-header-row-naive .entry-score {
+    flex-shrink: 0;
+    margin-left: auto;
+    min-width: 55px; /* MODIFIED: Reduced min-width */
+    text-align: right;
+    font-size: 0.9em;
+}
+
+/* --- Leaderboard Card Content Styling --- */
+.leaderboard-card-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* MODIFIED: Reduced gap from 0.75rem (e.g., 8px if 1rem=16px) */
+    width: 100%;
+    padding: 10px 8px; /* MODIFIED: Reduced horizontal padding from 10px to 8px */
+    overflow: hidden; /* ADDED: Crucial for preventing children from visually overflowing this container */
+    box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
+}
+
+.leaderboard-card-content .entry-rank {
+    flex-shrink: 0;
+    width: 35px; /* MODIFIED: Reduced width from 40px */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.leaderboard-card-content .entry-rank .rank-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.leaderboard-card-content .entry-rank .rank-number {
+    color: #4a5568;
+}
+
+.leaderboard-card-content .entry-details-middle {
+    flex-grow: 1;
+    min-width: 0; /* Crucial for allowing this block to shrink */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* MODIFIED: Reduced gap */
+}
+
+.leaderboard-card-content .entry-details-middle .entry-player {
+    flex-grow: 1;
+    min-width: 0; /* Crucial for text ellipsis to work */
+}
+
+.leaderboard-card-content .entry-player .player-name {
     font-weight: 600;
     font-size: 1rem;
-    color: #33475b;
+    color: #2d3748;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
-.player-org-display { /* 類似 .player-org */
-    font-size: 0.8rem;
-    color: #6c757d;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
-}
-
-.card-tier { /* 類似 .entry-tier */
-    text-align: center;
-}
-
-.card-tier .n-tag {
-    font-weight: bold;
-    letter-spacing: 0.3px;
-}
-
-.card-record { /* 類似 .entry-record */
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-align: center;
-    white-space: nowrap;
-}
-
-.card-record .wins-text {
-    color: var(--success-color, #198754);
-}
-
-/* 使用主題色 */
-.card-record .losses-text {
-    color: var(--error-color, #dc3545);
-}
-
-.card-record .total-matches-text {
-    font-size: 0.75em;
-    color: var(--text-color-3);
-}
-
-
-.card-score { /* 類似 .entry-score */
-    text-align: right;
-    white-space: nowrap;
-    justify-self: end; /* Grid 項目本身靠右 */
-}
-
-.card-score .score-value.n-gradient-text { /* Naive UI Gradient Text */
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-.card-score .score-label-text {
+.leaderboard-card-content .entry-player .player-org {
     font-size: 0.8em;
-    font-weight: normal;
-    color: var(--text-color-3);
-    margin-left: 2px;
-}
-
-/* 前三名高亮 - 現在作用於 n-card */
-.leaderboard-card.rank-first {
-    border-left: 5px solid #FFD700;
-    background-color: #fffbeb !important;
-}
-
-.leaderboard-card.rank-second {
-    border-left: 5px solid #C0C0C0;
-    background-color: #f8f8f8 !important;
-}
-
-.leaderboard-card.rank-third {
-    border-left: 5px solid #CD7F32;
-    background-color: #fff5eb !important;
-}
-
-/* 分頁控制樣式 (Naive UI Pagination 通常有不錯的預設，可微調) */
-.custom-pagination.n-pagination { /* 如果需要，可以為 Naive UI Pagination 添加自訂 class */
-    /* 例如調整 margin */
-}
-
-/* 可選的表頭行樣式 (如果保留) */
-.leaderboard-card-header {
-    display: grid;
-    grid-template-columns: 50px minmax(0, 2.5fr) minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
-    gap: 10px;
-    padding: 8px 20px;
-    font-weight: 600;
-    color: var(--text-color-3);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 10px;
-}
-
-.leaderboard-card-header > div {
-    text-overflow: ellipsis;
-    overflow: hidden;
+    color: #718096;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
-/* 響應式調整 */
-@media (max-width: 767px) {
-    /* md 以下，手機 */
-    .leaderboard-card-grid {
-        grid-template-columns: 40px 1fr auto; /* 隱藏 牌位 和 勝敗 */
-        gap: 8px;
-        padding: 12px 15px; /* 調整卡片內邊距 */
-    }
-
-    .card-tier, .card-record {
-        display: none;
-    }
-
-    .player-name-display {
-        font-size: 0.9rem;
-    }
-
-    .card-score .score-value.n-gradient-text {
-        font-size: 1rem;
-    }
-
-    .leaderboard-card-header {
-        display: none !important;
-    }
+.leaderboard-card-content .entry-details-middle .entry-record {
+    flex-shrink: 0;
+    min-width: 60px; /* MODIFIED: Reduced min-width from 65px */
+    font-size: 0.875rem;
+    white-space: nowrap; /* Important for "W - L" format */
+    color: #4a5568;
+    text-align: center;
 }
 
-@media (max-width: 576px) {
-    /* sm 以下，更小的手機 */
-    .leaderboard-card-grid {
-        grid-template-columns: 35px 1fr auto; /* 與 md 相同，但字體和 padding 可能更小 */
-        padding: 10px 12px;
-    }
+.leaderboard-card-content .entry-record .wins {
+    color: #38a169;
+    font-weight: 500;
+}
 
-    .player-org-display {
-        display: none;
-    }
+.leaderboard-card-content .entry-record .losses {
+    color: #e53e3e;
+    font-weight: 500;
+}
 
-    /* 極小螢幕隱藏組織 */
-    .main-layout-content.n-layout-content {
-        padding: 15px !important;
-    }
+.leaderboard-card-content .entry-score {
+    flex-shrink: 0; /* Score part should not shrink */
+    margin-left: auto; /* Pushes it to the right */
+    text-align: right;
+    min-width: 55px; /* MODIFIED: Reduced min-width from 60px */
+    font-size: 1rem;
+}
 
-    .page-main-title.n-h1 {
-        font-size: 1.5rem !important;
-    }
+.leaderboard-card-content .entry-score .score-number {
+    font-weight: 700;
+    font-size: 1.2em;
+    /* Color is set via :style binding in template */
+}
+
+.leaderboard-card-content .entry-score .score-label {
+    font-size: 0.8em;
+    margin-left: 3px;
+    color: #718096;
+}
+
+/* --- Top 3 Rank Highlighting (border and background) --- */
+.leaderboard-card-entry.rank-card-first {
+    border-left: 4px solid #ECC94B;
+    background-color: #FFFAF0;
+}
+
+.leaderboard-card-entry.rank-card-second {
+    border-left: 4px solid #A0AEC0;
+    background-color: #F8F9FA;
+}
+
+.leaderboard-card-entry.rank-card-third {
+    border-left: 4px solid #C05621;
+    background-color: #FFF5EB;
+}
+
+.leaderboard-card-entry.rank-card-other {
+    border-left: 4px solid #E2E8F0;
+}
+
+/* Optional: Explicitly set box-sizing for n-card if needed, though usually inherited */
+.leaderboard-card-entry.n-card {
+    box-sizing: border-box;
 }
