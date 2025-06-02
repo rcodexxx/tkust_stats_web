@@ -19,7 +19,7 @@ class User(db.Model):
     role = db.Column(
         SQLAlchemyEnum(
             UserRoleEnum,
-            name="user_role_enum_users",
+            name="user_role",
             create_type=False,
             values_callable=lambda x: [e.name for e in x],
         ),

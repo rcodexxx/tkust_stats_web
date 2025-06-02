@@ -11,8 +11,12 @@ class Member(db.Model):
     name = db.Column(db.String(50), nullable=False, comment="真實姓名")
     display_name = db.Column(db.String(20), nullable=False, comment="暱稱")
     student_id = db.Column(db.String(15), unique=True, nullable=True, comment="學號")
-    gender = db.Column(SQLAlchemyEnum(GenderEnum), nullable=True, comment="性別")
-    position = db.Column(SQLAlchemyEnum(PositionEnum), nullable=True, comment="位置")
+    gender = db.Column(
+        SQLAlchemyEnum(GenderEnum), nullable=True, create_type=False, comment="性別"
+    )
+    position = db.Column(
+        SQLAlchemyEnum(PositionEnum), nullable=True, create_type=False, comment="位置"
+    )
 
     # TrueSkill
     mu = db.Column(db.Float, nullable=False, default=25.0, comment="TrueSkill μ")
