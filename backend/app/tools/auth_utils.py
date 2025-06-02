@@ -3,9 +3,9 @@ from functools import wraps
 from flask import current_app, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
-from .extensions import db
-from .models.enums import UserRoleEnum
-from .models.user import User
+from ..extensions import db
+from ..models.enums import UserRoleEnum
+from ..models.user import User
 
 
 def roles_required(*required_roles: UserRoleEnum):
@@ -54,11 +54,3 @@ def roles_required(*required_roles: UserRoleEnum):
         return wrapper
 
     return decorator
-
-
-def admin_required(f):
-    return roles_required(*UserRoleEnum.ADMIN)(f)
-
-
-def cadre_required(f):
-    return roles_required(*UserRoleEnum.CADRE)(f)

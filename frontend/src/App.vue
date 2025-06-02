@@ -31,8 +31,8 @@
                           <n-icon :component="PersonCircleOutlineIcon"/>
                         </template>
                         {{ authStore.userDisplayName }}
-                        <small v-if="authStore.userRole" class="user-role-display-badge">
-                          ({{ getRoleDisplay(authStore.userRole) }})
+                        <small v-if="authStore.userRole" class="user-role-display">
+                          {{ getRoleDisplay(authStore.userRole) }}
                         </small>
                         <n-icon size="14" class="dropdown-arrow-icon">
                           <ChevronDownIcon/>
@@ -67,7 +67,7 @@
             </n-layout-content>
 
             <n-layout-footer bordered position="static" class="app-footer">
-              &copy; {{ new Date().getFullYear() }}
+              &copy; {{ new Date().getFullYear() }} TKU Soft Tennis. All Rights Reserved.
             </n-layout-footer>
           </n-layout>
         </n-dialog-provider>
@@ -180,60 +180,65 @@ onMounted(() => {
   activeMenuKey.value = route.name;
 });
 
-// Naive UI 主題覆蓋 (可選，根據您的喜好調整)
+// 任天堂風格主題覆蓋
+const nintendoRed = '#E60012'; // 任天堂主紅色
+const lightGreyText = '#888888'; // 導航連結文字淺灰色
+const bodyBgColor = '#F5F5F5'; // Body 淺灰色背景
+
 const themeOverrides = {
   common: {
-    primaryColor: '#0d6efd', // 例如，使用一個類似 Bootstrap Primary 的藍色
-    primaryColorHover: '#0b5ed7',
-    primaryColorPressed: '#0a58ca',
-    primaryColorSuppl: '#0d6efd', // 用於一些輔助元素
-    bodyColor: "#f8f9fa", // 應用程式背景色
-    textColorBase: '#212529', // 基本文字顏色
+    primaryColor: nintendoRed,
+    primaryColorHover: '#CC0010', // 深一點的紅
+    primaryColorPressed: '#B3000E', // 更深一點的紅
+    primaryColorSuppl: nintendoRed,
+    bodyColor: bodyBgColor, // 應用程式背景色
+    textColorBase: '#333333', // 基本文字顏色
     fontSize: '14px',
   },
   Button: {
-    // textColorPrimary: '#fff',
-    // textColorGhostPrimary: 'var(--primary-color)', // 繼承 common 中的 primaryColor
-    // textColorTextPrimary: 'var(--primary-color)',
+    textColorPrimary: '#FFFFFF', // 主要按鈕文字改為白色以搭配紅色背景
+    // textColorGhostPrimary: nintendoRed, //  保持 ghost 按鈕文字為紅色
+    // textColorTextPrimary: nintendoRed, // 保持 text 按鈕文字為紅色
   },
   Menu: {
-    // itemColorHorizontal: 'transparent', // 水平選單項背景
-    itemTextColorHorizontal: 'rgba(255, 255, 255, 0.75)', // Navbar 選單文字顏色
-    itemIconColorHorizontal: 'rgba(255, 255, 255, 0.75)',
-    itemTextColorHoverHorizontal: '#ffffff',
-    itemIconColorHoverHorizontal: '#ffffff',
-    itemTextColorActiveHorizontal: '#ffffff', // 選中項文字
-    itemIconColorActiveHorizontal: '#ffffff',
-    // itemColorActiveHorizontal: 'var(--primary-color-hover)', // 選中項背景（如果需要）
-    // --n-item-text-color-active: var(--primary-color) !important;
+    // itemColorHorizontal: 'transparent', // 水平選單項背景，由 CSS 控制
+    itemTextColorHorizontal: lightGreyText, // Navbar 選單文字顏色
+    itemIconColorHorizontal: lightGreyText, // Navbar 選單圖示顏色
+    itemTextColorHoverHorizontal: nintendoRed, // Hover 時文字變紅
+    itemIconColorHoverHorizontal: nintendoRed, // Hover 時圖示變紅
+    itemTextColorActiveHorizontal: nintendoRed, // 選中項文字變紅
+    itemIconColorActiveHorizontal: nintendoRed, // 選中項圖示變紅
+    // itemColorActiveHorizontal: 'transparent', // 選中項背景由 CSS 的偽元素處理
   },
   Layout: {
-    // headerColor: '#343a40', // Bootstrap .bg-dark 的顏色
-    // footerColor: '#f8f9fa', // Bootstrap .bg-light
-    // color: '#eef1f7' // content 背景色 (或用 bodyColor)
+    // headerColor: '#FFFFFF', // 由 CSS .app-header 控制
+    // footerColor: '#E0E0E0', // 由 CSS .app-footer 控制
+    // color: bodyBgColor // content 背景色
   },
   Dropdown: {
-    // Naive UI Dropdown 樣式通常不錯，如有需要可在此覆蓋
-    // optionTextColor: '#333',
+    optionTextColor: '#333333',
   }
 };
+
 </script>
 
 <style>
-/* 全域樣式 - 確保這些樣式能正確應用 */
+/* 全域樣式 */
 html, body, #app {
   height: 100%;
   margin: 0;
   overflow: hidden; /* 讓 n-layout-content 自己處理滾動 */
-  background-color: var(--body-color); /* Naive UI 的背景色 */
+  background-color: var(--body-color, #F5F5F5); /* 使用 Naive UI 的 bodyColor 或預設淺灰 */
+  font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif; /* 一個常見的無襯線字體 */
 }
 
 .app-header {
-  padding: 0 24px; /* 左右內邊距 */
-  height: 60px; /* 固定 header 高度 */
-  display: flex; /* 確保內部元素能用 flex 對齊 */
+  padding: 0 24px;
+  height: 64px; /* 稍微增加一點高度以容納 "方塊" 感 */
+  display: flex;
   align-items: center;
-  background-color: #343a40; /* Bootstrap .bg-dark 顏色 */
+  background-color: #FFFFFF; /* Navbar 白色背景 */
+  border-bottom: 1px solid #E0E0E0; /* Navbar 底部細線 */
 }
 
 .navbar-content {
@@ -244,96 +249,125 @@ html, body, #app {
 }
 
 .navbar-brand-custom {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 1.15rem; /* 調整字體大小 */
+  font-weight: bold; /* 加粗 */
+  color: #FFFFFF !important; /* 白色文字 */
+  background-color: var(--primary-color, #E60012); /* 任天堂紅背景 */
   text-decoration: none;
-  margin-right: 1.5rem;
+  margin-right: 2rem;
+  padding: 10px 20px; /* 增加內邊距，使其有方塊感 */
+  border-radius: 4px; /* 可選：輕微圓角 */
+  white-space: nowrap; /* 防止文字換行 */
+  transition: background-color 0.3s ease;
 }
 
 .navbar-brand-custom:hover {
-  color: #fff !important;
+  color: #FFFFFF !important;
+  background-color: var(--primary-color-hover, #CC0010); /* Hover 時略深一點的紅 */
 }
 
 .main-nav-menu.n-menu--horizontal {
   background-color: transparent !important;
-  line-height: 60px; /* 與 header 高度匹配 */
-  flex-grow: 1; /* 讓選單佔據可用空間 */
+  line-height: normal; /* 移除固定行高，讓 padding 控制高度 */
+  flex-grow: 1;
 }
 
 .main-nav-menu.n-menu--horizontal .n-menu-item {
-  height: 60px !important;
+  height: auto !important; /* 讓內容和 padding 決定高度 */
+  margin: 0 4px; /* 連結之間的間距 */
 }
 
 .main-nav-menu.n-menu--horizontal .n-menu-item-content {
-  padding: 0 10px !important;
-  border-bottom: 3px solid transparent !important;
+  padding: 12px 16px !important; /* 增加 padding 使連結有方塊感 */
+  border-bottom: none !important; /* 移除原有的底部邊框 */
+  position: relative; /* 為了偽元素定位 */
+  overflow: hidden; /* 為了偽元素的滑動效果 */
+  border-radius: 4px; /* 可選：輕微圓角 */
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-/* 使用 Naive UI 主題變數來設定選中項顏色 */
-.main-nav-menu.n-menu--horizontal .n-menu-item--selected .n-menu-item-content {
-  border-bottom-color: var(--primary-color) !important; /* 使用 themeOverrides 中的 primaryColor */
+/* 連結下方滑動的紅色條 */
+.main-nav-menu.n-menu--horizontal .n-menu-item-content::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px; /* 初始位置在方塊下方，準備向上滑入 */
+  width: 100%;
+  height: 4px; /* 紅色條的高度 */
+  background-color: var(--primary-color, #E60012);
+  transition: bottom 0.25s ease-in-out;
 }
+
+/* Hover 或選中時，紅色條滑入，文字顏色改變 */
+.main-nav-menu.n-menu--horizontal .n-menu-item:hover .n-menu-item-content::after,
+.main-nav-menu.n-menu--horizontal .n-menu-item--selected .n-menu-item-content::after {
+  bottom: 0; /* 滑入到方塊底部 */
+}
+
+.main-nav-menu.n-menu--horizontal .n-menu-item:hover .n-menu-item-content-header,
+.main-nav-menu.n-menu--horizontal .n-menu-item:hover .n-menu-item-content__icon,
+.main-nav-menu.n-menu--horizontal .n-menu-item--selected .n-menu-item-content-header,
+.main-nav-menu.n-menu--horizontal .n-menu-item--selected .n-menu-item-content__icon {
+  color: var(--primary-color, #E60012) !important; /* 使用 themeOverrides 中定義的顏色 */
+}
+
 
 .main-nav-menu .n-menu-item-content__icon {
-  margin-right: 6px !important;
+  margin-right: 8px !important; /* 圖示和文字間距 */
 }
 
 .main-nav-menu .n-menu-item-content-header a {
-  color: inherit !important;
+  color: inherit !important; /* 繼承父元素 .n-menu-item-content-header 的顏色 */
   text-decoration: none !important;
   display: flex;
   align-items: center;
 }
 
-
 .user-actions-area {
-  /* flex-shrink: 0; */ /* 確保使用者區域不被壓縮 */
+  /* flex-shrink: 0; */
 }
 
-.user-display-button.n-button { /* 為使用者名稱按鈕設定樣式 */
-  color: rgba(255, 255, 255, 0.85);
+.user-display-button.n-button {
+  color: #555555; /* 在白色 navbar 上的使用者名稱顏色 */
   font-weight: 500;
 }
 
 .user-display-button.n-button:hover,
 .user-display-button.n-button:focus {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--primary-color, #E60012); /* Hover 時變紅 */
+  background-color: rgba(0, 0, 0, 0.03) !important; /* 非常淡的背景表示 active */
 }
 
-.user-role-display-badge {
-  font-size: 0.75em;
-  opacity: 0.8;
-  color: #0dcaf0; /* Naive UI info color 或 text-info */
+/* 使用者 Role 文字樣式 (無括號) */
+.user-role-display {
+  font-size: 0.8em;
+  opacity: 0.9;
+  color: #777777; /* Role 文字顏色 */
+  margin-left: 6px; /* 和使用者名稱的間距 */
 }
 
 .dropdown-arrow-icon {
-  vertical-align: -0.125em; /* 微調箭頭圖示 */
+  vertical-align: -0.125em;
 }
 
-.custom-dropdown-link, .custom-dropdown-link:hover { /* 用於 dropdown 中的 RouterLink */
+.custom-dropdown-link, .custom-dropdown-link:hover {
   text-decoration: none;
-  color: inherit; /* 繼承 dropdown item 的顏色 */
+  color: inherit;
   display: block;
   width: 100%;
 }
 
-
 .main-layout-content.n-layout-content {
-  background-color: #f8f9fa; /* 內容區域背景色 */
+  background-color: var(--body-color, #F5F5F5); /* 內容區域背景色 */
 }
 
 .app-footer.n-layout-footer {
   text-align: center;
   line-height: 1.5;
-  background-color: #e9ecef;
-  color: #6c757d;
-  padding: 1rem 0; /* 調整 padding */
-}
-
-.app-footer .text-muted {
-  color: #6c757d !important;
+  background-color: #E0E0E0; /* Footer 背景色，比 body 略深 */
+  color: #666666; /* Footer 文字顏色 */
+  padding: 1rem 0;
+  border-top: 1px solid #D0D0D0;
 }
 
 /* 頁面切換過渡效果 */

@@ -62,9 +62,6 @@
         <n-form-item label="組織全名" path="name">
           <n-input v-model:value="currentOrganization.name" placeholder="請輸入組織全名"/>
         </n-form-item>
-        <n-form-item label="組織簡稱" path="short_name">
-          <n-input v-model:value="currentOrganization.short_name" placeholder="請輸入組織簡稱 (可選)"/>
-        </n-form-item>
         <n-form-item label="城市" path="city">
           <n-input v-model:value="currentOrganization.city" placeholder="請輸入城市 (可選)"/>
         </n-form-item>
@@ -99,6 +96,7 @@ import {
   NInput,
   NModal,
   NSpace,
+  NTooltip,
   useDialog,
   useMessage
 } from 'naive-ui';

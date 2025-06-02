@@ -1,145 +1,206 @@
 <template>
-  <div class="login-page container mt-5">
-    <div class="row justify-content-center">
-      <div class="col-md-6 col-lg-5 col-xl-4">
-        <div class="card shadow-sm">
-          <div class="card-body p-4 p-lg-5">
-            <h2 class="card-title text-center mb-4 fw-bold">登入</h2>
+  <div class="login-page-naive">
+    <n-card :bordered="false" class="login-card" hoverable>
+      <n-h2 align="center" class="card-title-naive">登入系統</n-h2>
 
-            <div v-if="loginRouteMessage" class="alert alert-info p-2 mb-3 text-center small">
-              {{ loginRouteMessage }}
-            </div>
+      <n-alert v-if="loginRouteMessage" title="提示" type="info" closable class="mb-4" @close="loginRouteMessage = ''">
+        {{ loginRouteMessage }}
+      </n-alert>
 
-            <form @submit.prevent="handleLogin">
-              <div class="mb-3">
-                <label for="username" class="form-label">帳號 (手機號碼)</label>
-                <input
-                    type="text"
-                    class="form-control form-control-lg"
-                    id="username"
-                    v-model="credentials.username"
-                    required
-                    placeholder="請輸入手機號碼"
-                    autocomplete="username"
-                >
-              </div>
-              <div class="mb-4">
-                <label for="password" class="form-label">密碼</label>
-                <input
-                    type="password"
-                    class="form-control form-control-lg"
-                    id="password"
-                    v-model="credentials.password"
-                    required
-                    placeholder="請輸入密碼"
-                    autocomplete="current-password"
-                >
-              </div>
+      <n-form
+          ref="formRef"
+          :model="credentials"
+          :rules="formRules"
+          label-placement="top"
+          require-mark-placement="right-hanging"
+          @submit.prevent="handleLogin"
+      >
+        <n-form-item path="username" label="帳號 (手機號碼)">
+          <n-input
+              v-model:value="credentials.username"
+              placeholder="請輸入手機號碼 (09開頭10位數字)"
+              size="large"
+              clearable
+              @keydown.enter.prevent="handleLogin"
+          >
+            <template #prefix>
+              <n-icon :component="PhoneIcon"/>
+            </template>
+          </n-input>
+        </n-form-item>
 
-              <div v-if="authStore.status.loginError" class="alert alert-danger p-2 py-1 mb-3 text-center small">
-                {{ authStore.status.loginError }}
-              </div>
+        <n-form-item path="password" label="密碼">
+          <n-input
+              type="password"
+              show-password-on="click"
+              v-model:value="credentials.password"
+              placeholder="請輸入密碼"
+              size="large"
+              clearable
+              @keydown.enter.prevent="handleLogin"
+          >
+            <template #prefix>
+              <n-icon :component="LockIcon"/>
+            </template>
+          </n-input>
+        </n-form-item>
 
-              <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg" :disabled="authStore.status.loggingIn">
-                  <span v-if="authStore.status.loggingIn" class="spinner-border spinner-border-sm me-2" role="status"
-                        aria-hidden="true"></span>
-                  {{ authStore.status.loggingIn ? '登入中...' : '登入' }}
-                </button>
-              </div>
-            </form>
+        <n-alert v-if="authStore.status.loginError" title="登入失敗" type="error" closable class="mb-3"
+                 @close="authStore.status.loginError = null">
+          {{ authStore.status.loginError }}
+        </n-alert>
 
-            <div class="mt-4 text-center">
-              <small class="text-muted">
-                還沒有帳號？
-                <router-link :to="{ name: 'Register' }">快速註冊</router-link>
-              </small>
-              <br>
-              <!--              <small class="text-muted">-->
-              <!--                <router-link to="/forgot-password" class="text-decoration-none">忘記密碼？</router-link>-->
-              <!--              </small>-->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <n-form-item :show-label="false">
+          <n-button
+              type="primary"
+              attr-type="submit"
+              block
+              strong
+              size="large"
+              :loading="authStore.status.loggingIn"
+              :disabled="authStore.status.loggingIn"
+          >
+            {{ authStore.status.loggingIn ? '登入中...' : '登入' }}
+          </n-button>
+        </n-form-item>
+      </n-form>
+
+      <n-divider/>
+
+      <n-space vertical align="center" class="mt-3">
+        <n-text>
+          還沒有帳號？
+          <router-link :to="{ name: 'Register' }" v-slot="{ navigate }">
+            <n-button text type="primary" @click="navigate">立即快速註冊</n-button>
+          </router-link>
+        </n-text>
+      </n-space>
+    </n-card>
   </div>
 </template>
 
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
-import {useAuthStore} from '../stores/authStore';
-import {useRoute, useRouter} from 'vue-router'; // 匯入 useRoute
+import {useAuthStore} from '@/stores/authStore'; // 確保路徑正確
+import {useRoute, useRouter} from 'vue-router';
+import {
+  NAlert,
+  NButton,
+  NCard,
+  NDivider,
+  NForm,
+  NFormItem,
+  NH2,
+  NIcon,
+  NInput,
+  NSpace,
+  NText,
+  useMessage
+} from 'naive-ui';
+import {KeyOutline as LockIcon, PhonePortraitOutline as PhoneIcon} from '@vicons/ionicons5';
 
 const authStore = useAuthStore();
 const router = useRouter();
-const route = useRoute(); // 獲取當前路由資訊
+const route = useRoute();
+const message = useMessage(); // Naive UI message API
 
+const formRef = ref(null); // Ref for NForm instance
 const credentials = reactive({
-  username: '', // 將會是手機號碼
+  username: '',
   password: '',
 });
 
 const loginRouteMessage = ref('');
 
+// Naive UI 表單驗證規則
+const formRules = {
+  username: [
+    {required: true, message: '手機號碼為必填', trigger: ['input', 'blur']},
+    {
+      pattern: /^09\d{8}$/,
+      message: '手機號碼格式不正確 (應為09開頭10位數字)',
+      trigger: ['input', 'blur']
+    }
+  ],
+  password: [
+    {required: true, message: '密碼為必填', trigger: ['input', 'blur']},
+    {min: 6, message: '密碼長度至少需要6位', trigger: ['input', 'blur']} // 可選的最小長度驗證
+  ]
+};
+
 onMounted(() => {
-  // 清除之前的登入錯誤訊息 (如果有的話)
   authStore.status.loginError = null;
-  // 檢查路由查詢參數是否有登出訊息
   if (route.query.loggedOut === 'true') {
     loginRouteMessage.value = '您已成功登出。';
-    // 清除查詢參數，避免刷新頁面時再次顯示
     router.replace({query: {}});
   } else if (route.query.sessionExpired === 'true') {
-    loginRouteMessage.value = '您的登入已過期，請重新登入。';
+    loginRouteMessage.value = '您的登入已過期或無效，請重新登入。';
     router.replace({query: {}});
-  } else if (route.query.unauthorized === 'true') {
+  } else if (route.query.unauthorized === 'true' || route.query.redirect) {
     loginRouteMessage.value = '您需要登入才能訪問該頁面。';
-    router.replace({query: {}});
+    const query = {...route.query};
+    delete query.unauthorized;
+    router.replace({query});
   }
 });
 
-const handleLogin = async () => {
-  if (!credentials.username || !credentials.password) {
-    authStore.status.loginError = '手機號碼和密碼皆為必填。';
-    return;
-  }
-  await authStore.login(credentials);
-  // 導航邏輯已在 authStore.login action 中處理
+const handleLogin = () => {
+  formRef.value?.validate(async (validationErrors) => {
+    if (!validationErrors) {
+      // 表單驗證通過，執行登入
+      const success = await authStore.login(credentials);
+      if (success) {
+        const redirectPath = route.query.redirect || '/';
+        router.push(redirectPath);
+      }
+      // 失敗的錯誤訊息由 authStore.status.loginError 在模板中顯示
+    } else {
+      // Naive UI 會自動在表單項旁邊顯示錯誤，這裡可以選擇性地用 message API 提示
+      message.error('請修正表單中的錯誤。');
+      console.log('Login form validation errors:', validationErrors);
+    }
+  });
 };
 </script>
 
 <style scoped>
-.login-page {
+.login-page-naive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 120px); /* 減去 header 和 footer 的大致高度 */
+  padding: 20px;
+  background-color: var(--body-color); /* 使用 App.vue themeOverrides 中的 bodyColor */
+}
+
+.login-card.n-card {
+  max-width: 420px; /* 登入卡片最大寬度 */
   width: 100%;
+  border-radius: var(--border-radius-large, 12px); /* 使用主題設定或自訂 */
+  box-shadow: var(--box-shadow-2); /* 使用主題設定或自訂 */
 }
 
-.form-signin {
-  max-width: 400px;
-  padding: 1rem;
+.card-title-naive.n-h2 {
+  font-weight: 700; /* 來自 uenify 的 font-weight */
+  color: var(--text-color-1); /* 使用主題設定 */
 }
 
-.form-signin .form-floating:focus-within {
-  z-index: 2;
+/* 微調 Naive UI 組件間距 */
+.n-form-item {
+  margin-bottom: 20px; /* 增加表單項之間的間距 */
 }
 
-.form-signin input[type="text"] {
-  margin-bottom: -1px;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
+.n-alert {
+  margin-bottom: 20px !important;
 }
 
-.form-signin input[type="password"] {
-  margin-bottom: 10px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+.n-button[block] { /* 如果用 block 屬性，確保 padding 合適 */
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
-.card {
-  border-radius: 1rem;
-}
-
-.btn-lg {
-  font-weight: 500;
+.n-divider {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
 }
 </style>

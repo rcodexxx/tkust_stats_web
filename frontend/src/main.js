@@ -12,6 +12,6 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
-app.use(naive) // 全局註冊 Naive UI
+app.use(naive)
 
 app.mount('#app')

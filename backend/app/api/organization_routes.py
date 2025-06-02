@@ -14,7 +14,6 @@ def create_organization():
         return jsonify({"error": "Organization name is required"}), 400
 
     name = data.get("name")
-    short_name = data.get("short_name")
     city = data.get("city")
     notes = data.get("notes")
 
@@ -23,18 +22,9 @@ def create_organization():
             jsonify({"error": f"Organization with name '{name}' already exists."}),
             409,
         )
-    if short_name and Organization.query.filter_by(short_name=short_name).first():
-        return (
-            jsonify(
-                {
-                    "error": f"Organization with short_name '{short_name}' already exists."
-                }
-            ),
-            409,
-        )
 
     try:
-        new_org = Organization(name=name, short_name=short_name, city=city, notes=notes)
+        new_org = Organization(name=name, city=city, notes=notes)
         db.session.add(new_org)
         db.session.commit()
         return jsonify(new_org.to_dict()), 201
@@ -80,7 +70,6 @@ def update_organization(org_id):
         return jsonify({"error": "Request payload must be JSON"}), 400
 
     errors = {}
-    # 檢查 name 和 short_name 的唯一性 (排除自身)
     if "name" in data and data["name"] != org.name:
         if Organization.query.filter(
             Organization.id != org_id, Organization.name == data["name"]
@@ -92,7 +81,6 @@ def update_organization(org_id):
 
     try:
         org.name = data.get("name", org.name)
-        org.short_name = data.get("short_name", org.short_name)
         org.city = data.get("city", org.city)
         org.notes = data.get("notes", org.notes)
         db.session.commit()

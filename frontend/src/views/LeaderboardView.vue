@@ -1,104 +1,134 @@
 <template>
-  <div class="leaderboard-page-wrapper">
-    <div class="leaderboard-header container pt-4 pb-3">
-      <h1 class="text-center page-title">排行榜</h1>
-      <!--      <div class="d-flex justify-content-center mt-3 mb-4">-->
-      <!--        <router-link to="/match/record" class="btn btn-lg btn-custom-action shadow-sm">-->
-      <!--          <i class="bi bi-pencil-square me-2"></i>記錄比賽結果-->
-      <!--        </router-link>-->
-      <!--      </div>-->
+  <div class="leaderboard-page pa-md-4">
+    <div class="leaderboard-header mb-4">
+      <n-h1 align="center" class="page-main-title">
+        <n-icon :component="TrophyIcon" size="32" style="vertical-align: -5px; margin-right: 10px;"/>
+        球隊排行榜
+      </n-h1>
+      <n-space justify="center" class="mt-3 mb-4"
+               v-if="authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin)">
+        <router-link :to="{name: 'RecordMatch'}" v-slot="{ navigate }">
+          <n-button type="primary" strong round @click="navigate">
+            <template #icon>
+              <n-icon :component="PencilIcon"/>
+            </template>
+            記錄比賽結果
+          </n-button>
+        </router-link>
+      </n-space>
     </div>
 
-    <div class="leaderboard-content container">
-      <div v-if="loading" class="d-flex justify-content-center my-5">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-      <div v-if="error" class="alert alert-danger shadow-sm my-4" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>載入排行榜時發生錯誤: {{ error }}
-      </div>
-
-      <div v-if="!loading && !error">
-        <div v-if="allMembersWithRank.length === 0" class="alert alert-light text-center my-4 text-muted">
-          目前排行榜尚無資料，快去記錄第一場比賽吧！
+    <div class="leaderboard-content-wrapper">
+      <n-spin :show="loading" size="large">
+        <template #description>排行榜載入中...</template>
+        <div v-if="!loading && error" class="mt-4">
+          <n-alert title="錯誤" type="error" closable @close="error = null">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>載入排行榜時發生錯誤: {{ error }}
+          </n-alert>
         </div>
 
-        <div class="leaderboard-list" v-if="paginatedMembers.length > 0">
-          <div class="leaderboard-entry leaderboard-header-row d-none d-md-flex">
-            <!--            <div class="entry-rank text-muted">#</div>-->
-            <!--            <div class="entry-player text-muted">名稱</div>-->
-            <!--            <div class="entry-score text-muted">分數</div>-->
+        <div v-if="!loading && !error">
+          <n-empty
+              v-if="allMembersWithRank.length === 0"
+              description="目前排行榜尚無資料，快去記錄第一場比賽吧！"
+              class="py-5"
+              size="huge"
+          />
+
+          <div class="leaderboard-list-naive" v-if="paginatedMembers.length > 0">
+            <div class="leaderboard-entry-naive leaderboard-header-row-naive d-none d-md-flex">
+              <div class="entry-rank">#</div>
+              <div class="entry-player">球員 / 組織</div>
+              <div class="entry-tier text-center">牌位</div>
+              <div class="entry-record text-center">勝 - 敗</div>
+              <div class="entry-score text-end">分數</div>
+            </div>
+
+            <n-list hoverable clickable class="leaderboard-cards-list">
+              <n-list-item v-for="(member) in paginatedMembers" :key="member.id">
+                <n-card :class="['leaderboard-card-entry', getRankHighlightClass(member.rank)]" hoverable>
+                  <div class="leaderboard-card-content">
+                    <div class="entry-rank">
+                      <span v-if="member.rank <= 3 && member.rank > 0" class="rank-icon-wrapper">
+                        <n-icon :component="getRankIconComponent(member.rank)" :size="28"
+                                :color="getRankIconColor(member.rank)"/>
+                      </span>
+                      <span v-else class="rank-number">{{ member.rank }}</span>
+                    </div>
+                    <div class="entry-player">
+                      <div class="player-name">{{ member.display_name || member.name }}</div>
+                      <div class="player-org text-muted" v-if="member.organization_name">
+                        {{ member.organization_name }}
+                      </div>
+                    </div>
+                    <div class="entry-record text-center">
+                      <span class="wins">{{ member.wins }}W</span> - <span class="losses">{{ member.losses }}L</span>
+                    </div>
+                    <div class="entry-score text-end">
+                      <n-gradient-text :type="getScoreGradientType(member.score)"
+                                       style="font-weight: bold; font-size: 1.2em;">
+                        {{ member.score }}
+                      </n-gradient-text>
+                      <span class="score-label">分</span>
+                    </div>
+                  </div>
+                </n-card>
+              </n-list-item>
+            </n-list>
           </div>
+        </div>
 
-          <div
-              v-for="(member) in paginatedMembers"
-              :key="member.id"
-              class="leaderboard-entry"
-              :class="getRankHighlightClass(member.rank)"
+        <div v-if="totalPages > 1 && !loading" class="d-flex justify-content-center mt-4 pt-2">
+          <n-pagination
+              v-model:page="currentPage"
+              :item-count="allMembersWithRank.length"
+              v-model:page-size="itemsPerPage"
+              :page-sizes="[10, 20, 30, 50]"
+              show-size-picker
+              show-quick-jumper
           >
-            <div class="entry-rank">
-              <span v-if="member.rank <= 3 && member.rank > 0" class="rank-icon-wrapper">
-                <i :class="getRankIconClass(member.rank)"></i>
-              </span>
-              <span v-else>{{ member.rank }}</span>
-            </div>
-            <div class="entry-player">
-              <div class="player-name">{{ member.display_name || member.name }}</div>
-              <div class="player-org text-muted">{{ member.organization || '-' }}</div>
-            </div>
-            <div class="entry-record">
-              <span class="wins">{{ member.wins }} W</span> - <span class="losses">{{ member.losses }} L</span>
-              <!--              <small class="total-matches d-block text-muted">({{ member.total_matches }} 場)</small>-->
-            </div>
-            <div class="entry-score">
-              {{ member.score }} <span class="score-label">分</span>
-            </div>
-          </div>
+            <template #prefix="{ itemCount }">
+              共 {{ itemCount }} 位球員
+            </template>
+          </n-pagination>
         </div>
-      </div>
-
-      <div v-if="totalPages > 1" class="d-flex justify-content-center align-items-center mt-4 pt-3">
-        <nav aria-label="Leaderboard pagination">
-          <ul class="pagination custom-pagination mb-0">
-            <li class="page-item" :class="{ disabled: currentPage === 1 }">
-              <button class="page-link" @click="prevPage" :disabled="currentPage === 1" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-              </button>
-            </li>
-            <li v-for="pageNumber in visiblePageNumbers"
-                :key="pageNumber"
-                class="page-item"
-                :class="{ active: pageNumber === currentPage, disabled: pageNumber === '...' }">
-              <button v-if="pageNumber !== '...'" class="page-link" @click="goToPage(pageNumber)">{{
-                  pageNumber
-                }}
-              </button>
-              <span v-else class="page-link dots">...</span>
-            </li>
-            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-              <button class="page-link" @click="nextPage" :disabled="currentPage === totalPages" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
-      <div v-if="allMembersWithRank.length > 0 && totalPages > 1" class="text-center mt-2 text-muted">
-        <small>第 {{ currentPage }} / {{ totalPages }} 頁 (共 {{ allMembersWithRank.length }} 位球員)</small>
-      </div>
-      <div v-if="allMembersWithRank.length > 0 && totalPages <=1 && !loading" class="text-center mt-3 text-muted">
-        <small>共 {{ allMembersWithRank.length }} 位球員</small>
-      </div>
+        <div v-if="allMembersWithRank.length > 0 && totalPages <=1 && !loading" class="text-center mt-3 text-muted">
+          <small>共 {{ allMembersWithRank.length }} 位球員</small>
+        </div>
+      </n-spin>
     </div>
   </div>
 </template>
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import axios from 'axios';
+import axios from 'axios'; // 或您的 apiClient
+import {useAuthStore} from '@/stores/authStore'; // 假設您有 authStore
+import {
+  NAlert,
+  NButton,
+  NCard,
+  NEmpty,
+  NGradientText,
+  NH1,
+  NIcon,
+  NList,
+  NListItem,
+  NPagination,
+  NSpace,
+  NSpin
+} from 'naive-ui';
+import {
+  CreateOutline as PencilIcon,
+  PodiumOutline as Rank1Icon,
+  RibbonOutline as Rank2Icon,
+  StarOutline as Rank3Icon,
+  TrophyOutline as TrophyIcon,
+} from '@vicons/ionicons5';
+
 import '../assets/css/leaderboard.css';
 
+const authStore = useAuthStore(); // 用於控制「記錄比賽」按鈕的顯示
 const allMembersWithRank = ref([]);
 const loading = ref(true);
 const error = ref(null);
@@ -110,43 +140,19 @@ onMounted(async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`${apiBaseUrl}/leaderboard`);
-    if (!response) {
-      console.error("LeaderboardView: API response object is undefined!");
-      error.value = 'API 未返回有效的回應物件。';
+    const response = await axios.get(`${apiBaseUrl}/leaderboard`); // 假設 API 端點不變
+    if (response && Array.isArray(response.data)) {
+      // 後端 API 應該已經回傳了包含 rank, wins, losses, score, rank_tier 的數據
+      allMembersWithRank.value = response.data;
+    } else {
+      console.error("LeaderboardView: API response data is not an array or is missing!", response.data);
+      error.value = 'API 回應數據格式不正確。';
       allMembersWithRank.value = [];
-      loading.value = false;
-      return; // 提前退出
     }
-    if (typeof response.data === 'undefined') {
-      console.error("LeaderboardView: response.data is undefined!");
-      error.value = 'API 回應中缺少 data 屬性。';
-      allMembersWithRank.value = [];
-      loading.value = false;
-      return; // 提前退出
-    }
-
-    console.log("LeaderboardView: API response object:", response);
-    console.log("LeaderboardView: response.data raw content:", response.data);
-    console.log("LeaderboardView: typeof response.data:", typeof response.data);
-    console.log("LeaderboardView: Array.isArray(response.data):", Array.isArray(response.data));
-
-    let members = response.data.map(m => ({...m, score: Number(m.score)}))
-        .sort((a, b) => b.score - a.score);
-    if (members.length > 0) {
-      let rank = 1;
-      members[0].rank = rank;
-      for (let i = 1; i < members.length; i++) {
-        if (members[i].score < members[i - 1].score) {
-          rank = i + 1;
-        }
-        members[i].rank = rank;
-      }
-    }
-    allMembersWithRank.value = members;
   } catch (e) {
     error.value = e.response?.data?.error || e.message || '無法獲取排行榜數據';
     console.error("API請求錯誤:", e.response || e);
+    allMembersWithRank.value = [];
   } finally {
     loading.value = false;
   }
@@ -164,65 +170,35 @@ const paginatedMembers = computed(() => {
   return allMembersWithRank.value.slice(startIndex, endIndex);
 });
 
-function nextPage() {
-  if (currentPage.value < totalPages.value) currentPage.value++;
-}
-
-function prevPage() {
-  if (currentPage.value > 1) currentPage.value--;
-}
-
-function goToPage(pageNumber) {
-  if (pageNumber !== '...' && pageNumber >= 1 && pageNumber <= totalPages.value) {
-    currentPage.value = pageNumber;
-  }
-}
-
-const visiblePageNumbers = computed(() => {
-  const total = totalPages.value;
-  const current = currentPage.value;
-  if (total <= 1) return [];
-  const delta = 2;
-  const range = [];
-  const rangeWithDots = [];
-  let l;
-
-  range.push(1);
-  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
-    range.push(i);
-  }
-  if (total > 1) range.push(total); // 總是顯示最後一頁（如果總頁數大於1）
-
-  const uniqueRange = [...new Set(range)].sort((a, b) => a - b);
-
-  uniqueRange.forEach((i) => {
-    if (l) {
-      if (i - l === 2) {
-        rangeWithDots.push(l + 1);
-      } else if (i - l > 1) {
-        rangeWithDots.push('...');
-      }
-    }
-    rangeWithDots.push(i);
-    l = i;
-  });
-  return rangeWithDots;
-});
-
-
-// 根據排名給予不同的高亮 class (用於背景或邊框)
+// 這些函數現在用於 Naive UI Card 的 class 和 Naive UI Icon 的 component/color
 function getRankHighlightClass(memberRank) {
-  if (memberRank === 1) return 'rank-first';
-  if (memberRank === 2) return 'rank-second';
-  if (memberRank === 3) return 'rank-third';
-  return 'rank-other';
+  if (memberRank === 1) return 'rank-card-first';
+  if (memberRank === 2) return 'rank-card-second';
+  if (memberRank === 3) return 'rank-card-third';
+  return 'rank-card-other';
 }
 
-// 根據排名給予不同的圖示 class (如果需要圖示)
-function getRankIconClass(memberRank) {
-  if (memberRank === 1) return 'bi bi-trophy-fill rank-icon-first';
-  if (memberRank === 2) return 'bi bi-shield-fill rank-icon-second';
-  if (memberRank === 3) return 'bi bi-award-fill rank-icon-third';
-  return ''; // 其他排名不顯示圖示
+function getRankIconComponent(memberRank) {
+  if (memberRank === 1) return Rank1Icon;
+  if (memberRank === 2) return Rank2Icon;
+  if (memberRank === 3) return Rank3Icon;
+  return null;
 }
+
+function getRankIconColor(memberRank) {
+  if (memberRank === 1) return '#FFD700'; // 金色
+  if (memberRank === 2) return '#C0C0C0'; // 銀色
+  if (memberRank === 3) return '#CD7F32'; // 銅色
+  return undefined;
+}
+
+// 分數漸變文字類型 (可選)
+function getScoreGradientType(score) {
+  if (score >= 1200) return "error"; // 例如高分用紅色系漸變
+  if (score >= 800) return "warning";
+  if (score >= 400) return "info";
+  return "success"; // 預設或低分
+}
+
+// visiblePageNumbers 不再需要，Naive UI Pagination 會自己處理
 </script>

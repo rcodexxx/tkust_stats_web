@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import StrEnum, Enum
 
 
 class GenderEnum(StrEnum):
@@ -92,11 +92,20 @@ class MatchFormatEnum(StrEnum):
             return None
 
 
-class UserRoleEnum(StrEnum):
-    MEMBER = "成員"
-    CADRE = "幹部"
-    COACH = "教練"
-    ADMIN = "管理員"
+class UserRoleEnum(Enum):
+    MEMBER = ("隊員", 1)
+    CADRE = ("幹部", 2)
+    COACH = ("教練", 3)
+    ADMIN = ("管理員", 4)
+
+    # 讓 Enum 實例可以直接訪問 display_name 和 level
+    def __init__(self, display_name, level):
+        self._display_name_val = display_name  # 儲存中文名
+        self.level = level
+
+    @property
+    def display_name(self):  # 提供一個 property 來獲取中文名
+        return self._display_name_val
 
     @classmethod
     def get_by_name(cls, name_str: str):
@@ -106,3 +115,8 @@ class UserRoleEnum(StrEnum):
             return cls[name_str.upper()]
         except KeyError:
             return None
+
+    # 讓 str(UserRoleEnum.PLAYER) 返回 "隊員" (Enum 的 value 會是 tuple)
+    # Naive UI 的 NTag 等通常使用 label，所以 User.to_dict() 中回傳 role.display_name
+    def __str__(self):
+        return self.display_name

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import Enum as SQLAlchemyEnum
 
 from .enums import GenderEnum, PositionEnum
@@ -21,8 +19,8 @@ class Member(db.Model):
     sigma = db.Column(db.Float, nullable=False, default=8.333, comment="TrueSkill σ")
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    joined_date = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-    leaved_date = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    joined_date = db.Column(db.Date, nullable=True)
+    leaved_date = db.Column(db.Date, nullable=True)
     notes = db.Column(db.Text, nullable=True, comment="備註")
 
     # Organization
@@ -63,18 +61,40 @@ class Member(db.Model):
         data = {
             "id": self.id,
             "name": self.name,
-            "display_name": self.display_name,
+            "display_name": self.get_display_name(),  # 使用 get_display_name 更佳
             "organization_id": self.organization_id,
             "organization_name": (
                 self.organization_profile.name if self.organization_profile else None
             ),
-            "score": self.score,
-            "mu": round(self.mu, 2),
-            "sigma": round(self.sigma, 2),
+            "score": self.score,  # 確保 self.score 是一個有效的屬性或計算屬性
+            "mu": (
+                round(self.mu, 2) if self.mu is not None else None
+            ),  # 處理 mu 可能為 None
+            "sigma": (
+                round(self.sigma, 2) if self.sigma is not None else None
+            ),  # 處理 sigma 可能為 None
             "student_id": self.student_id,
-            "gender": self.gender.name if self.gender else None,
-            "position": self.position.name if self.position else None,
+            "gender": self.gender.name if self.gender else None,  # 返回 Enum 的 NAME
+            "position": (self.position.name if self.position else None),
+            "notes": self.notes,
+            "is_active": self.is_active,  # Member 自身的活躍狀態
+            "joined_date": self.joined_date.isoformat() if self.joined_date else None,
+            "leaved_date": self.leaved_date.isoformat() if self.leaved_date else None,
+            # 初始化 User 相關欄位為 None
+            "user_id": self.user_id,  # 直接使用外鍵 user_id，即使 user_account 未載入或不存在，這個 ID 也可能存在
+            "username": None,  # User 的登入帳號 (手機號)
+            "user_email": None,  # User 的 Email
+            "user_role": None,  # User 的角色 (Enum NAME)
         }
+
+        if self.user_account:  # 檢查是否存在關聯的 User 物件
+            # data["user_id"] = self.user_account.id # User 的主鍵，其實與 self.user_id 應該相同
+            data["username"] = self.user_account.username
+            data["user_email"] = self.user_account.email
+            data["user_role"] = (
+                self.user_account.role.name if self.user_account.role else None
+            )
+
         return data
 
     def __repr__(self):

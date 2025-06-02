@@ -14,7 +14,7 @@ from . import bp
 from ..extensions import db
 from ..models.enums import UserRoleEnum
 from ..models.user import User
-from ..services.member_service import create_member
+from ..services.member_service import create_member_with_user
 
 
 @bp.route("/auth/register", methods=["POST"])
@@ -34,7 +34,7 @@ def quick_register_user():
     initial_name = f"隊員_{username[-4:]}"
 
     try:
-        new_user, new_member, actual_password = create_member(
+        new_user, new_member, actual_password = create_member_with_user(
             username=username,
             name=initial_name,
             display_name=initial_name,

@@ -1,87 +1,140 @@
+# backend/app/services/user_member_service.py
 import datetime
+import os
 
 from ..extensions import db
-from ..models.enums import GenderEnum, PositionEnum, UserRoleEnum
 from ..models.member import Member
 from ..models.user import User
+from ..tools.validators import (
+    validate_username,
+    validate_email,
+    validate_member_student_id,
+    validate_role_str,
+    validate_gender_str_for_member,
+    validate_position_str_for_member,
+    validate_organization_id_for_member,
+    validate_password,
+)
+
+GENERAL_DEFAULT_INITIAL_PASSWORD = os.environ.get(
+    "DEFAULT_INITIAL_PASSWORD", "password"
+)
 
 
-def create_member(
-    username: str,
-    name: str,
-    password: str = None,
-    email: str = None,
-    role: UserRoleEnum = UserRoleEnum.MEMBER,
-    display_name: str = None,
-    student_id: str = None,
-    organization: str = None,
-    gender: GenderEnum = None,
-    position: PositionEnum = None,
-    mu: float = None,
-    sigma: float = None,
-    join_date: datetime.date = None,
-    is_active: bool = True,
-    notes: str = None,
-):
+class UserMemberServiceError(ValueError):  # 自訂錯誤類別，方便 API 層捕捉
+    def __init__(self, message="操作失敗", errors=None):
+        super().__init__(message)
+        self.errors = errors if errors is not None else {}
+
+
+def create_member_with_user(data: dict):
     """
-    核心服務函數：創建 User 和關聯的 TeamMember。
-    - username: 必須提供，用於 User 登入。
-    - name: 必須提供，作為 TeamMember 的真實姓名。
-    - password: 預設等於username
-    - 其他 TeamMember 欄位可選，將使用提供的值或模型預設值。
-    成功則返回 (new_user, new_member, actual_password_used)
-    失敗則拋出 ValueError 或其他異常。
+    創建新的 Member 及其關聯的 User 帳號。
+    'username' (手機號) 和 'name' (Member 真實姓名) 為必填。
+    密碼邏輯：如果 data 中有 'password'，則使用它；否則使用 'username' (手機號) 作為密碼。
+    成功則返回 (user, member, password_used_for_user)。
+    失敗則拋出 UserMemberServiceError。
     """
+    errors = {}
 
-    if User.query.filter_by(username=username).first():
-        raise ValueError(f"使用者名稱 '{username}' 已存在。")
+    # User data
+    username = data.get("username", "").strip()
+    password_from_payload = data.get("password")
+    email = data.get("email", "").strip() or None
+    role_str = data.get("role", "PLAYER").upper()  # 管理員新增時可指定角色
+    is_active_user = data.get("is_active_user", True)
 
+    # Member data
+    member_name = data.get("name", "").strip()
+    display_name = data.get("display_name", "").strip() or member_name
+    student_id = data.get("student_id", "").strip() or None
+    gender_str = data.get("gender")
+    position_str = data.get("position")
+    organization_id_payload = data.get("organization_id")
+    mu_payload = data.get("mu")
+    sigma_payload = data.get("sigma")
+    join_date_payload = data.get("join_date")
+    is_active_payload = data.get("is_active", True)  # Member 的 is_active
+    notes_payload = data.get("notes")
+
+    # --- 執行驗證 ---
+    err = validate_username(username)
+    if err:
+        errors["username"] = err
+
+    err = validate_email(email)
+    if err:
+        errors["email"] = err
+
+    if not member_name:
+        errors["name"] = "成員真實姓名為必填。"
+
+    err = validate_member_student_id(student_id)
+    if err:
+        errors["student_id"] = err
+
+    err_role, role_enum = validate_role_str(role_str)
+    if err_role:
+        errors["role"] = err_role
+
+    err_gender, gender_enum = validate_gender_str_for_member(gender_str)
+    if err_gender:
+        errors["gender"] = err_gender
+
+    err_pos, position_enum = validate_position_str_for_member(position_str)
+    if err_pos:
+        errors["position"] = err_pos
+
+    err_org, org_id_int = validate_organization_id_for_member(organization_id_payload)
+    if err_org:
+        errors["organization_id"] = err_org
+
+    actual_password_to_set = password_from_payload
+    if not actual_password_to_set:
+        if username:
+            actual_password_to_set = username  # 手機號即密碼
+        else:
+            actual_password_to_set = GENERAL_DEFAULT_INITIAL_PASSWORD  # 備用
+
+    err_pass = validate_password(actual_password_to_set, is_required=True)  # 密碼必填
+    if err_pass:
+        errors["password"] = err_pass
+
+    if errors:
+        raise UserMemberServiceError("資料驗證失敗", errors_dict=errors)
+
+    # --- 創建實例 ---
     new_user = User(
-        username=username,
-        email=email,
-        role=role,
-        is_active=is_active,
+        username=username, email=email, role=role_enum, is_active=is_active_user
     )
-    actual_password_used = password if password is not None else username
-    new_user.set_password(actual_password_used)
-
-    # 創建 TeamMember
-    processed_student_id = student_id if student_id and student_id.strip() else None
-    if (
-        processed_student_id
-        and Member.query.filter_by(student_id=processed_student_id).first()
-    ):
-        raise ValueError(f"學號 '{processed_student_id}' 已被其他成員使用。")
-
-    final_display_name = display_name if display_name and display_name.strip() else name
-
-    default_mu = Member.mu.default.arg if Member.mu.default else 25.0
-    default_sigma = (
-        Member.sigma.default.arg
-        if Member.sigma.default
-        else round(25.0 / 3.0, 4)
-    )
-    default_join_date = (
-        Member.join_date.default.arg
-        if Member.join_date.default
-        else datetime.date.today()
-    )
+    new_user.set_password(actual_password_to_set)
 
     new_member = Member(
-        name=name,
-        display_name=final_display_name,
-        student_id=processed_student_id,
-        organization=organization,
-        gender=gender,
-        position=position,
-        mu=mu if mu is not None else default_mu,
-        sigma=sigma if sigma is not None else default_sigma,
-        join_date=join_date or default_join_date,
-        is_active_member=(is_active if is_active is not None else False),
-        notes=notes,
-        user_account=new_user,
+        name=member_name,
+        display_name=display_name,
+        student_id=student_id,
+        gender=gender_enum,
+        position=position_enum,
+        mu=float(mu_payload) if mu_payload is not None else Member.mu.default.arg,
+        sigma=(
+            float(sigma_payload)
+            if sigma_payload is not None
+            else Member.sigma.default.arg
+        ),
+        organization_id=org_id_int,
+        joined_date=(
+            datetime.datetime.strptime(join_date_payload, "%Y-%m-%d").date()
+            if join_date_payload
+            else (
+                Member.joined_date.default.arg
+                if Member.joined_date.default
+                else datetime.date.today()
+            )
+        ),
+        is_active=is_active_payload,  # Member.is_active
+        notes=notes_payload,
+        user_account=new_user,  # 建立關聯
     )
-
-    db.session.add(new_member)
-
-    return new_user, new_member, actual_password_used
+    db.session.add(new_member)  # add Member 會級聯 add User (如果 cascade 設定正確)
+    # 或者 db.session.add_all([new_user, new_member]) 更明確
+    return new_user, new_member, actual_password_to_set

@@ -1,326 +1,241 @@
-/* frontend/src/assets/css/leaderboard-uenify-style.css */
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
-
-body { /* 建議將字體設定移到 App.vue 或全域 CSS */
-    font-family: 'Lexend', 'Helvetica Neue', Arial, sans-serif;
-    background-color: #eef1f7; /* 淺藍灰色背景 */
-    color: #333;
-}
-
 .leaderboard-page-wrapper {
-    /* 這個 wrapper 可以用來設定整個頁面的背景等 */
+    /* background-color: #eef1f7; 由 App.vue 的 themeOverrides.common.bodyColor 控制 */
 }
 
 .leaderboard-header {
-    /* 可以為標題和按鈕區域設定背景或樣式 */
+    /* 樣式 */
 }
 
-.page-title {
-    font-weight: 700;
-    color: #2a3a51; /* 深藍灰色 */
+.page-main-title.n-h1 { /* Naive UI H1 的樣式 */
+    font-weight: 700 !important; /* 覆蓋 Naive UI 預設 */
+    color: #2a3a51 !important; /* 深藍灰色 */
     letter-spacing: -0.5px;
 }
 
-.btn-custom-action {
-    background-color: #4a76f5; /* 主題藍色 */
-    border-color: #4a76f5;
-    color: white;
-    padding: 0.65rem 1.5rem;
-    font-weight: 500;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
+.title-icon {
+    color: var(--primary-color, #4a76f5); /* 使用 Naive UI 主題色 */
 }
 
-.btn-custom-action:hover {
-    background-color: #3a60d4;
-    border-color: #3a60d4;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4);
+.record-match-button.n-button { /* Naive UI Button 的樣式 */
+    /* 顏色和邊框由 type="primary" 和 themeOverrides 控制 */
+    /* padding: 0.65rem 1.5rem; */ /* Naive UI Button 有自己的 padding 控制 */
+    font-weight: 500 !important;
+    /* border-radius: 0.5rem; */ /* 由 round prop 和 themeOverrides 控制 */
+    /* transition: all 0.3s ease; */ /* Naive UI Button 有自己的 transition */
 }
 
-.btn-custom-action i {
-    vertical-align: -0.125em; /* 微調圖示對齊 */
+.record-match-button.n-button:hover {
+    /* transform: translateY(-2px); */ /* Naive UI hover 效果 */
+    /* box-shadow: 0 4px 12px rgba(74, 118, 245, 0.4); */
+}
+
+.leaderboard-content-naive {
+    max-width: 750px; /* 控制排行榜內容最大寬度，比之前略寬以適應卡片 */
+}
+
+.leaderboard-cards-container.n-list {
+    background-color: transparent; /* List 背景透明，讓卡片自己顯示背景 */
+    padding: 0;
+}
+
+.leaderboard-cards-container .n-list-item {
+    padding: 0 0 10px 0 !important; /* 調整 list item 之間的間距 */
+    background-color: transparent !important;
+    border: none !important; /* 移除 list item 預設邊框 */
+}
+
+.leaderboard-card.n-card {
+    border-radius: 10px; /* 來自 uenify */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07); /* 柔和陰影 */
+    /* :content-style="{ padding: '0' }" 已在模板中設定 */
+}
+
+.leaderboard-card.n-card > .n-card__content { /* 確保 padding 為 0 */
+    padding: 0 !important;
 }
 
 
-.leaderboard-content {
-    max-width: 700px; /* 控制排行榜內容最大寬度 */
-}
-
-.leaderboard-list {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-    padding: 10px 0; /* 上下留白給卡片內部 */
-    overflow: hidden; /* 如果 entry 有圓角 */
-}
-
-
-.leaderboard-entry {
+.leaderboard-card-grid { /* 替代 .leaderboard-entry */
     display: grid;
-    /* 原始: # | 球員&組織 | 勝率(W-L) | 分數 */
-    /* 調整：讓球員列更具彈性，其他列盡量保持其內容寬度 */
-    grid-template-columns:
-    min-content  /* # (排名) - 盡量小 */
-    1fr          /* 球員&組織 - 佔據剩餘主要空間，可以被壓縮 */
-    min-content  /* 勝率 (W-L) - 盡量小 */
-    1fr; /* 分數 - 盡量小 */
+    grid-template-columns: 50px minmax(0, 2.5fr) minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    /* # | 球員/組織 | 牌位 | 勝-敗 | 分數 */
     gap: 10px;
     align-items: center;
-    padding: 12px 15px; /* 稍微減少左右 padding 以爭取空間 */
-    margin-bottom: 8px;
-    /* ... (其他 leaderboard-entry 樣式) ... */
+    padding: 15px 20px; /* 卡片內部的 padding */
 }
 
-.entry-rank {
-    font-size: 1rem; /* 略微縮小排名數字/圖示 */
+/* 卡片內的各個部分樣式 */
+.card-rank {
+    font-size: 1.1rem;
     font-weight: 700;
     color: #8898aa;
     text-align: center;
-    /* margin-right 已由 grid gap 控制 */
-    /* min-width 不再嚴格需要，因為是 min-content */
 }
 
-.rank-icon-wrapper i {
-    font-size: 1.4rem; /* 略微縮小獎盃圖示 */
+.rank-icon-display .n-icon { /* 確保圖示正確顯示 */
 }
 
-.entry-player {
-    /* 這個 div 包裹 name 和 org */
-    min-width: 0; /* 允許 flex/grid item 收縮到小於其內容寬度，以便 ellipsis 生效 */
-    overflow: hidden; /* 確保子元素的 ellipsis 能正確觸發 */
+.rank-number-display { /* ... */
 }
 
-.player-name {
+
+.card-player-info {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.player-name-display { /* 類似 .player-name */
     font-weight: 600;
-    font-size: 0.95rem; /* 略微縮小字體 */
+    font-size: 1rem;
     color: #33475b;
-    white-space: nowrap; /* 強制不換行 */
-    overflow: hidden; /* 隱藏超出的部分 */
-    text-overflow: ellipsis; /* 用省略號顯示超出的文本 */
-    display: block; /* 或 inline，取決於您是否希望組織在同一行如果空間夠 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.player-org {
-    font-size: 0.8em; /* 略微縮小字體 */
+.player-org-display { /* 類似 .player-org */
+    font-size: 0.8rem;
     color: #6c757d;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: block; /* 讓組織名在名字下方 */
     margin-top: 2px;
 }
 
-.entry-record {
-    font-size: 0.85rem; /* 略微縮小字體 */
-    color: #333;
-    font-weight: 500;
-    text-align: center; /* 讓 W-L 居中 */
-    white-space: nowrap; /* 防止 "W - L" 換行 */
-    /* margin-right 已由 grid gap 控制 */
-}
-
-.entry-record .wins {
-    color: #198754;
-}
-
-.entry-record .losses {
-    color: #dc3545;
-}
-
-.total-matches {
-    display: none;
-}
-
-/* 在小螢幕上先隱藏總場次，以節省空間 */
-
-.entry-score {
-    font-size: 1.1rem; /* 略微縮小字體 */
-    font-weight: 700;
-    color: #4a76f5;
-    text-align: right;
-    white-space: nowrap; /* 防止分數和 "分" 換行 */
-    /* margin-left 已由 grid gap 控制，且 justify-self: end; (grid特性) 或 text-align: right 會處理對齊 */
-    justify-self: end; /* Grid 項目本身靠右對齊 */
-}
-
-.score-label {
-    font-size: 0.75em;
-    margin-left: 1px;
-}
-
-.leaderboard-entry:last-child {
-    border-bottom: none;
-}
-
-.leaderboard-entry:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-}
-
-.entry-rank {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #8898aa; /* 排名數字顏色 */
-    min-width: 45px; /* 固定寬度 */
+.card-tier { /* 類似 .entry-tier */
     text-align: center;
-    margin-right: 20px; /* 與玩家資訊的間距 */
 }
 
-.rank-icon-wrapper i { /* 包裹圖示的 span */
-    font-size: 1.6rem; /* 調整獎盃/獎牌圖示大小 */
-    vertical-align: middle;
+.card-tier .n-tag {
+    font-weight: bold;
+    letter-spacing: 0.3px;
 }
 
-.rank-icon-first {
-    color: #ffd700 !important;
+.card-record { /* 類似 .entry-record */
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
 }
 
-.rank-icon-second {
-    color: #c0c0c0 !important;
+.card-record .wins-text {
+    color: var(--success-color, #198754);
 }
 
-.rank-icon-third {
-    color: #cd7f32 !important;
+/* 使用主題色 */
+.card-record .losses-text {
+    color: var(--error-color, #dc3545);
 }
 
-/* 前三名高亮 */
-.leaderboard-entry.rank-first {
-    background-color: rgba(255, 215, 0, 0.08); /* 淡金色背景 */
-    border-left: 5px solid #ffd700;
+.card-record .total-matches-text {
+    font-size: 0.75em;
+    color: var(--text-color-3);
 }
 
-.leaderboard-entry.rank-second {
-    background-color: rgba(192, 192, 192, 0.08); /* 淡銀色背景 */
-    border-left: 5px solid #c0c0c0;
+
+.card-score { /* 類似 .entry-score */
+    text-align: right;
+    white-space: nowrap;
+    justify-self: end; /* Grid 項目本身靠右 */
 }
 
-.leaderboard-entry.rank-third {
-    background-color: rgba(205, 127, 50, 0.08); /* 淡古銅色背景 */
-    border-left: 5px solid #cd7f32;
+.card-score .score-value.n-gradient-text { /* Naive UI Gradient Text */
+    font-size: 1.2rem;
+    font-weight: 700;
 }
 
-/* 分頁控制樣式 */
-.custom-pagination .page-link {
-    color: #4a76f5; /* 主題藍色 */
-    border: 1px solid #dee2e6;
-    margin: 0 3px;
-    border-radius: 0.3rem;
-    transition: all 0.2s ease;
+.card-score .score-label-text {
+    font-size: 0.8em;
+    font-weight: normal;
+    color: var(--text-color-3);
+    margin-left: 2px;
 }
 
-.custom-pagination .page-link:hover {
-    background-color: #eef1f7;
-    border-color: #adb5bd;
+/* 前三名高亮 - 現在作用於 n-card */
+.leaderboard-card.rank-first {
+    border-left: 5px solid #FFD700;
+    background-color: #fffbeb !important;
 }
 
-.custom-pagination .page-item.active .page-link {
-    background-color: #4a76f5;
-    border-color: #4a76f5;
-    color: white;
+.leaderboard-card.rank-second {
+    border-left: 5px solid #C0C0C0;
+    background-color: #f8f8f8 !important;
+}
+
+.leaderboard-card.rank-third {
+    border-left: 5px solid #CD7F32;
+    background-color: #fff5eb !important;
+}
+
+/* 分頁控制樣式 (Naive UI Pagination 通常有不錯的預設，可微調) */
+.custom-pagination.n-pagination { /* 如果需要，可以為 Naive UI Pagination 添加自訂 class */
+    /* 例如調整 margin */
+}
+
+/* 可選的表頭行樣式 (如果保留) */
+.leaderboard-card-header {
+    display: grid;
+    grid-template-columns: 50px minmax(0, 2.5fr) minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 20px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(74, 118, 245, 0.3);
+    color: var(--text-color-3);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 10px;
 }
 
-.custom-pagination .page-item.disabled .page-link {
-    color: #adb5bd;
-    background-color: #f8f9fa;
-}
-
-.custom-pagination .page-link .dots {
-    cursor: default;
+.leaderboard-card-header > div {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 
 /* 響應式調整 */
-@media (max-width: 576px) {
-    /* 針對手機等小螢幕 */
-    .leaderboard-entry {
-        padding: 10px 10px; /* 進一步減少 padding */
-        /* 在極小螢幕上，勝率和分數可能需要更緊湊 */
-        /* 調整 Grid 欄位以適應更小的空間，可能需要犧牲組織名或讓勝率更簡潔 */
-        grid-template-columns:
-      min-content  /* # */
-      1fr          /* 球員名稱 */
-      min-content  /* 勝率 */
-      1fr; /* 分數 */
-        gap: 8px; /* 縮小間距 */
+@media (max-width: 767px) {
+    /* md 以下，手機 */
+    .leaderboard-card-grid {
+        grid-template-columns: 40px 1fr auto; /* 隱藏 牌位 和 勝敗 */
+        gap: 8px;
+        padding: 12px 15px; /* 調整卡片內邊距 */
     }
 
-    .player-org {
-        display: none !important; /* 在非常小的螢幕上完全隱藏組織名 */
+    .card-tier, .card-record {
+        display: none;
     }
 
-    .player-name {
+    .player-name-display {
         font-size: 0.9rem;
     }
 
-    .entry-rank {
-        font-size: 0.9rem;
-    }
-
-    .rank-icon-wrapper i {
-        font-size: 1.2rem;
-    }
-
-    .entry-record {
-        font-size: 0.75rem;
-    }
-
-    .entry-score {
+    .card-score .score-value.n-gradient-text {
         font-size: 1rem;
     }
 
-    .score-label {
-        display: none;
-    }
-
-    .leaderboard-header-row {
+    .leaderboard-card-header {
         display: none !important;
     }
-
-    /* 在手機上隱藏表頭 */
 }
 
-/* 可以再加入一個更小斷點的微調，例如 max-width: 400px */
-@media (max-width: 420px) {
-    .leaderboard-entry {
-        /* 嘗試讓球員名和勝敗在一行，分數單獨一行，或者更極端的簡化 */
-        /* 或者，保持4列，但進一步縮小字體和間距 */
-        grid-template-columns:
-          min-content  /* # */
-          minmax(80px, 1fr) /* 球員名稱 */
-          auto         /* 勝率，自動寬度 */
-          auto; /* 分數，自動寬度 */
-        gap: 5px;
-        padding: 8px;
+@media (max-width: 576px) {
+    /* sm 以下，更小的手機 */
+    .leaderboard-card-grid {
+        grid-template-columns: 35px 1fr auto; /* 與 md 相同，但字體和 padding 可能更小 */
+        padding: 10px 12px;
     }
 
-    .entry-rank {
-        margin-right: 0;
-    }
-
-    /* grid gap 會處理 */
-    .entry-player {
-        margin-right: 0;
-    }
-
-    .entry-record {
-        margin-right: 0;
-    }
-
-    .player-name {
-        font-size: 0.85rem;
-    }
-
-    .entry-score {
-        font-size: 0.95rem;
-    }
-
-    .score-label {
+    .player-org-display {
         display: none;
     }
 
-    /* 極小螢幕隱藏 "分" */
+    /* 極小螢幕隱藏組織 */
+    .main-layout-content.n-layout-content {
+        padding: 15px !important;
+    }
 
+    .page-main-title.n-h1 {
+        font-size: 1.5rem !important;
+    }
 }

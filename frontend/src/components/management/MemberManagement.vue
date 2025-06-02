@@ -90,26 +90,24 @@ const tableSortState = ref(null);
 
 function handleMemberSortChange(sorter) {
   tableSortState.value = sorter;
-  // Naive UI data table handles client-side sorting automatically if sorter is defined in columns
-  // If you need to trigger a re-sort or custom logic, you can do it here
 }
 
-// 列定義 (Naive UI Columns)
 const memberTableColumns = computed(() => [
   {
-    title: "名稱(帳號)",
+    title: "姓名",
     key: "name",
     sorter: 'default',
     fixed: 'left',
-    width: 180,
+    width: 150,
     resizable: true,
     ellipsis: {tooltip: true},
-    render(row) {
-      return h('div', [
-        h('span', {style: {fontWeight: '500'}}, row.name),
-        row.username ? h('small', {class: 'd-block text-muted'}, `(${row.username})`) : null
-      ]);
-    }
+    // render(row) {
+    //   return h('div', [
+    //     h('span', {style: {fontWeight: '500'}}, row.name),
+    //     row.username ? h('small', {class: 'd-block text-muted'}, `(${row.username})`) : null
+    //   ]);
+    // }
+    render: (row) => row.name || '-'
   },
   {
     title: "學號",
@@ -120,6 +118,24 @@ const memberTableColumns = computed(() => [
     resizable: true,
     ellipsis: {tooltip: true},
     render: (row) => row.student_id || '-'
+  },
+  {
+    title: "性別",
+    key: "gender",
+    sorter: 'default',
+    fixed: 'left',
+    width: 100,
+    resizable: true,
+    filterOptions: [
+      {label: '男', value: 'MALE'},
+      {label: '女', value: 'FEMALE'},
+    ],
+    filter(value, row) {
+      return row.gender === value;
+    },
+    render(row) {
+      return getGenderDisplay(row.gender);
+    }
   },
   {
     title: "組織",
@@ -145,8 +161,10 @@ const memberTableColumns = computed(() => [
     sorter: (a, b) => getRoleDisplay(a.user_role).localeCompare(getRoleDisplay(b.user_role), 'zh-Hant-TW'),
     width: 100, resizable: true, align: 'center',
     filterOptions: [
-      {label: '管理員', value: 'ADMIN'}, {label: '幹部', value: 'CADRE'},
-      {label: '隊員', value: 'PLAYER'}, {label: '教練', value: 'COACH'}
+      {label: '管理員', value: 'ADMIN'},
+      {label: '幹部', value: 'CADRE'},
+      {label: '隊員', value: 'PLAYER'},
+      {label: '教練', value: 'COACH'}
     ],
     filter(value, row) {
       return row.user_role === value;
@@ -257,7 +275,7 @@ function confirmDeleteMember(member) {
       try {
         await memberService.deleteMember(memberToDelete.value.id);
         message.success(`成員 ${memberToDelete.value.name} 已成功刪除。`);
-        fetchMembers(); // 重新獲取列表
+        await fetchMembers(); // 重新獲取列表
       } catch (err) {
         console.error("Error deleting member:", err.response || err);
         message.error(`刪除成員失敗: ${err.response?.data?.error || err.message}`);
@@ -289,8 +307,14 @@ function getRoleNaiveType(roleName) { // 用於 Naive UI Tag 的 type
   return 'default';
 }
 
+function getGenderDisplay(genderName) {
+  if (genderName === 'MALE') return '男';
+  if (genderName === 'FEMALE') return '女';
+  return '-'; // 預設或未知時顯示
+}
+
 function editMember(memberId) {
-  router.push({name: 'AdminEditMember', params: {id: memberId}});
+  router.push({name: 'EditMember', params: {id: String(memberId)}});
 }
 
 </script>

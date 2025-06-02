@@ -1,12 +1,13 @@
 // src/router/index.js
 import {createRouter, createWebHistory} from 'vue-router';
 import LeaderboardView from '../views/LeaderboardView.vue';
-import AddMemberView from "../views/AddMemberView.vue";
+import AddMemberView from "../views/Management/AddMemberView.vue";
 import MatchRecordView from "../views/MatchRecordView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import EditProfileView from "../views/EditProfileView.vue";
-import ManagementCenterView from "@/views/ManagementCenterView.vue";
+import ManagementCenterView from "@/views/Management/ManagementCenterView.vue";
+import EditMemberView from "@/views/Management/EditMemberView.vue";
 
 const routes = [
     {path: '/', name: 'Leaderboard', component: LeaderboardView},
@@ -17,19 +18,17 @@ const routes = [
         meta: {guestOnly: true} // 只允許未登入使用者訪問
     },
     {
-        path: '/register',
-        name: 'Register',
-        component: RegisterView,
-        meta: {guestOnly: true} // 只允許未登入使用者訪問
+        path: '/register', name: 'Register', component: RegisterView, meta: {guestOnly: true} // 只允許未登入使用者訪問
     }, {
         path: '/management',
         name: 'ManagementCenter',
         component: ManagementCenterView,
-    },
-    {
+    }, {
         path: '/', name: 'Leaderboard', component: LeaderboardView
     }, {
         path: '/members/add', name: 'AddMember', component: AddMemberView
+    }, {
+        path: '/members/edit/:id', name: 'EditMember', component: EditMemberView, props: true
     }, {
         path: '/match/record', name: 'RecordMatch', component: MatchRecordView
     }, {
