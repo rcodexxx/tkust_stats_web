@@ -41,8 +41,7 @@ def create_member_with_user(data: dict):
     username = data.get("username", "").strip()
     password_from_payload = data.get("password")
     email = data.get("email", "").strip() or None
-    role_str = data.get("role", "PLAYER").upper()  # 管理員新增時可指定角色
-    is_active_user = data.get("is_active_user", True)
+    role_str = data.get("role", "MEMBER")
 
     # Member data
     member_name = data.get("name", "").strip()
@@ -54,7 +53,7 @@ def create_member_with_user(data: dict):
     mu_payload = data.get("mu")
     sigma_payload = data.get("sigma")
     join_date_payload = data.get("join_date")
-    is_active_payload = data.get("is_active", True)  # Member 的 is_active
+    is_active = data.get("is_active", True)  # Member 的 is_active
     notes_payload = data.get("notes")
 
     # --- 執行驗證 ---
@@ -101,12 +100,10 @@ def create_member_with_user(data: dict):
         errors["password"] = err_pass
 
     if errors:
-        raise UserMemberServiceError("資料驗證失敗", errors_dict=errors)
+        raise UserMemberServiceError("資料驗證失敗")
 
     # --- 創建實例 ---
-    new_user = User(
-        username=username, email=email, role=role_enum, is_active=is_active_user
-    )
+    new_user = User(username=username, email=email, role=role_enum, is_active=is_active)
     new_user.set_password(actual_password_to_set)
 
     new_member = Member(
@@ -131,7 +128,7 @@ def create_member_with_user(data: dict):
                 else datetime.date.today()
             )
         ),
-        is_active=is_active_payload,  # Member.is_active
+        is_active=is_active,  # Member.is_active
         notes=notes_payload,
         user_account=new_user,  # 建立關聯
     )

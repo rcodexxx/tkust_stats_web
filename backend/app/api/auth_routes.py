@@ -31,17 +31,19 @@ def quick_register_user():
     if not re.match(r"^09\d{8}$", username):
         return jsonify({"msg": "無效的手機號碼格式"}), 400
 
-    initial_name = f"隊員_{username[-4:]}"
+    initial_name = f"成員_{username[-4:]}"
 
     try:
-        new_user, new_member, actual_password = create_member_with_user(
-            username=username,
-            name=initial_name,
-            display_name=initial_name,
-            password=username,
-            role=UserRoleEnum.MEMBER,
-            is_active=True,
-        )
+        data = {
+            "username": username,
+            "name": initial_name,
+            "display_name": initial_name,
+            "password": username,
+            "role": UserRoleEnum.MEMBER,
+            "is_active": True,
+        }
+
+        new_user, new_member, actual_password = create_member_with_user(data=data)
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.id)

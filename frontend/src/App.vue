@@ -41,12 +41,16 @@
                     </n-dropdown>
                   </template>
                   <template v-else>
-                    <n-space align="center">
+                    <n-space align="center" :wrap="false">
                       <router-link :to="{ name: 'Register' }" v-slot="{ navigate }">
-                        <n-button size="small" ghost @click="navigate">快速註冊</n-button>
+                        <n-button size="small" ghost round @click="navigate">
+                          快速註冊
+                        </n-button>
                       </router-link>
                       <router-link :to="{ name: 'Login' }" v-slot="{ navigate }">
-                        <n-button type="primary" size="small" @click="navigate">登入</n-button>
+                        <n-button type="primary" size="small" round @click="navigate">
+                          登入
+                        </n-button>
                       </router-link>
                     </n-space>
                   </template>
@@ -384,5 +388,10 @@ html, body, #app {
 
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+.user-actions-area {
+  flex-shrink: 0; /* 防止此區域被壓縮，確保按鈕有空間並排 */
+  /* 如果按鈕之間需要特定間距，可以在 n-space 上使用 :size 屬性 */
 }
 </style>

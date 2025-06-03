@@ -48,10 +48,10 @@ def validate_email(email, existing_user_id=None):
 
 def validate_role_str(role_str, default_role=UserRoleEnum.MEMBER):
     """Validates role string and returns Enum member or default."""
-    if not role_str or not role_str.strip():
+    if not role_str:
         return None, default_role  # 如果未提供，返回預設角色
 
-    role_enum = UserRoleEnum.get_by_name(role_str.upper())
+    role_enum = UserRoleEnum.get_by_name(role_str)
     if not role_enum:
         return (
             f"無效的角色值: '{role_str}'. 有效值為 {[r.name for r in UserRoleEnum]}.",

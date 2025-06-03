@@ -56,13 +56,17 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
+        clearRegisterError() {
+            this.status.registerError = null;
+        },
+
         // 假設這個 register action 是用於「快速註冊」
         async register(payload) { // payload 應為 { phone_number: '...' }
             this.status.registering = true;
             this.status.registerError = null;
             try {
                 // 確認 API 端點是否與後端匹配 (例如 /auth/quick_register)
-                const response = await apiClient.post('/auth/quick_register', payload);
+                const response = await apiClient.post('/auth/register', payload);
                 const {access_token, refresh_token, user, initial_password_info} = response.data;
 
                 this.accessToken = access_token;

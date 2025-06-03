@@ -71,7 +71,7 @@ class OutcomeEnum(StrEnum):
         if not name_str:
             return None
         try:
-            return cls[name_str.upper()]
+            return cls[name_str]
         except KeyError:
             return None
 
@@ -87,7 +87,7 @@ class MatchFormatEnum(StrEnum):
         if not name_str:
             return None
         try:
-            return cls[name_str.upper()]
+            return cls[name_str]
         except KeyError:
             return None
 
@@ -112,7 +112,7 @@ class UserRoleEnum(Enum):
         if not name_str:
             return None
         try:
-            return cls[name_str.upper()]
+            return cls[name_str]
         except KeyError:
             return None
 
