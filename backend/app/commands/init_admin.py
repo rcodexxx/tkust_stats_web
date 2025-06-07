@@ -45,20 +45,20 @@ def init_admin_command():
 
     try:
         # 4. 創建 User 和 Member 物件
-        new_admin_user = User(
+        user_profile = User(
             username=admin_username,
             # email=admin_email,
             role=UserRoleEnum.ADMIN,  # 明確設定角色為管理員
             is_active=True,  # 管理員帳號預設為啟用
             display_name=admin_name,  # 管理員的顯示名稱
         )
-        new_admin_user.set_password(admin_password)  # 使用 User 模型中的 set_password 方法來雜湊密碼
-        db.session.add(new_admin_user)
+        user_profile.set_password(admin_password)  # 使用 User 模型中的 set_password 方法來雜湊密碼
+        db.session.add(user_profile)
 
         # 根據您的模型設計，每個 User 都需要一個關聯的 Member profile
         admin_member_profile = Member(
-            user=new_admin_user,  # 直接關聯 User 物件，SQLAlchemy 會處理 user_id
-            name=admin_name,  # Member 的真實姓名
+            user_profile=user_profile,  # 直接關聯 User 物件，SQLAlchemy 會處理 user_id
+            name=admin_name,
         )
         db.session.add(admin_member_profile)
 

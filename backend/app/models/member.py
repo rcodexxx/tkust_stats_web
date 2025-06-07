@@ -64,8 +64,8 @@ class Member(db.Model):
         comment="使用球拍ID",
     )
     racket = relationship(
-        "Racket", back_populates="users_of_racket"
-    )  # 'Racket' 是模型類名, 'users_of_racket' 是 Racket 模型中反向關聯屬性
+        "Racket", back_populates="members_using"
+    )  # 'Racket' 是模型類名, 'members_using' 是 Racket 模型中反向關聯屬性
 
     # --- 關聯：對應的使用者帳號 (一對一) ---
     user_id = db.Column(
@@ -76,7 +76,7 @@ class Member(db.Model):
         index=True,
         comment="對應的使用者帳號ID",
     )
-    user = relationship("User", back_populates="member_profile")
+    user_profile = relationship("User", back_populates="member_profile")
 
     # --- 關聯：該隊員的所有比賽統計記錄 (若將其視為 Member 的一部分) ---
     match_stats_records = relationship(

@@ -1,12 +1,9 @@
 # backend/app/models/match_record.py
-import datetime
 
-from sqlalchemy import Integer, Date, ForeignKey, Enum as SQLAlchemyEnum
+from sqlalchemy import Integer, ForeignKey, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship  # foreign 用於指定 relationship 的 foreign_keys
 
 from .enums import (
-    MatchFormatEnum,
-    MatchTypeEnum,
     MatchOutcomeEnum,
 )
 from ..extensions import db
@@ -17,21 +14,14 @@ class MatchRecord(db.Model):
 
     id = db.Column(Integer, primary_key=True, comment="比賽記錄唯一識別碼")
 
-    match_date = db.Column(Date, nullable=False, default=datetime.date.today, index=True, comment="比賽日期")
-    match_type = db.Column(
-        SQLAlchemyEnum(
-            MatchFormatEnum, name="match_type_enum_match_records", values_callable=lambda x: [e.value for e in x]
-        ),
-        nullable=False,
-        comment="比賽類型",
+    match_id = db.Column(
+        Integer,
+        ForeignKey("matches.id", name="fk_match_records_match_id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        comment="所屬比賽事件ID",
     )
-    match_format = db.Column(
-        SQLAlchemyEnum(
-            MatchTypeEnum, name="match_format_enum_match_records", values_callable=lambda x: [e.value for e in x]
-        ),
-        nullable=False,
-        comment="賽制",
-    )
+    match = relationship("Match", back_populates="results")
 
     # --- Side A Players ---
     player1_id = db.Column(
