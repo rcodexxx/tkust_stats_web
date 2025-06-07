@@ -1,17 +1,38 @@
-# requirements.txt
-
+# =================================================================
+# Flask Core & Extensions
+# Flask 核心框架及其常用擴展
+# =================================================================
 Flask
-SQLAlchemy
 Flask-SQLAlchemy
 Flask-Migrate
-flask_jwt_extended
-flask_cors
-alembic
-psycopg2-binary
-python-dotenv
-gunicorn
+Flask-JWT-Extended
 Flask-CORS
-trueskill
-marshmallow
 Flask-Marshmallow
+
+# =================================================================
+# Database & ORM
+# 資料庫驅動 (以 PostgreSQL 為例) 與 ORM 核心
+# =================================================================
+SQLAlchemy
+psycopg2-binary # 如果您使用 PostgreSQL，這是必需的
+
+# =================================================================
+# Data Validation & Serialization
+# 數據驗證與序列化/反序列化
+# =================================================================
+marshmallow
 marshmallow-enum
+
+# =================================================================
+# Business Logic & Utilities
+# 業務邏輯與其他工具
+# =================================================================
+trueskill # 用於 TrueSkill 評分系統
+
+# =================================================================
+# Production & Environment
+# 生產環境部署與環境變數管理
+# =================================================================
+gunicorn        # 生產環境用的 WSGI 伺服器
+python-dotenv   # 用於讀取 .env 檔案
+
