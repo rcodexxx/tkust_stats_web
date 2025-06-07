@@ -1,128 +1,116 @@
 # backend/app/api/organization_routes.py
-from flask import request, jsonify, current_app
+from flask import jsonify, request, current_app
+from flask_jwt_extended import jwt_required
+from marshmallow import ValidationError as MarshmallowValidationError
 
-from . import bp  # API 藍圖
-from ..extensions import db
-from ..models.organization import Organization
+from . import api_bp  # 您的 API 藍圖
+from ..schemas.organization_schemas import OrganizationSchema, OrganizationCreateSchema, OrganizationUpdateSchema
+from ..services.organization_service import (
+    OrganizationService,
+    OrganizationNotFoundError,
+    OrganizationInUseError,
+    OrganizationAlreadyExistsError,
+)
+from ..tools.exceptions import AppException
 
-
-@bp.route("/organizations", methods=["POST"])
-# @admin_required # 只有管理員可以新增組織
-def create_organization():
-    data = request.get_json()
-    if not data or not data.get("name"):
-        return jsonify({"error": "Organization name is required"}), 400
-
-    name = data.get("name")
-    city = data.get("city")
-    notes = data.get("notes")
-
-    if Organization.query.filter_by(name=name).first():
-        return (
-            jsonify({"error": f"Organization with name '{name}' already exists."}),
-            409,
-        )
-
-    try:
-        new_org = Organization(name=name, city=city, notes=notes)
-        db.session.add(new_org)
-        db.session.commit()
-        return jsonify(new_org.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(
-            f"Error creating organization: {str(e)}", exc_info=True
-        )
-        return jsonify({"error": "Failed to create organization."}), 500
+# 實例化 Schemas 以便在路由中使用
+org_schema = OrganizationSchema()
+orgs_schema = OrganizationSchema(many=True)
+org_create_schema = OrganizationCreateSchema()
+org_update_schema = OrganizationUpdateSchema()
 
 
-@bp.route("/organizations", methods=["GET"])
+@api_bp.route("/organizations", methods=["GET"])
 def get_organizations():
-    """獲取所有組織列表，用於前端下拉選單等"""
+    """獲取所有組織的列表。"""
     try:
-        # 可以加入排序，例如按名稱
-        orgs = Organization.query.order_by(Organization.name).all()
-        return jsonify([org.to_dict() for org in orgs])
+        orgs = OrganizationService.get_all_organizations(request.args)
+        # 在序列化前，將成員數量附加到每個組織物件上
+        for org in orgs:
+            org.members_count = len(org.members)
+        return jsonify(orgs_schema.dump(orgs)), 200
     except Exception as e:
-        current_app.logger.error(
-            f"Error fetching organizations: {str(e)}", exc_info=True
-        )
-        return jsonify({"error": "Failed to fetch organizations."}), 500
+        current_app.logger.error(f"獲取組織列表時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取組織列表時發生伺服器錯誤。"}), 500
 
 
-@bp.route("/organizations/<int:org_id>", methods=["GET"])
+@api_bp.route("/organizations/<int:org_id>", methods=["GET"])
 def get_organization(org_id):
-    org = db.session.get(Organization, org_id)
-    if not org:
-        return jsonify({"error": "Organization not found"}), 404
-    return jsonify(org.to_dict())
+    """根據 ID 獲取單一組織的詳細資訊。"""
+    try:
+        org = OrganizationService.get_organization_by_id(org_id)
+        if not org:
+            raise OrganizationNotFoundError()  # 拋出業務異常
+
+        org.members_count = len(org.members)
+        return jsonify(org_schema.dump(org)), 200
+    except OrganizationNotFoundError as e:
+        return jsonify(e.to_dict()), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"獲取組織 ID {org_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取組織資訊時發生伺服器錯誤。"}), 500
 
 
-@bp.route("/organizations/<int:org_id>", methods=["PUT"])
-# @admin_required
+@api_bp.route("/organizations", methods=["POST"])
+@jwt_required()  # 假設只有認證後的使用者 (例如管理員) 可以創建組織
+def create_organization():
+    """創建一個新的組織。"""
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify({"error": "missing_json", "message": "缺少 JSON 請求內容。"}), 400
+
+    try:
+        validated_data = org_create_schema.load(json_data)
+        new_org = OrganizationService.create_organization(validated_data)
+        return jsonify({"message": "組織已成功建立。", "organization": org_schema.dump(new_org)}), 201
+    except MarshmallowValidationError as err:
+        return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
+    except (OrganizationAlreadyExistsError, AppException) as e:
+        return jsonify(e.to_dict()), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"創建組織時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "創建組織時發生未預期錯誤。"}), 500
+
+
+@api_bp.route("/organizations/<int:org_id>", methods=["PUT"])
+@jwt_required()  # 假設只有認證後的使用者可以更新
 def update_organization(org_id):
-    org = db.session.get(Organization, org_id)
+    """更新一個已存在的組織。"""
+    org = OrganizationService.get_organization_by_id(org_id)
     if not org:
-        return jsonify({"error": "Organization not found"}), 404
+        return jsonify({"error": "not_found", "message": "找不到要更新的組織。"}), 404
 
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request payload must be JSON"}), 400
-
-    errors = {}
-    if "name" in data and data["name"] != org.name:
-        if Organization.query.filter(
-            Organization.id != org_id, Organization.name == data["name"]
-        ).first():
-            errors["name"] = f"Organization name '{data['name']}' already exists."
-
-    if errors:
-        return jsonify({"message": "Validation failed", "errors": errors}), 400
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify({"error": "missing_json", "message": "缺少 JSON 請求內容。"}), 400
 
     try:
-        org.name = data.get("name", org.name)
-        org.city = data.get("city", org.city)
-        org.notes = data.get("notes", org.notes)
-        db.session.commit()
-        return jsonify(org.to_dict()), 200
+        # partial=True 允許部分更新
+        validated_data = org_update_schema.load(json_data, partial=True)
+        updated_org = OrganizationService.update_organization(org, validated_data)
+        return jsonify({"message": "組織資料已成功更新。", "organization": org_schema.dump(updated_org)}), 200
+    except MarshmallowValidationError as err:
+        return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
+    except (OrganizationAlreadyExistsError, AppException) as e:
+        return jsonify(e.to_dict()), e.status_code
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(
-            f"Error updating organization {org_id}: {str(e)}", exc_info=True
-        )
-        return jsonify({"error": "Failed to update organization."}), 500
+        current_app.logger.error(f"更新組織 ID {org_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "更新組織資料時發生錯誤。"}), 500
 
 
-@bp.route("/organizations/<int:org_id>", methods=["DELETE"])
-# @admin_required
+@api_bp.route("/organizations/<int:org_id>", methods=["DELETE"])
+@jwt_required()  # 假設只有認證後的使用者可以刪除
 def delete_organization(org_id):
-    org = db.session.get(Organization, org_id)
+    """刪除一個組織。"""
+    org = OrganizationService.get_organization_by_id(org_id)
     if not org:
-        return jsonify({"error": "Organization not found"}), 404
-
-    # 檢查是否有成員關聯到這個組織
-    if org.members.first():  # 如果 lazy='dynamic'
-        return (
-            jsonify(
-                {
-                    "error": "Cannot delete organization: It has associated members. Please reassign members first."
-                }
-            ),
-            400,
-        )
-        # 或者，您可以選擇將關聯成員的 organization_id 設為 NULL (如果模型允許)
-        # for member in org.members:
-        #     member.organization_id = None
-        #     member.organization_profile = None
-        # db.session.flush()
+        return jsonify({"error": "not_found", "message": "找不到要刪除的組織。"}), 404
 
     try:
-        db.session.delete(org)
-        db.session.commit()
-        return jsonify({"message": "Organization deleted successfully"}), 200
+        OrganizationService.delete_organization(org)
+        return jsonify({"message": "組織已成功刪除。"}), 200
+    except (OrganizationInUseError, AppException) as e:
+        return jsonify(e.to_dict()), e.status_code
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(
-            f"Error deleting organization {org_id}: {str(e)}", exc_info=True
-        )
-        return jsonify({"error": "Failed to delete organization."}), 500
+        current_app.logger.error(f"刪除組織 ID {org_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "刪除組織時發生錯誤。"}), 500

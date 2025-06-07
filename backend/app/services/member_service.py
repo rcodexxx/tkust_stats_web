@@ -1,137 +1,190 @@
-# backend/app/services/user_member_service.py
-import datetime
-import os
+# your_project/app/services/member_service.py
+from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models.member import Member
-from ..models.user import User
-from ..tools.validators import (
-    validate_username,
-    validate_email,
-    validate_member_student_id,
-    validate_role_str,
-    validate_gender_str_for_member,
-    validate_position_str_for_member,
-    validate_organization_id_for_member,
-    validate_password,
-)
-
-GENERAL_DEFAULT_INITIAL_PASSWORD = os.environ.get(
-    "DEFAULT_INITIAL_PASSWORD", "password"
-)
+from ..models import User, Member
+from ..models.enums.user_enums import UserRoleEnum
+from ..tools.exceptions import UserAlreadyExistsError, ValidationError, AppException, UserNotFoundError
 
 
-class UserMemberServiceError(ValueError):  # 自訂錯誤類別，方便 API 層捕捉
-    def __init__(self, message="操作失敗", errors=None):
-        super().__init__(message)
-        self.errors = errors if errors is not None else {}
+class MemberService:
 
+    @staticmethod
+    def _get_leaderboard_data():
+        """
+        一個高效的內部方法，用於計算並返回排行榜數據。
+        此方法取代了原先在路由中 N+1 查詢的邏輯。
+        """
+        # 1. 一次性查詢所有已完成的比賽記錄
+        all_records = MatchRecord.query.all()
 
-def create_member_with_user(data: dict):
-    """
-    創建新的 Member 及其關聯的 User 帳號。
-    'username' (手機號) 和 'name' (Member 真實姓名) 為必填。
-    密碼邏輯：如果 data 中有 'password'，則使用它；否則使用 'username' (手機號) 作為密碼。
-    成功則返回 (user, member, password_used_for_user)。
-    失敗則拋出 UserMemberServiceError。
-    """
-    errors = {}
+        # 2. 在記憶體中計算每個球員的勝敗場次
+        stats = {}  # key: member_id, value: {'wins': x, 'losses': y}
+        for record in all_records:
+            if record.side_a_outcome == OutcomeEnum.WIN:
+                winner_ids = [record.side_a_player1_id, record.side_a_player2_id]
+                loser_ids = [record.side_b_player1_id, record.side_b_player2_id]
+            elif record.side_a_outcome == OutcomeEnum.LOSS:
+                winner_ids = [record.side_b_player1_id, record.side_b_player2_id]
+                loser_ids = [record.side_a_player1_id, record.side_a_player2_id]
+            else:  # 平局或未定義結果，跳過
+                continue
 
-    # User data
-    username = data.get("username", "").strip()
-    password_from_payload = data.get("password")
-    email = data.get("email", "").strip() or None
-    role_str = data.get("role", "MEMBER")
+            for p_id in winner_ids:
+                if p_id:
+                    stats.setdefault(p_id, {"wins": 0, "losses": 0})["wins"] += 1
+            for p_id in loser_ids:
+                if p_id:
+                    stats.setdefault(p_id, {"wins": 0, "losses": 0})["losses"] += 1
 
-    # Member data
-    member_name = data.get("name", "").strip()
-    display_name = data.get("display_name", "").strip() or member_name
-    student_id = data.get("student_id", "").strip() or None
-    gender_str = data.get("gender")
-    position_str = data.get("position")
-    organization_id_payload = data.get("organization_id")
-    mu_payload = data.get("mu")
-    sigma_payload = data.get("sigma")
-    join_date_payload = data.get("join_date")
-    is_active = data.get("is_active", True)  # Member 的 is_active
-    notes_payload = data.get("notes")
+        # 3. 獲取所有現役隊員
+        active_members = (
+            Member.query.filter_by(is_active=True)
+            .options(joinedload(Member.user), joinedload(Member.organization))
+            .all()
+        )
 
-    # --- 執行驗證 ---
-    err = validate_username(username)
-    if err:
-        errors["username"] = err
+        leaderboard_members = []
+        for member in active_members:
+            member_stats = stats.get(member.id, {"wins": 0, "losses": 0})
+            total_matches = member_stats["wins"] + member_stats["losses"]
 
-    err = validate_email(email)
-    if err:
-        errors["email"] = err
+            # 只有參與過比賽的成員才加入排行榜
+            if total_matches > 0:
+                # 動態地將統計數據附加到 member 物件上，以便 Schema 序列化
+                member.wins = member_stats["wins"]
+                member.losses = member_stats["losses"]
+                member.total_matches = total_matches
+                member.win_rate = round((member.wins / total_matches) * 100, 2) if total_matches > 0 else 0
+                leaderboard_members.append(member)
 
-    if not member_name:
-        errors["name"] = "成員真實姓名為必填。"
+        # 4. 在 Python 中根據計算後的 'score' 屬性進行最終排序
+        leaderboard_members.sort(key=lambda m: m.score, reverse=True)
 
-    err = validate_member_student_id(student_id)
-    if err:
-        errors["student_id"] = err
+        return leaderboard_members
 
-    err_role, role_enum = validate_role_str(role_str)
-    if err_role:
-        errors["role"] = err_role
+    @staticmethod
+    def get_all_members(args: dict):
+        """
+        獲取成員列表。如果 'view' 參數為 'leaderboard'，則返回排行榜數據。
+        """
+        if args.get("view") == "leaderboard":
+            return MemberService._get_leaderboard_data()
 
-    err_gender, gender_enum = validate_gender_str_for_member(gender_str)
-    if err_gender:
-        errors["gender"] = err_gender
+        # --- 以下為標準的成員列表查詢邏輯 ---
+        query = Member.query.options(joinedload(Member.user), joinedload(Member.organization))
 
-    err_pos, position_enum = validate_position_str_for_member(position_str)
-    if err_pos:
-        errors["position"] = err_pos
+        if args.get("all", "false").lower() != "true":
+            query = query.filter(Member.is_active == True)
+        # ... 其他篩選和排序邏輯 ...
+        if search_term := args.get("name"):
+            search_like = f"%{search_term}%"
+            query = query.filter(or_(Member.name.ilike(search_like), User.username.ilike(search_like)))
 
-    err_org, org_id_int = validate_organization_id_for_member(organization_id_payload)
-    if err_org:
-        errors["organization_id"] = err_org
+        sort_by = args.get("sort_by", "name")
+        sort_order = args.get("sort_order", "asc")
+        sort_attr = getattr(Member, sort_by, Member.name)
+        query = query.order_by(sort_attr.desc() if sort_order == "desc" else sort_attr.asc())
 
-    actual_password_to_set = password_from_payload
-    if not actual_password_to_set:
-        if username:
-            actual_password_to_set = username  # 手機號即密碼
-        else:
-            actual_password_to_set = GENERAL_DEFAULT_INITIAL_PASSWORD  # 備用
+        return query.all()
 
-    err_pass = validate_password(actual_password_to_set, is_required=True)  # 密碼必填
-    if err_pass:
-        errors["password"] = err_pass
+    @staticmethod
+    def get_member_by_id(member_id: int):
+        """Finds a member by their ID."""
+        return db.session.get(Member, member_id)
 
-    if errors:
-        raise UserMemberServiceError("資料驗證失敗")
+    @staticmethod
+    def create_member_and_user(data: dict):
+        """
+        Creates a new member and an associated user account.
+        'data' is validated data from the MemberSchema.
+        """
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
 
-    # --- 創建實例 ---
-    new_user = User(username=username, email=email, role=role_enum, is_active=is_active)
-    new_user.set_password(actual_password_to_set)
+        if not username:
+            raise ValidationError({"username": ["必須提供手機號碼作為登入帳號。"]})
+        if User.query.filter_by(username=username).first():
+            raise UserAlreadyExistsError(f"手機號碼 '{username}' 已被註冊。")
+        if email and User.query.filter_by(email=email).first():
+            raise UserAlreadyExistsError(f"Email '{email}' 已被註冊。")
 
-    new_member = Member(
-        name=member_name,
-        display_name=display_name,
-        student_id=student_id,
-        gender=gender_enum,
-        position=position_enum,
-        mu=float(mu_payload) if mu_payload is not None else Member.mu.default.arg,
-        sigma=(
-            float(sigma_payload)
-            if sigma_payload is not None
-            else Member.sigma.default.arg
-        ),
-        organization_id=org_id_int,
-        joined_date=(
-            datetime.datetime.strptime(join_date_payload, "%Y-%m-%d").date()
-            if join_date_payload
-            else (
-                Member.joined_date.default.arg
-                if Member.joined_date.default
-                else datetime.date.today()
+        try:
+            new_user = User(
+                username=username,
+                email=email,
+                role=UserRoleEnum.MEMBER,
+                display_name=data.get("display_name") or data.get("name"),
             )
-        ),
-        is_active=is_active,  # Member.is_active
-        notes=notes_payload,
-        user_account=new_user,  # 建立關聯
-    )
-    db.session.add(new_member)  # add Member 會級聯 add User (如果 cascade 設定正確)
-    # 或者 db.session.add_all([new_user, new_member]) 更明確
-    return new_user, new_member, actual_password_to_set
+            new_user.set_password(password or username)  # Fallback to username as password if not provided
+            db.session.add(new_user)
+
+            new_member = Member(
+                user=new_user,
+                name=data["name"],
+                display_name=data.get("display_name"),
+                student_id=data.get("student_id"),
+                gender=data.get("gender"),
+                position=data.get("position"),
+                organization_id=data.get("organization_id"),
+                is_active=data.get("is_active", True),
+            )
+            db.session.add(new_member)
+            db.session.commit()
+            return new_member
+        except IntegrityError as e:
+            db.session.rollback()
+            raise AppException(f"資料庫錯誤，無法創建成員: {e.orig}", status_code=409)
+        except Exception as e:
+            db.session.rollback()
+            raise AppException(f"創建成員時發生未預期錯誤: {e}")
+
+    @staticmethod
+    def update_member(member: Member, data: dict):
+        """
+        Updates an existing member's profile and associated user info.
+        'member' is the Member model instance to update.
+        'data' is validated data from the MemberSchema.
+        """
+        for field, value in data.items():
+            if hasattr(member, field):
+                setattr(member, field, value)
+
+        # Handle associated User updates
+        if member.user:
+            if "email" in data and member.user.email != data["email"]:
+                if User.query.filter(User.email == data["email"], User.id != member.user.id).first():
+                    raise UserAlreadyExistsError(f"Email '{data['email']}' 已被其他帳號使用。")
+                member.user.email = data["email"]
+
+        try:
+            db.session.commit()
+            return member
+        except IntegrityError as e:
+            db.session.rollback()
+            raise AppException(f"資料庫錯誤，無法更新成員: {e.orig}", status_code=409)
+        except Exception as e:
+            db.session.rollback()
+            raise AppException(f"更新成員時發生未預期錯誤: {e}")
+
+    @staticmethod
+    def delete_member(member: Member):
+        """
+        Deletes a member and their associated user account.
+        """
+        if not member:
+            raise UserNotFoundError("找不到指定的成員。")
+
+        try:
+            # The cascade setting on the User->Member relationship should handle this
+            db.session.delete(member)
+            if member.user:
+                db.session.delete(member.user)  # Ensure user is also deleted
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            raise AppException(f"刪除成員時發生錯誤: {e}")

@@ -1,133 +1,126 @@
-from trueskill import Rating, rate, rate_1vs1
+# backend/app/services/rating_service.py
+import trueskill
+from flask import current_app
 
-from ..models.enums import GenderEnum
+from ..extensions import db
+from ..models import Member, MatchRecord
+from ..models.enums import GenderEnum  # 導入您的 GenderEnum
 
-GENDER_BONUS_MU = 0.7  # 女生打贏男生時，額外增加的 mu
-GENDER_ADJUST_SIGMA = (
-    0.5  # 女生對男生時，女生的 sigma 可以稍微調高一點點，表示結果更不可測 (可選)
-)
+# --- 評分相關常數 ---
+GENDER_BONUS_MU = 0.6  # 女生打贏男生時，額外增加的 mu
+
+# --- 設定 TrueSkill 環境 ---
+# draw_probability=0 表示平局機率為零，適用於勝負分明的比賽
+trueskill_env = trueskill.TrueSkill(draw_probability=0)
 
 
-def calculate_new_ratings_1v1(
-    p1_mu,
-    p1_sigma,
-    p1_gender: GenderEnum,
-    p2_mu,
-    p2_sigma,
-    p2_gender: GenderEnum,
-    p1_won: bool,
-):
-    """計算 1v1 比賽後的新 TrueSkill 評分，並加入性別調整。"""
+class RatingService:
+    @staticmethod
+    def _get_player_data(player_ids: list[int]) -> dict:
+        """根據球員 ID 列表，一次性獲取他們的 Member 物件。"""
+        if not player_ids:
+            return {}
+        players = Member.query.filter(Member.id.in_(player_ids)).all()
+        return {p.id: p for p in players}
 
-    r1_initial = Rating(mu=p1_mu, sigma=p1_sigma)
-    r2_initial = Rating(mu=p2_mu, sigma=p2_sigma)
+    @staticmethod
+    def update_ratings_from_match(match_record: MatchRecord):
+        """
+        根據一場新的比賽結果，更新所有參與者的 TrueSkill 評分，
+        並應用性別差異獎勵。
+        """
+        side_a_ids = [p_id for p_id in [match_record.side_a_player1_id, match_record.side_a_player2_id] if p_id]
+        side_b_ids = [p_id for p_id in [match_record.side_b_player1_id, match_record.side_b_player2_id] if p_id]
 
-    r1 = Rating(mu=p1_mu, sigma=p1_sigma)
-    r2 = Rating(mu=p2_mu, sigma=p2_sigma)
+        all_player_ids = side_a_ids + side_b_ids
+        # 一次性獲取所有參與者的 Member 物件
+        players_data = RatingService._get_player_data(all_player_ids)
 
-    # 標準 TrueSkill 更新
-    if p1_won:
-        new_r1_base, new_r2_base = rate_1vs1(r1, r2)
-    else:
-        new_r2_base, new_r1_base = rate_1vs1(r2, r1)
+        # 創建 TrueSkill Rating 物件
+        team1_ratings = {
+            p_id: trueskill_env.create_rating(mu=players_data[p_id].mu, sigma=players_data[p_id].sigma)
+            for p_id in side_a_ids
+        }
+        team2_ratings = {
+            p_id: trueskill_env.create_rating(mu=players_data[p_id].sigma, sigma=players_data[p_id].sigma)
+            for p_id in side_b_ids
+        }
 
-    # 性別差異獎勵調整
-    final_p1_mu, final_p1_sigma = new_r1_base.mu, new_r1_base.sigma
-    final_p2_mu, final_p2_sigma = new_r2_base.mu, new_r2_base.sigma
+        # 根據賽果決定排名
+        if match_record.side_a_games_won > match_record.side_b_games_won:
+            ranks = [0, 1]  # A方勝 (排名第0), B方敗 (排名第1)
+            winning_team_ids, losing_team_ids = side_a_ids, side_b_ids
+        else:
+            ranks = [1, 0]  # B方勝, A方敗
+            winning_team_ids, losing_team_ids = side_b_ids, side_a_ids
 
-    if p1_won:  # P1 獲勝
-        if p1_gender == GenderEnum.FEMALE and p2_gender == GenderEnum.MALE:
-            final_p1_mu += GENDER_BONUS_MU
-            print(
-                f"Gender bonus applied to P1 (Female) for winning against Male. Mu +{GENDER_BONUS_MU}"
+        # --- 1. 標準 TrueSkill 評分更新 ---
+        new_team1_ratings, new_team2_ratings = trueskill_env.rate([team1_ratings, team2_ratings], ranks=ranks)
+
+        # 將更新後的評分暫存起來
+        final_ratings = {}
+        for p_id, rating in new_team1_ratings.items():
+            final_ratings[p_id] = {"mu": rating.mu, "sigma": rating.sigma}
+        for p_id, rating in new_team2_ratings.items():
+            final_ratings[p_id] = {"mu": rating.mu, "sigma": rating.sigma}
+
+        # --- 2. 應用性別差異獎勵 ---
+        winning_team_genders = {p_id: players_data[p_id].gender for p_id in winning_team_ids}
+        losing_team_genders = {p_id: players_data[p_id].gender for p_id in losing_team_ids}
+
+        # 檢查勝方是否有女性，敗方是否有男性
+        winner_has_female = GenderEnum.FEMALE in winning_team_genders.values()
+        loser_has_male = GenderEnum.MALE in losing_team_genders.values()
+
+        if winner_has_female and loser_has_male:
+            # 為勝方中的每一位女性成員加上獎勵 mu
+            for p_id, gender in winning_team_genders.items():
+                if gender == GenderEnum.FEMALE:
+                    final_ratings[p_id]["mu"] += GENDER_BONUS_MU
+                    current_app.logger.info(f"性別獎勵已應用於球員 ID {p_id} (女性勝男性)。Mu +{GENDER_BONUS_MU}")
+
+        # --- 3. 將最終的評分寫回資料庫的 Member 物件 ---
+        for p_id, new_rating_values in final_ratings.items():
+            member = players_data.get(p_id)  # 直接從已獲取的字典中取得 Member 物件
+            if member:
+                member.mu = new_rating_values["mu"]
+                member.sigma = new_rating_values["sigma"]
+
+        current_app.logger.info(f"已為比賽記錄 ID {match_record.id} 更新評分。")
+
+    @staticmethod
+    def recalculate_ratings_for_players(player_ids: list[int]):
+        """
+        為一組指定的球員，基於他們所有的比賽記錄，從頭重新計算評分。
+        這在刪除比賽記錄時使用。
+        """
+        if not player_ids:
+            return
+
+        current_app.logger.info(f"正在為球員 ID {player_ids} 重新計算評分...")
+
+        # 1. 將這些球員的分數重設為初始值
+        Member.query.filter(Member.id.in_(player_ids)).update(
+            {"mu": trueskill_env.mu, "sigma": trueskill_env.sigma}, synchronize_session="fetch"
+        )  # 'fetch' 是一個推薦的選項，確保 session 中的物件也更新
+
+        # 2. 獲取所有與這些球員相關的比賽記錄，並按日期和ID排序 (確保順序穩定)
+        relevant_matches = (
+            MatchRecord.query.filter(
+                db.or_(
+                    MatchRecord.side_a_player1_id.in_(player_ids),
+                    MatchRecord.side_a_player2_id.in_(player_ids),
+                    MatchRecord.side_b_player1_id.in_(player_ids),
+                    MatchRecord.side_b_player2_id.in_(player_ids),
+                )
             )
-    else:  # P2 獲勝
-        if p2_gender == GenderEnum.FEMALE and p1_gender == GenderEnum.MALE:
-            final_p2_mu += GENDER_BONUS_MU
-            print(
-                f"Gender bonus applied to P2 (Female) for winning against Male. Mu +{GENDER_BONUS_MU}"
-            )
-
-    return ((final_p1_mu, final_p1_sigma), (final_p2_mu, final_p2_sigma))
-
-
-def calculate_new_ratings_2v2(
-    t1p1_mu,
-    t1p1_sigma,
-    t1p1_gender: GenderEnum,
-    t1p2_mu,
-    t1p2_sigma,
-    t1p2_gender: GenderEnum,
-    t2p1_mu,
-    t2p1_sigma,
-    t2p1_gender: GenderEnum,
-    t2p2_mu,
-    t2p2_sigma,
-    t2p2_gender: GenderEnum,
-    team1_won: bool,  # True 表示 team1 (t1p1, t1p2) 獲勝
-):
-    """
-    計算 2v2 (雙打) 比賽後的新 TrueSkill 評分。
-    如果 team1 獲勝，且 team1 中有女性，且 team2 中有男性，則 team1 中的女性獲得額外 mu 獎勵。
-    """
-    t1p1_r = Rating(mu=t1p1_mu, sigma=t1p1_sigma)
-    t1p2_r = Rating(mu=t1p2_mu, sigma=t1p2_sigma)
-    t2p1_r = Rating(mu=t2p1_mu, sigma=t2p1_sigma)
-    t2p2_r = Rating(mu=t2p2_mu, sigma=t2p2_sigma)
-
-    team1_ratings_obj = [t1p1_r, t1p2_r]
-    team2_ratings_obj = [t2p1_r, t2p2_r]
-
-    # 標準 TrueSkill 更新
-    if team1_won:
-        # Team 1 won (rank 0), Team 2 lost (rank 1)
-        (new_team1_base_ratings, new_team2_base_ratings) = rate(
-            [team1_ratings_obj, team2_ratings_obj], ranks=[0, 1]
-        )
-    else:
-        # Team 2 won (rank 0), Team 1 lost (rank 1)
-        (new_team2_base_ratings, new_team1_base_ratings) = rate(
-            [team2_ratings_obj, team1_ratings_obj], ranks=[0, 1]
+            .order_by(MatchRecord.match_date.asc(), MatchRecord.id.asc())
+            .all()
         )
 
-    # 將更新後的 mu, sigma 先取出來
-    # Team 1 players
-    t1p1_new_mu, t1p1_new_sigma = (
-        new_team1_base_ratings[0].mu,
-        new_team1_base_ratings[0].sigma,
-    )
-    t1p2_new_mu, t1p2_new_sigma = (
-        new_team1_base_ratings[1].mu,
-        new_team1_base_ratings[1].sigma,
-    )
-    # Team 2 players
-    t2p1_new_mu, t2p1_new_sigma = (
-        new_team2_base_ratings[0].mu,
-        new_team2_base_ratings[0].sigma,
-    )
-    t2p2_new_mu, t2p2_new_sigma = (
-        new_team2_base_ratings[1].mu,
-        new_team2_base_ratings[1].sigma,
-    )
+        # 3. 按時間順序，逐場重新應用評分更新
+        # 這裡的更新是直接修改 session 中的 Member 物件，最後一起 commit
+        for match in relevant_matches:
+            RatingService.update_ratings_from_match(match)
 
-    # 根據需求進行性別獎勵調整
-    if team1_won:
-        team1_has_female = (
-            t1p1_gender == GenderEnum.FEMALE or t1p2_gender == GenderEnum.FEMALE
-        )
-        team2_has_male = (
-            t2p1_gender == GenderEnum.MALE or t2p2_gender == GenderEnum.MALE
-        )
-
-        if team1_has_female and team2_has_male:
-            if t1p1_gender == GenderEnum.FEMALE:
-                t1p1_new_mu += GENDER_BONUS_MU
-            if t1p2_gender == GenderEnum.FEMALE:
-                t1p2_new_mu += GENDER_BONUS_MU
-
-    return (
-        (t1p1_new_mu, t1p1_new_sigma),
-        (t1p2_new_mu, t1p2_new_sigma),  # Team 1 new ratings
-        (t2p1_new_mu, t2p1_new_sigma),
-        (t2p2_new_mu, t2p2_new_sigma),  # Team 2 new ratings
-    )
+        current_app.logger.info(f"為球員 ID {player_ids} 的評分重新計算完成。")

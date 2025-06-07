@@ -1,31 +1,41 @@
 # backend/app/models/organization.py
+from typing import Dict
+
+from sqlalchemy import Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from ..extensions import db
 
 
 class Organization(db.Model):
     __tablename__ = "organizations"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(
-        db.String(100), unique=True, nullable=False, index=True, comment="組織/隊伍"
-    )
-    city = db.Column(db.String(50), nullable=True, comment="所在城市")
-    notes = db.Column(db.Text, nullable=True, comment="備註")
 
-    # 反向關聯: 一個 Organization 可以有多個 Member (TeamMember)
-    # 'members' 屬性可以讓您從 Organization 實例訪問其所有成員
-    members = db.relationship(
-        "Member", back_populates="organization_profile", lazy="dynamic"
-    )  # 假設您的成員模型類名是 Member
+    id = db.Column(Integer, primary_key=True, comment="組織唯一識別碼")
+    name = db.Column(String(100), unique=True, nullable=False, index=True, comment="組織全名")
+    short_name = db.Column(String(30), unique=True, nullable=True, index=True, comment="組織簡稱或代號")
+    description = db.Column(Text, nullable=True, comment="組織描述")
 
-    def to_dict(self):
-        return {
+    contact_person = db.Column(String(50), nullable=True, comment="主要聯絡人")
+    contact_email = db.Column(String(120), nullable=True, comment="聯絡Email")
+    contact_phone = db.Column(String(30), nullable=True, comment="聯絡電話")
+
+    members = relationship("Member", back_populates="organization")
+
+    def to_dict(self, members_count: bool = False, contact_info: bool = False) -> Dict:
+        data = {
             "id": self.id,
             "name": self.name,
-            "city": self.city,
-            "notes": self.notes,
-            "member_count": self.members.count(),  # (可選) 回傳成員數量
+            "short_name": self.short_name,
+            "description": self.description,
         }
+        if members_count:
+            data["contact_person"] = self.contact_person
+            data["contact_email"] = self.contact_email
+            data["contact_phone"] = self.contact_phone
+
+        if members_count:
+            data["members_count"] = len(self.members) if self.members else 0
+        return data
 
     def __repr__(self):
         return f"<Organization {self.name}>"
