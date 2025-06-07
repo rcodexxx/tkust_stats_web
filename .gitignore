@@ -1,0 +1,117 @@
+# =========================================================================
+# General / OS specific
+# =========================================================================
+# Mac OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# =========================================================================
+# IDEs and Editors
+# =========================================================================
+# PyCharm
+.idea/
+*.iws
+
+# VS Code
+.vscode/
+
+# =========================================================================
+# Python / Backend specific
+# =========================================================================
+# Virtual Environments
+# 忽略所有名為 venv, env, .venv 的資料夾
+venv/
+env/
+.venv/
+*/venv/
+*/env/
+*/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.tar.gz
+*.whl
+
+# Instance folder (might contain secrets, instance-specific config)
+# 強烈建議忽略此資料夾
+instance/
+
+# Environment variables
+# 絕對不要將包含密鑰的 .env 檔案上傳到 git
+.env
+.env.*
+!.env.example # 但保留 .env.example 檔案作為範例
+
+# Flask-Migrate / Alembic
+# alembic.ini 通常會被版本控制，但如果其中包含敏感資訊則忽略
+# alembic/versions/ # 通常會被版本控制
+
+# Test & Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+pytest_cache/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# =========================================================================
+# JavaScript / Frontend specific
+# =========================================================================
+# Dependencies
+# 巨大且可以透過 package.json 和 lock 檔案重新安裝
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Production / build artifacts
+# 根據您的前端框架調整，dist/ 和 build/ 是最常見的
+dist/
+build/
+.output/
+.next/
+.svelte-kit/
+out/
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Lock files - 通常建議保留在版本控制中，以確保團隊成員安裝的套件版本一致
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =========================================================================
+# Other
+# =========================================================================
+# SQLite databases (if used for local development)
+*.sqlite
+*.sqlite3
+db.sqlite3
+
