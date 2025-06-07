@@ -76,7 +76,7 @@ class Member(db.Model):
         index=True,
         comment="對應的使用者帳號ID",
     )
-    user_profile = relationship("User", back_populates="member_profile")
+    user = relationship("User", back_populates="member_profile")
 
     # --- 關聯：該隊員的所有比賽統計記錄 (若將其視為 Member 的一部分) ---
     match_stats_records = relationship(

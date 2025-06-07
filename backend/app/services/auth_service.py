@@ -71,8 +71,8 @@ class AuthService:
 
         # 6. 生成 Tokens
         # 確保 new_user.id 在 commit 後可用
-        access_token = create_access_token(identity=new_user.id)
-        refresh_token = create_refresh_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
+        refresh_token = create_refresh_token(identity=str(new_user.id))
 
         return {
             "user": new_user,  # 回傳 User 物件供後續序列化
@@ -95,8 +95,8 @@ class AuthService:
         if not user.is_active:
             raise UserInactiveError()
 
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
 
         return {
             "user": user,

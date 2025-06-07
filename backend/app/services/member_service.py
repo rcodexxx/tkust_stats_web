@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models import User, Member
+from ..models import User, Member, MatchRecord
+from ..models.enums.match_enums import MatchOutcomeEnum
 from ..models.enums.user_enums import UserRoleEnum
 from ..tools.exceptions import UserAlreadyExistsError, ValidationError, AppException, UserNotFoundError
 
@@ -23,10 +24,10 @@ class MemberService:
         # 2. 在記憶體中計算每個球員的勝敗場次
         stats = {}  # key: member_id, value: {'wins': x, 'losses': y}
         for record in all_records:
-            if record.side_a_outcome == OutcomeEnum.WIN:
+            if record.side_a_outcome == MatchOutcomeEnum.WIN:
                 winner_ids = [record.side_a_player1_id, record.side_a_player2_id]
                 loser_ids = [record.side_b_player1_id, record.side_b_player2_id]
-            elif record.side_a_outcome == OutcomeEnum.LOSS:
+            elif record.side_a_outcome == MatchOutcomeEnum.LOSS:
                 winner_ids = [record.side_b_player1_id, record.side_b_player2_id]
                 loser_ids = [record.side_a_player1_id, record.side_a_player2_id]
             else:  # 平局或未定義結果，跳過
@@ -40,11 +41,7 @@ class MemberService:
                     stats.setdefault(p_id, {"wins": 0, "losses": 0})["losses"] += 1
 
         # 3. 獲取所有現役隊員
-        active_members = (
-            Member.query.filter_by(is_active=True)
-            .options(joinedload(Member.user), joinedload(Member.organization))
-            .all()
-        )
+        active_members = Member.query.options(joinedload(Member.user_profile), joinedload(Member.organization)).all()
 
         leaderboard_members = []
         for member in active_members:

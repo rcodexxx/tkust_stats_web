@@ -11,6 +11,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(hours=1)  # Access Token 有效期
     JWT_REFRESH_TOKEN_EXPIRES = datetime.timedelta(days=30)  # Refresh Token 有效期
 
+    # WTF_CSRF_ENABLED = False
     DEBUG = False
     TESTING = False
 

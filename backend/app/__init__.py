@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime  # 保留，因為 inject_current_time 使用了它
 
+import jwt
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager
@@ -20,8 +21,9 @@ def create_app(config_name: str = None):
     應用程式工廠函數 (Application Factory)。
     負責創建和配置 Flask 應用程式實例。
     """
+
     load_dotenv()  # 載入 .env 檔案中的環境變數
-    jwt = JWTManager()  # 初始化 JWTManager
+    jwt_manager = JWTManager()  # 初始化 JWTManager
 
     if config_name is None:
         config_name = os.environ.get("FLASK_CONFIG", "default")
@@ -35,6 +37,30 @@ def create_app(config_name: str = None):
     except KeyError:
         app.logger.warning(f"Invalid FLASK_CONFIG '{config_name}'. Using 'default' config.")
         app.config.from_object(config_by_name["default"])
+
+        @app.before_request
+        def debug_token_and_key():
+            # 只對 API 請求進行除錯
+            if request.path.startswith("/api/") and "Authorization" in request.headers:
+                app.logger.info("--- JWT DEBUG START ---")
+
+                # 1. 印出當前應用程式設定的 JWT 金鑰
+                jwt_key = app.config.get("JWT_SECRET_KEY")
+                if jwt_key:
+                    app.logger.info(f"[DEBUG] App is using JWT_SECRET_KEY ending in: ...{jwt_key[-4:]}")
+                else:
+                    app.logger.error("[DEBUG] FATAL: JWT_SECRET_KEY IS NOT CONFIGURED IN THE APP!")
+
+                # 2. 解碼收到的 Token (不驗證簽名)，只查看其內容
+                auth_header = request.headers.get("Authorization")
+                if auth_header and auth_header.startswith("Bearer "):
+                    token = auth_header.split(" ")[1]
+                    try:
+                        decoded_payload = jwt.decode(token, options={"verify_signature": False})
+                        app.logger.info(f"[DEBUG] Received token payload: {decoded_payload}")
+                    except jwt.exceptions.DecodeError as e:  # <-- 修正：使用明確的別名
+                        app.logger.error(f"[DEBUG] Could not decode the received token: {e}")
+                app.logger.info("--- JWT DEBUG END ---")
 
     # 2. 設定 Logger
     # 避免在 Flask 開發伺服器重載時重複設定 logger
@@ -60,7 +86,7 @@ def create_app(config_name: str = None):
     # 3. 初始化 Flask 擴充套件
     db.init_app(app)
     migrate.init_app(app, db)  # Flask-Migrate 用於資料庫遷移
-    jwt.init_app(app)  # Flask-JWT-Extended 用於 JWT 認證
+    jwt_manager.init_app(app)  # Flask-JWT-Extended 用於 JWT 認證
 
     # 設定 CORS (Cross-Origin Resource Sharing)
     allowed_origins_str = os.environ.get(
@@ -104,18 +130,18 @@ def create_app(config_name: str = None):
     app.logger.info("Registered CLI commands blueprint.")
 
     # 6. 設定 JWT 錯誤處理回調
-    @jwt.expired_token_loader
+    @jwt_manager.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         token_type = jwt_payload.get("type", "unknown")
         app.logger.info(f"{token_type.capitalize()} token has expired for sub: {jwt_payload.get('sub')}")
         return jsonify(error="token_expired", message=f"您的 {token_type} token 已過期，請重新整理或登入。"), 401
 
-    @jwt.invalid_token_loader
+    @jwt_manager.invalid_token_loader
     def invalid_token_callback(error_string):
         app.logger.warning(f"Invalid token encountered: {error_string}")
         return jsonify(error="invalid_token", message="提供的認證 Token 無效。"), 422  # 422 Unprocessable Entity
 
-    @jwt.unauthorized_loader
+    @jwt_manager.unauthorized_loader
     def missing_token_callback(error_string):
         app.logger.warning(f"Missing token: {error_string}")
         return jsonify(error="authorization_required", message="請求缺少有效的認證 Token。"), 401

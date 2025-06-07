@@ -42,7 +42,12 @@ class User(db.Model):
     )
 
     is_active = db.Column(db.Boolean, default=True, nullable=False, comment="帳號是否啟用")
-    member_profile = db.relationship("Member", back_populates="user_profile")
+    member_profile = db.relationship(
+        "Member",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def set_password(self, password: str):
         """

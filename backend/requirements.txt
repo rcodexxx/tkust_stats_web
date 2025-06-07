@@ -8,6 +8,7 @@ Flask-Migrate
 Flask-JWT-Extended
 Flask-CORS
 Flask-Marshmallow
+Flask-WTF
 
 # =================================================================
 # Database & ORM
