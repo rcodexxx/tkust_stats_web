@@ -101,6 +101,7 @@ import {
   useMessage
 } from 'naive-ui';
 import {KeyOutline as LockIcon, PhonePortraitOutline as PhoneIcon} from '@vicons/ionicons5';
+import "@/assets/css/login.css"
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -167,80 +168,5 @@ const handleLogin = () => {
 </script>
 
 <style scoped>
-.login-page-naive {
-  display: flex;
-  flex-direction: column; /* 讓卡片在垂直方向上也能有彈性 */
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - var(--header-height, 64px) - var(--footer-height, 67px)); /* 假設 header 和 footer 高度 */
-  padding: 20px;
-  background-color: var(--n-body-color); /* Naive UI body 背景色 */
-  box-sizing: border-box;
-}
 
-.login-card.n-card {
-  max-width: 400px; /* 登入卡片最大寬度，略微減小 */
-  width: 100%;
-  border-radius: var(--n-border-radius); /* Naive UI 圓角 */
-  box-shadow: var(--n-box-shadow2); /* Naive UI 二級陰影 */
-  background-color: var(--n-card-color); /* Naive UI 卡片背景色 */
-  padding: 10px; /* 卡片自身的padding，微調 */
-}
-
-/* 卡片標題 */
-.login-card .card-title-naive.n-h2 {
-  font-weight: 600; /* 與 page-main-title 一致 */
-  color: var(--n-title-text-color); /* Naive UI 標題顏色 */
-  margin-bottom: 1.75rem; /* 標題與表單的間距 */
-}
-
-/* 表單 */
-.login-form.n-form {
-  /* 可在此處為整個表單添加特定樣式 */
-}
-
-/* 表單項 */
-.login-form .n-form-item {
-  margin-bottom: var(--n-form-item-margin-bottom, 24px); /* Naive UI 表單項間距或自訂 */
-}
-
-/* 最後一個表單項（按鈕）可能不需要那麼大的底部間距 */
-.login-form .submit-button-form-item.n-form-item {
-  margin-bottom: 0;
-}
-
-/* 輸入框和按鈕使用 Naive UI 的 size="large" 屬性來控制高度和字體大小 */
-.login-form .n-input--large-size,
-.login-form .login-submit-button.n-button--large-size {
-  /* 如果需要微調 large size 的高度，可以在這裡覆寫 --n-height-large */
-  /* 例如：--n-height-large: 40px !important; */
-}
-
-/* 登入按鈕 */
-.login-submit-button.n-button {
-  /* size="large" 已設定高度和大部分樣式 */
-  /* strong 屬性已在模板中 */
-  /* block 屬性已在模板中 */
-  font-weight: 500; /* 統一按鈕字重 */
-}
-
-/* Alert 間距 */
-.login-alert.n-alert {
-  margin-bottom: var(--n-form-item-margin-bottom, 24px) !important;
-}
-
-/* 分隔線 */
-.login-divider.n-divider:not(.n-divider--vertical) {
-  margin-top: 1.8rem; /* 與上方元素的間距 */
-  margin-bottom: 1.2rem; /* 與下方元素的間距 */
-}
-
-/* "還沒有帳號？" 區域 */
-.additional-actions.n-space .n-text {
-  color: var(--n-text-color-2); /* 使用 Naive UI 次要文字顏色 */
-}
-
-.additional-actions.n-space .n-button {
-  font-weight: 500;
-}
 </style>

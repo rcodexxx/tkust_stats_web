@@ -1,5 +1,6 @@
 <template>
   <div class="member-management-section">
+    <!-- 表格上方的操作按鈕 -->
     <div class="table-actions-header d-flex justify-content-end mb-3">
       <router-link :to="{ name: 'AddMember' }" v-slot="{ navigate }">
         <n-button type="primary" size="small" @click="navigate" :disabled="loadingMembers">
@@ -11,28 +12,30 @@
       </router-link>
     </div>
 
+    <!-- 錯誤提示 -->
     <div v-if="memberError" class="mb-3">
       <n-alert title="錯誤" type="error" closable @close="memberError = null">
         {{ memberError }}
       </n-alert>
     </div>
 
+    <!-- 成員資料表格 -->
     <n-data-table
         :columns="memberTableColumns"
         :data="filteredDataForTable"
         :loading="loadingMembers"
-        :pagination="memberPaginationReactive"
+        :pagination="memberPagination"
         :bordered="false"
         :bottom-bordered="true"
         :single-line="false"
         size="small"
         flex-height
-        style="min-height: 400px; max-height: 70vh;" :scroll-x="tableScrollXWidth"
+        style="min-height: 400px; max-height: 70vh;"
+        :scroll-x="tableScrollXWidth"
         :resizable="true"
-        @update:sorter="handleMemberSortChange"
-        :row-key="row => row.id"
     />
 
+    <!-- 空狀態提示 -->
     <div v-if="!loadingMembers && filteredDataForTable.length === 0 && props.searchTermProp && !memberError"
          class="mt-3">
       <n-empty :description="`找不到符合 '${props.searchTermProp}' 的成員。`"/>
@@ -45,8 +48,8 @@
 
 <script setup>
 import {computed, h, onMounted, reactive, ref, watch} from 'vue';
-import {useRouter} from 'vue-router';
-import memberService from '@/services/memberService';
+import {RouterLink, useRouter} from 'vue-router';
+import apiClient from '@/services/apiClient'; // 假設您使用 apiClient
 import {NAlert, NButton, NDataTable, NEmpty, NIcon, NSpace, NTag, NTooltip, useDialog, useMessage} from 'naive-ui';
 import {
   PencilOutline as EditIcon,
@@ -54,175 +57,195 @@ import {
   TrashBinOutline as DeleteIcon,
 } from '@vicons/ionicons5';
 
+// --- Props & Hooks ---
 const props = defineProps({
-  searchTermProp: {
-    type: String,
-    default: ''
-  }
+  searchTermProp: {type: String, default: ''}
 });
-
 const router = useRouter();
 const dialog = useDialog();
 const message = useMessage();
 
+// --- 狀態管理 (State) ---
 const allFetchedMembers = ref([]);
 const loadingMembers = ref(true);
 const memberError = ref(null);
 
-const memberPaginationReactive = reactive({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  showSizePicker: true,
+// --- 表格分頁設定 ---
+const memberPagination = reactive({
+  page: 1, pageSize: 10, showSizePicker: true,
   pageSizes: [10, 20, 30, 50],
   onChange: (page) => {
-    memberPaginationReactive.page = page;
+    memberPagination.page = page;
   },
   onUpdatePageSize: (pageSize) => {
-    memberPaginationReactive.pageSize = pageSize;
-    memberPaginationReactive.page = 1;
+    memberPagination.pageSize = pageSize;
+    memberPagination.page = 1;
   }
 });
 
-const tableSortState = ref(null);
-
-function handleMemberSortChange(sorter) {
-  tableSortState.value = sorter;
+// --- 輔助函數 (Helpers) ---
+function getRoleDisplay(roleValue) {
+  const roles = {admin: '管理員', cadre: '幹部', coach: '教練', member: '隊員'};
+  return roles[roleValue] || roleValue;
 }
 
+function getRoleNaiveType(roleValue) {
+  const types = {admin: 'error', cadre: 'warning', coach: 'success', member: 'info'};
+  return types[roleValue] || 'default';
+}
+
+function getGenderDisplay(genderValue) {
+  const genders = {male: '男', female: '女'};
+  return genders[genderValue] || '-';
+}
+
+function getPositionDisplay(positionValue) {
+  const positions = {back: '後排', front: '前排', versatile: '皆可'};
+  return positions[positionValue] || '-';
+}
+
+// --- 表格欄位定義 ---
 const memberTableColumns = computed(() => [
   {
-    title: "姓名",
-    key: "name",
+    title: "名稱",
+    key: "display_name", // 主要顯示 User 的 display_name
     sorter: 'default',
     fixed: 'left',
     width: 150,
     resizable: true,
     ellipsis: {tooltip: true},
-    // render(row) {
-    //   return h('div', [
-    //     h('span', {style: {fontWeight: '500'}}, row.name),
-    //     row.username ? h('small', {class: 'd-block text-muted'}, `(${row.username})`) : null
-    //   ]);
-    // }
-    render: (row) => row.name || '-'
+    render(row) {
+      // 點擊姓名可以跳轉到編輯頁面
+      return h(
+          RouterLink,
+          {to: {name: 'EditMember', params: {id: row.id}}, class: 'table-link'},
+          {default: () => row.name}
+      );
+    }
   },
   {
     title: "學號",
     key: "student_id",
     sorter: 'default',
-    fixed: 'left',
     width: 120,
     resizable: true,
-    ellipsis: {tooltip: true},
     render: (row) => row.student_id || '-'
   },
   {
     title: "性別",
     key: "gender",
-    sorter: 'default',
-    fixed: 'left',
+    width: 80,
+    align: 'center',
+    filterOptions: [{label: '男', value: 'male'}, {label: '女', value: 'female'}],
+    filter: (value, row) => row.gender === value,
+    render: (row) => getGenderDisplay(row.gender)
+  },
+  {
+    title: "位置", // 新增的欄位
+    key: "position",
     width: 100,
-    resizable: true,
+    align: 'center',
     filterOptions: [
-      {label: '男', value: 'MALE'},
-      {label: '女', value: 'FEMALE'},
+      {label: '後排', value: 'back'},
+      {label: '前排', value: 'front'},
+      {label: '皆可', value: 'versatile'}
     ],
-    filter(value, row) {
-      return row.gender === value;
-    },
-    render(row) {
-      return getGenderDisplay(row.gender);
-    }
+    filter: (value, row) => row.position === value,
+    render: (row) => getPositionDisplay(row.position)
   },
   {
     title: "組織",
     key: "organization_name",
     sorter: 'default',
-    width: 150,
+    width: 180,
     resizable: true,
     ellipsis: {tooltip: true},
-    render: (row) => row.organization_name || '-'
+    render: (row) => row.organization?.short_name || row.organization?.name || '-' // 從巢狀物件獲取
   },
-  {title: "分數", key: "score", sorter: (a, b) => a.score - b.score, width: 80, resizable: true, align: 'right'},
   {
-    title: "μ",
+    title: "μ", // Mu 分數
     key: "mu",
     sorter: (a, b) => a.mu - b.mu,
-    width: 70,
+    width: 80,
     resizable: true,
     align: 'right',
-    render: (row) => row.mu?.toFixed(1) || '-'
+    render: (row) => row.mu?.toFixed(2) || '-'
   },
   {
-    title: "角色", key: "user_role",
-    sorter: (a, b) => getRoleDisplay(a.user_role).localeCompare(getRoleDisplay(b.user_role), 'zh-Hant-TW'),
-    width: 100, resizable: true, align: 'center',
+    title: "角色",
+    key: "user.role", // 直接根據 user 物件中的 role 排序和篩選
+    width: 110,
+    resizable: true,
+    align: 'center',
     filterOptions: [
-      {label: '管理員', value: 'ADMIN'},
-      {label: '幹部', value: 'CADRE'},
-      {label: '隊員', value: 'PLAYER'},
-      {label: '教練', value: 'COACH'}
+      {label: '管理員', value: 'admin'}, {label: '幹部', value: 'cadre'},
+      {label: '教練', value: 'coach'}, {label: '隊員', value: 'member'}
     ],
-    filter(value, row) {
-      return row.user_role === value;
-    },
+    filter: (value, row) => row.user?.role === value,
     render(row) {
-      return row.user_role
-          ? h(NTag, {type: getRoleNaiveType(row.user_role), size: 'small', round: true, bordered: false},
-              {default: () => getRoleDisplay(row.user_role)})
-          : h('span', {class: 'text-muted'}, '無帳號');
+      const role = row.user?.role;
+      return role
+          ? h(NTag, {type: getRoleNaiveType(role), size: 'small', round: true}, {default: () => getRoleDisplay(role)})
+          : h('span', {class: 'text-muted'}, '無');
     }
   },
   {
-    title: "操作", key: "actions", fixed: 'right', width: 100, align: 'center', resizable: false,
+    title: "操作",
+    key: "actions",
+    fixed: 'right',
+    width: 100,
+    align: 'center',
     render(row) {
       return h(NSpace, {justify: 'center'}, () => [
         h(NTooltip, null, {
-          trigger: () => h(NButton, {size: 'tiny', circle: true, quaternary: true, onClick: () => editMember(row.id)},
-              {icon: () => h(NIcon, {component: EditIcon})}
-          ),
-          default: () => '編輯成員'
+          trigger: () => h(NButton, {
+            size: 'tiny',
+            circle: true,
+            onClick: () => editMember(row.id)
+          }, {icon: () => h(NIcon, {component: EditIcon})}),
+          default: () => '編輯'
         }),
         h(NTooltip, null, {
           trigger: () => h(NButton, {
-                size: 'tiny',
-                circle: true,
-                quaternary: true,
-                type: 'error',
-                onClick: () => confirmDeleteMember(row)
-              },
-              {icon: () => h(NIcon, {component: DeleteIcon})}
-          ),
-          default: () => '刪除成員'
+            size: 'tiny',
+            circle: true,
+            type: 'error',
+            onClick: () => confirmDeleteMember(row)
+          }, {icon: () => h(NIcon, {component: DeleteIcon})}),
+          default: () => '刪除'
         })
       ]);
     }
   }
 ]);
 
-// 計算表格的 scroll-x 以觸發固定列，基於可見列的總寬度
+// --- 計算屬性 ---
 const tableScrollXWidth = computed(() => {
-  let totalWidth = 0;
-  memberTableColumns.value.forEach(col => {
-    // 這裡可以加入邏輯，如果未來有 column visibility 控制
-    totalWidth += (col.width || 120); // 如果沒有設定 width，給一個預設值
-  });
-  // 如果總寬度小於某個閾值 (例如視窗寬度)，可以不設定 scroll-x，讓表格自然排列
-  // 但為了確保 sticky column 總能工作 (因為它們依賴於可滾動的容器)，通常會設定一個值
-  return totalWidth;
+  return memberTableColumns.value.reduce((sum, col) => sum + (col.width || 120), 0);
 });
 
+const filteredDataForTable = computed(() => {
+  const term = props.searchTermProp.toLowerCase().trim();
+  if (!term) {
+    return allFetchedMembers.value;
+  }
+  return allFetchedMembers.value.filter(member =>
+      Object.values(member).some(value =>
+          String(value).toLowerCase().includes(term)
+      )
+  );
+});
+
+// --- API 呼叫與邏輯 ---
 async function fetchMembers() {
   loadingMembers.value = true;
   memberError.value = null;
   try {
-    const response = await memberService.getAllMembers(false); // false = 獲取所有成員
+    // 假設後端 /members API 會回傳包含 user 和 organization 的巢狀數據
+    const response = await apiClient.get('/members', {params: {all: true}});
     allFetchedMembers.value = response.data || [];
   } catch (err) {
-    console.error("Error fetching members for Naive Table:", err.response || err);
-    memberError.value = err.response?.data?.error || err.message || "無法載入成員列表。";
-    allFetchedMembers.value = [];
+    memberError.value = err.response?.data?.message || "無法載入成員列表。";
   } finally {
     loadingMembers.value = false;
   }
@@ -230,91 +253,31 @@ async function fetchMembers() {
 
 onMounted(fetchMembers);
 
-// 過濾後的數據傳給 n-data-table
-const filteredDataForTable = computed(() => {
-  let dataToFilter = allFetchedMembers.value;
-  const term = props.searchTermProp.toLowerCase().trim();
-
-  if (!term) {
-    memberPaginationReactive.itemCount = dataToFilter.length; // 更新總條目數
-    return dataToFilter;
-  }
-  const filtered = dataToFilter.filter(member => {
-    return (
-        member.name?.toLowerCase().includes(term) ||
-        (member.username && member.username.toLowerCase().includes(term)) ||
-        (member.student_id && member.student_id.toLowerCase().includes(term)) ||
-        (member.organization_name && member.organization_name.toLowerCase().includes(term)) ||
-        (member.user_role && getRoleDisplay(member.user_role).toLowerCase().includes(term))
-    );
-  });
-  memberPaginationReactive.itemCount = filtered.length; // 更新總條目數
-  return filtered;
-});
-
 watch(() => props.searchTermProp, () => {
-  memberPaginationReactive.page = 1; // 搜尋詞改變時，回到第一頁
+  memberPagination.page = 1;
 });
 
-
-// --- Modal 相關 ---
-const memberToDelete = ref(null);
+function editMember(memberId) {
+  router.push({name: 'EditMember', params: {id: memberId}});
+}
 
 function confirmDeleteMember(member) {
-  memberToDelete.value = {id: member.id, name: member.name};
   dialog.error({
     title: '確認刪除',
-    content: () => `您確定要刪除成員 "${member.name}" (ID: ${member.id}) 嗎？此操作通常會一併刪除其關聯的登入帳號，且可能無法復原！`,
+    content: () => `您確定要刪除成員 "${member.name}" 嗎？此操作將一併刪除其關聯的登入帳號，且無法復原！`,
     positiveText: '確認刪除',
     negativeText: '取消',
-    maskClosable: false,
     onPositiveClick: async () => {
-      if (!memberToDelete.value?.id) return;
       try {
-        await memberService.deleteMember(memberToDelete.value.id);
-        message.success(`成員 ${memberToDelete.value.name} 已成功刪除。`);
+        await apiClient.delete(`/members/${member.id}`);
+        message.success(`成員 ${member.name} 已成功刪除。`);
         await fetchMembers(); // 重新獲取列表
       } catch (err) {
-        console.error("Error deleting member:", err.response || err);
-        message.error(`刪除成員失敗: ${err.response?.data?.error || err.message}`);
-      } finally {
-        memberToDelete.value = null;
+        message.error(`刪除成員失敗: ${err.response?.data?.message || err.message}`);
       }
-    },
-    onNegativeClick: () => {
-      memberToDelete.value = null;
-      message.info('已取消刪除');
     }
   });
 }
-
-// --- 輔助函數 ---
-function getRoleDisplay(roleName) {
-  if (roleName === 'ADMIN') return '管理員';
-  if (roleName === 'CADRE') return '幹部';
-  if (roleName === 'COACH') return '教練';
-  if (roleName === 'PLAYER') return '隊員';
-  return roleName || 'N/A';
-}
-
-function getRoleNaiveType(roleName) { // 用於 Naive UI Tag 的 type
-  if (roleName === 'ADMIN') return 'error';
-  if (roleName === 'CADRE') return 'warning';
-  if (roleName === 'PLAYER') return 'info';
-  if (roleName === 'COACH') return 'success'; // 例如
-  return 'default';
-}
-
-function getGenderDisplay(genderName) {
-  if (genderName === 'MALE') return '男';
-  if (genderName === 'FEMALE') return '女';
-  return '-'; // 預設或未知時顯示
-}
-
-function editMember(memberId) {
-  router.push({name: 'EditMember', params: {id: String(memberId)}});
-}
-
 </script>
 
 <style scoped>

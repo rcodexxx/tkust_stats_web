@@ -104,8 +104,8 @@
 
 <script setup>
 import {computed, onMounted, ref} from 'vue';
-import axios from 'axios'; // 或您的 apiClient
 import {useAuthStore} from '@/stores/authStore';
+import apiClient from "@/services/apiClient.js";
 import {NAlert, NCard, NEmpty, NH1, NIcon, NList, NListItem, NPagination, NSpin} from 'naive-ui';
 import {
   Medal as Rank3Icon,
@@ -128,12 +128,16 @@ onMounted(async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`${apiBaseUrl}/leaderboard`);
+    const response = await apiClient.get('/members', {
+      params: {
+        view: 'leaderboard'
+      }
+    });
     if (response && Array.isArray(response.data)) {
-      // ** 主要修改點：根據 API 回傳的順序賦予 rank **
+      // 後端已按分數排序，前端直接根據順序賦予 rank
       allMembersWithRank.value = response.data.map((member, index) => ({
-        ...member, // 保留 member 原有的所有屬性
-        rank: index + 1 // 添加 rank 屬性，值為索引 + 1
+        ...member,
+        rank: index + 1
       }));
     } else {
       console.error("LeaderboardView: API response data is not an array or is missing!", response.data);

@@ -12,9 +12,18 @@ class ProfileUpdateSchema(Schema):
     用於驗證 (Validation) 更新個人資料的請求數據。
     所有欄位都是可選的，因為使用者可能只更新其中一部分。
     """
+
     # User Model Fields
     email = fields.Email(allow_none=True, metadata={"description": "電子郵件"})
     display_name = fields.Str(allow_none=True, validate=validate.Length(max=50), metadata={"description": "使用者暱稱"})
+
+    # Member Model Fields
+    name = fields.Str(validate=validate.Length(min=1, max=80), metadata={"description": "真實姓名"})
+    student_id = fields.Str(
+        allow_none=True,
+        validate=validate.Regexp(r"^\d{7,9}$", error="學號必須是7到9位數字。"),
+        metadata={"description": "學號"},
+    )
 
     # Member Model Fields (如果使用者有關聯的 Member Profile)
     # 這些欄位是使用者可以自己修改的 bio
@@ -31,16 +40,18 @@ class ProfileUpdateSchema(Schema):
                 data[key] = None
         return data
 
+
 class UserProfileResponseSchema(Schema):
     """
     用於序列化 (Serialization) /profile/me 的 GET 回應。
     它結合了 User 和 Member 的資訊。
     """
+
     id = fields.Int(dump_only=True)
     username = fields.Str(dump_only=True)
     email = fields.Email(dump_only=True, allow_none=True)
     display_name = fields.Str(dump_only=True, allow_none=True)
-    role = fields.Str(attribute="role.value", dump_only=True) # 輸出 Enum 的 value
+    role = fields.Str(attribute="role.value", dump_only=True)  # 輸出 Enum 的 value
     is_active = fields.Bool(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
 

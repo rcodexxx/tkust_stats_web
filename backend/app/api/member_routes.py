@@ -4,13 +4,14 @@ from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError as MarshmallowValidationError
 
 from . import api_bp  # Assuming your Blueprint is named api_bp
-from ..schemas.member_schemas import MemberSchema, MemberCreateSchema, MemberUpdateSchema
+from ..schemas.member_schemas import MemberSchema, MemberCreateSchema, MemberUpdateSchema, LeaderboardMemberSchema
 from ..services.member_service import MemberService
 from ..tools.exceptions import AppException, UserAlreadyExistsError
 
 # Instantiate all necessary schemas
 member_display_schema = MemberSchema()
 members_display_schema = MemberSchema(many=True)
+leaderboard_members_schema = LeaderboardMemberSchema(many=True)
 member_create_schema = MemberCreateSchema()
 member_update_schema = MemberUpdateSchema()
 
@@ -20,9 +21,14 @@ member_update_schema = MemberUpdateSchema()
 def get_members_list():
     """Get a list of members with optional filtering and sorting."""
     try:
+        is_leaderboard_view = request.args.get("view") == "leaderboard"
         members = MemberService.get_all_members(request.args)
-        # Use the display schema for serialization
-        return jsonify(members_display_schema.dump(members)), 200
+        if is_leaderboard_view:
+            schema = leaderboard_members_schema
+        else:
+            schema = members_display_schema
+
+        return jsonify(schema.dump(members)), 200
     except Exception as e:
         current_app.logger.error(f"Error getting members list: {e}", exc_info=True)
         return jsonify({"error": "server_error", "message": "獲取成員列表時發生錯誤。"}), 500
@@ -51,10 +57,15 @@ def create_member():
         # Use the specific create schema for validation and deserialization
         validated_data = member_create_schema.load(json_data)
         new_member = MemberService.create_member_and_user(validated_data)
-        return jsonify({
-            "message": "成員及使用者帳號已成功建立。",
-            "member": member_display_schema.dump(new_member)  # Use the display schema for the response
-        }), 201
+        return (
+            jsonify(
+                {
+                    "message": "成員及使用者帳號已成功建立。",
+                    "member": member_display_schema.dump(new_member),  # Use the display schema for the response
+                }
+            ),
+            201,
+        )
     except MarshmallowValidationError as err:
         return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
     except (UserAlreadyExistsError, AppException) as e:
@@ -82,10 +93,15 @@ def update_member(member_id):
         # Use the specific update schema for validation, allowing partial updates
         validated_data = member_update_schema.load(json_data, partial=True)
         updated_member = MemberService.update_member(member, validated_data)
-        return jsonify({
-            "message": "成員資料已成功更新。",
-            "member": member_display_schema.dump(updated_member) # Use the display schema for the response
-        }), 200
+        return (
+            jsonify(
+                {
+                    "message": "成員資料已成功更新。",
+                    "member": member_display_schema.dump(updated_member),  # Use the display schema for the response
+                }
+            ),
+            200,
+        )
     except MarshmallowValidationError as err:
         return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
     except (UserAlreadyExistsError, AppException) as e:

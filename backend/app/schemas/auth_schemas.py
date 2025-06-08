@@ -6,14 +6,14 @@ from ..models.enums.user_enums import UserRoleEnum
 
 
 # --- Request Schemas ---
-class QuickRegisterRequestSchema(Schema):
+class QuickRegisterSchema(Schema):
     phone_number = fields.Str(
         required=True,
         validate=[
             validate.Length(min=10, max=10, error="手機號碼必須是10位數字。"),
             validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效 (應為09開頭10位數字)。"),
         ],
-        data_key="phoneNumber",
+        data_key="phone_number",
         attribute="username",
     )
 

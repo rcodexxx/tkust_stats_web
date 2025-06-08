@@ -15,9 +15,17 @@
           :model="formData"
           :rules="formRules"
           label-placement="top"
-          require-mark-placement="right-hanging"
           @submit.prevent="handleAddMember"
       >
+        <n-alert
+            v-if="submitMessage"
+            title="新增失敗"
+            type="error"
+            closable class="mb-4" @close="clearSubmitMessage"
+        >
+          <span style="white-space: pre-wrap;">{{ submitMessage }}</span>
+        </n-alert>
+
         <n-grid :x-gap="24" :y-gap="12" :cols="12" item-responsive>
           <n-form-item-gi :span="12" label="真實姓名*" path="name">
             <n-input v-model:value="formData.name" placeholder="請輸入成員的真實姓名"/>
@@ -42,10 +50,11 @@
           <n-form-item-gi :span="12" :md="6" label="角色*" path="role">
             <n-select v-model:value="formData.role" :options="roleOptions" placeholder="選擇角色"/>
           </n-form-item-gi>
+
           <n-gi :span="12">
             <n-divider title-placement="left" class="section-divider">球員詳細資料</n-divider>
           </n-gi>
-          <n-form-item-gi :span="12" :md="6" label="學號 (7-9位數字)" path="student_id">
+          <n-form-item-gi :span="12" :md="6" label="學號" path="student_id">
             <n-input v-model:value="formData.student_id" placeholder="選填"/>
           </n-form-item-gi>
           <n-form-item-gi :span="12" :md="6" label="性別" path="gender">
@@ -55,33 +64,20 @@
             <n-select v-model:value="formData.position" :options="positionOptions" placeholder="選擇位置" clearable/>
           </n-form-item-gi>
           <n-form-item-gi :span="12" :md="6" label="所屬組織" path="organization_id">
-            <n-select v-model:value="formData.organization_id"
-                      :options="organizationOptions"
-                      placeholder="選擇組織"
-                      clearable filterable
-                      label-field="name" value-field="id"
-                      style="width:100%"
+            <n-select
+                v-model:value="formData.organization_id"
+                :options="organizationOptions"
+                placeholder="選擇組織"
+                clearable filterable
             />
           </n-form-item-gi>
-          <n-form-item-gi :span="12" :md="6" label="初始 Mu (μ)" path="mu">
-            <n-input-number v-model:value="formData.mu" :min="0" :step="0.1" placeholder="預設 25.0" clearable
-                            style="width:100%"/>
+          <n-form-item-gi :span="12" :md="6" label="入隊日期" path="joined_date_ts">
+            <n-date-picker v-model:value="formData.joined_date_ts" type="date" clearable style="width:100%"/>
           </n-form-item-gi>
-          <n-form-item-gi :span="12" :md="6" label="初始 Sigma (σ)" path="sigma">
-            <n-input-number v-model:value="formData.sigma" :min="0.1" :step="0.001" placeholder="預設約 8.333" clearable
-                            style="width:100%"/>
-          </n-form-item-gi>
-          <n-form-item-gi :span="12" :md="6" label="球拍" path="racket">
-            <n-input v-model:value="formData.racket" placeholder="選填"/>
-          </n-form-item-gi>
-          <n-form-item-gi :span="12" :md="6" label="入隊日期" path="join_date">
-            <n-date-picker v-model:formatted-value="formData.join_date" type="date" value-format="yyyy-MM-dd"
-                           placeholder="選填，預設今日" style="width:100%"/>
-          </n-form-item-gi>
-          <n-form-item-gi :span="12" :md="6" label="成員活躍狀態" path="is_active">
+          <n-form-item-gi :span="12" :md="6" label="活躍狀態">
             <div class="switch-with-label">
               <n-switch v-model:value="formData.is_active"/>
-              <span class="switch-label-text">預設活躍</span>
+              <span class="switch-label-text">{{ formData.is_active ? '現役' : '非現役' }}</span>
             </div>
           </n-form-item-gi>
           <n-form-item-gi :span="12" label="備註" path="notes">
@@ -93,7 +89,7 @@
         <n-space justify="end" class="mt-4 action-buttons">
           <n-button @click="goBack" size="medium">取消</n-button>
           <n-button type="primary" attr-type="submit" :loading="submitting" size="medium" strong>
-            確認新增
+            {{ submitting ? '新增中...' : '確認新增' }}
           </n-button>
         </n-space>
       </n-form>
@@ -103,202 +99,160 @@
 
 <script setup>
 import {onMounted, reactive, ref} from 'vue';
-import {useRoute, useRouter} from 'vue-router';
+import {useRouter} from 'vue-router';
 import {
+  NAlert,
   NButton,
   NCard,
   NDatePicker,
   NDivider,
   NForm,
   NFormItemGi,
+  NGi,
+  NGrid,
   NH1,
   NIcon,
   NInput,
-  NInputNumber,
   NSelect,
   NSpace,
   NSwitch,
   useMessage
 } from 'naive-ui';
 import {ArrowBackOutline as ArrowBackIcon} from '@vicons/ionicons5';
-import memberService from '@/services/memberService.js';
-import organizationService from '@/services/organizationService.js';
+import apiClient from '@/services/apiClient';
 
+// --- Hooks ---
 const router = useRouter();
-const route = useRoute();
 const message = useMessage();
 const formRef = ref(null);
 
-const memberId = ref(route.params.id);
-const loadingData = ref(true);
-const fetchError = ref(null);
+// --- 狀態管理 (State) ---
 const submitting = ref(false);
+const submitMessage = ref('');
 
 const formData = reactive({
   name: '',
   display_name: '',
-  username: '', // User.username (手機號)
-  // password: '', // 編輯頁面通常不直接處理密碼，應有專門的密碼重設流程
-  email: '',    // User.email
-  role: 'MEMBER',// User.role
-
+  username: '',
+  password: '',
+  email: '',
+  role: 'member',
   student_id: '',
   gender: null,
   position: null,
   organization_id: null,
-  mu: null,
-  sigma: null,
-  join_date: null,
-  leaved_date: null,
-  is_active: true,  // Member.is_active (成員自身的活躍狀態)
+  is_active: true,
+  joined_date_ts: null,
   notes: ''
 });
 
-// 與 AdminAddMemberView.vue 統一
-const roleOptions = [
-  {label: '隊員', value: 'MEMBER'},
-  {label: '幹部', value: 'CADRE'},
-  {label: '教練', value: 'COACH'},
-  {label: '管理員', value: 'ADMIN'}
-];
-const genderOptions = [
-  {label: '男性', value: 'MALE'},
-  {label: '女性', value: 'FEMALE'},
-];
-const positionOptions = [ // 與 AddMemberView.vue 統一
-  {label: '皆可', value: 'VERSATILE'},
-  {label: '後排', value: 'BACK'}, /* 之前 AddMember 有，EditMember 沒有 */
-  {label: '前排', value: 'FRONT'} /* 之前 AddMember 有，EditMember 沒有 */
-];
+// --- 選項與規則 ---
 const organizationOptions = ref([]);
+const roleOptions = [
+  {label: '隊員', value: 'member'},
+  {label: '幹部', value: 'cadre'},
+  {label: '教練', value: 'coach'},
+]; // 移除了 'admin' 選項
+const genderOptions = [{label: '男性', value: 'male'}, {label: '女性', value: 'female'}];
+const positionOptions = [{label: '後排', value: 'back'}, {label: '前排', value: 'front'}, {
+  label: '皆可',
+  value: 'versatile'
+}];
 
-// 與 AdminAddMemberView.vue 類似的表單驗證規則
 const formRules = {
-  name: [{required: true, message: '真實姓名為必填', trigger: ['input', 'blur']}],
+  name: [{required: true, message: '真實姓名為必填', trigger: ['blur', 'input']}],
   username: [
-    {required: true, message: '手機號碼 (登入帳號) 為必填', trigger: ['input', 'blur']},
-    {pattern: /^09\d{8}$/, message: '手機號碼格式不正確 (應為09開頭10位數字)', trigger: ['input', 'blur']}
+    {required: true, message: '手機號碼為必填', trigger: ['blur', 'input']},
+    {pattern: /^09\d{8}$/, message: '手機號碼格式不正確', trigger: ['blur', 'input']}
   ],
-  email: [{type: 'email', message: '請輸入有效的電子郵件格式', trigger: ['input', 'blur']}],
-  student_id: [{
-    pattern: /^\d{7,9}$/, message: '學號必須是7到9位數字', trigger: ['input', 'blur'],
-    required: false
+  email: [{type: 'email', message: '請輸入有效的電子郵件格式', trigger: ['blur', 'input']}],
+  password: [{
+    required: false, trigger: ['blur', 'input'],
+    validator: (rule, value) => {
+      if (value && value.length < 6) return new Error('密碼長度至少需要6位');
+      return true;
+    }
   }],
-  role: [{required: true, message: '角色為必填', trigger: ['change', 'blur']}],
+  student_id: [{
+    required: false, trigger: ['blur', 'input'],
+    validator: (rule, value) => {
+      if (value && !/^\d{7,9}$/.test(value)) return new Error('學號必須是7到9位數字');
+      return true;
+    }
+  }],
+  role: [{required: true, message: '角色為必填', trigger: ['change']}],
 };
 
-async function fetchOrganizationOptions() { // 改名以區分
+// --- 方法 ---
+async function fetchOrganizationOptions() {
   try {
-    const orgResponse = await organizationService.getOrganizations();
-    organizationOptions.value = orgResponse.data || []; // 直接使用 API 返回的對象數組
-  } catch (err) {
+    const response = await apiClient.get('/organizations');
+    organizationOptions.value = response.data.map(org => ({label: org.name, value: org.id}));
+  } catch (error) {
     message.error("載入組織列表失敗");
-    console.error("Failed to load organizations for select:", err);
-    organizationOptions.value = [];
   }
 }
 
-async function fetchMemberDetails() {
-  loadingData.value = true;
-  fetchError.value = null;
-  try {
-    // 先獲取組織列表，以便後續 memberData.organization_id 能正確匹配
-    await fetchOrganizationOptions();
+const handleAddMember = () => {
+  formRef.value?.validate(async (validationErrors) => {
+    if (validationErrors) {
+      message.error("請檢查表單，修正錯誤後再提交。");
+      return;
+    }
+    submitting.value = true;
+    clearSubmitMessage();
 
-    const memberResponse = await memberService.getMember(memberId.value);
-    const memberData = memberResponse.data;
+    const formatDate = (timestamp) => {
+      if (!timestamp) return null;
+      const date = new Date(timestamp);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
 
-    formData.name = memberData.name || '';
-    formData.display_name = memberData.display_name || '';
-    formData.student_id = memberData.student_id || '';
-    formData.gender = memberData.gender || null;
-    formData.position = memberData.position || null;
-    formData.organization_id = memberData.organization_id || null;
-    formData.mu = (memberData.mu === null || memberData.mu === undefined) ? null : Number(memberData.mu);
-    formData.sigma = (memberData.sigma === null || memberData.sigma === undefined) ? null : Number(memberData.sigma);
-    formData.join_date = memberData.join_date || null;
-    formData.leaved_date = memberData.leaved_date || null;
-    formData.is_active = typeof memberData.is_active === 'boolean' ? memberData.is_active : true;
-    formData.notes = memberData.notes || '';
+    const payload = {
+      name: formData.name,
+      display_name: formData.display_name || formData.name,
+      username: formData.username,
+      password: formData.password || null,
+      email: formData.email || null,
+      role: formData.role,
+      student_id: formData.student_id || null,
+      gender: formData.gender,
+      position: formData.position,
+      organization_id: formData.organization_id,
+      is_active: formData.is_active,
+      notes: formData.notes,
+      joined_date: formatDate(formData.joined_date_ts),
+    };
 
-    // 填充 User 相關欄位 (假設後端 to_dict 返回的 user_xxx 字段)
-    formData.username = memberData.user_username || ''; // 確保後端返回的是 user_username
-    formData.email = memberData.user_email || '';
-    formData.role = memberData.user_role || 'MEMBER'; // 與 roleOptions 保持一致
-
-  } catch (err) {
-    fetchError.value = "無法載入成員資料進行編輯。";
-    console.error("Failed to fetch member details:", err.response || err);
-  } finally {
-    loadingData.value = false;
-  }
-}
-
-onMounted(fetchMemberDetails);
-
-const handleUpdateMember = async () => {
-  formRef.value?.validate(async (errors) => {
-    if (!errors) {
-      submitting.value = true;
-      try {
-        // 準備 payload
-        const updatePayload = {
-          name: formData.name,
-          display_name: formData.display_name,
-          student_id: formData.student_id,
-          username: formData.username, // User 的登入手機號
-          email: formData.email,      // User 的 email
-          role: formData.role,        // User 的角色
-          gender: formData.gender,
-          position: formData.position,
-          organization_id: formData.organization_id,
-          // mu 和 sigma 雖然 disabled，但其值來自 fetch，如果後端允許更新或需要傳回，則保留
-          mu: formData.mu,
-          sigma: formData.sigma,
-          join_date: formData.join_date,
-          leaved_date: formData.leaved_date,
-          is_active: formData.is_active, // Member 的 is_active
-          notes: formData.notes
-        };
-
-        // 清理空字串為 null，確保可選欄位正確傳遞
-        for (const key in updatePayload) {
-          if (updatePayload[key] === '') {
-            updatePayload[key] = null;
-          }
-        }
-        // 如果 mu/sigma 允許為空但不能是空字串，可能需要進一步處理
-        if (updatePayload.mu === null || updatePayload.mu === '') delete updatePayload.mu;
-        if (updatePayload.sigma === null || updatePayload.sigma === '') delete updatePayload.sigma;
-
-
-        const response = await memberService.updateMember(memberId.value, updatePayload);
-        message.success(response.data.message || "成員資料已成功更新！");
-        await router.push({name: 'ManagementCenter', query: {tab: 'members'}}); // 跳轉回管理中心並嘗試定位到成員tab
-      } catch (err) {
-        const errorData = err.response?.data;
-        let errorMsgToShow = errorData?.error || errorData?.message || err.message || "更新成員失敗。";
-        if (errorData && errorData.errors) {
-          errorMsgToShow = errorData.message || "更新失敗，請檢查欄位：";
-          for (const field in errorData.errors) {
-            errorMsgToShow += `\n- ${field}: ${errorData.errors[field]}`;
-          }
-        }
-        message.error(errorMsgToShow, {duration: 7000, closable: true});
-        console.error("Failed to update member:", err.response || err);
-      } finally {
-        submitting.value = false;
+    try {
+      // 呼叫後端的 /members 端點來創建成員
+      const response = await apiClient.post('/members', payload);
+      message.success(response.data.message || "成員已成功新增！");
+      router.push({name: 'ManagementCenter'});
+    } catch (err) {
+      const errorData = err.response?.data;
+      if (errorData?.details) {
+        let errorMsg = "新增失敗，請檢查以下欄位：\n" + Object.values(errorData.details).flat().join('\n');
+        submitMessage.value = errorMsg;
+      } else {
+        submitMessage.value = errorData?.message || "新增成員時發生未預期錯誤。";
       }
-    } else {
-      message.error("請修正表單中的錯誤。");
-      console.log('Form validation errors:', errors);
+    } finally {
+      submitting.value = false;
     }
   });
 };
 
+// --- 生命週期鉤子 ---
+onMounted(fetchOrganizationOptions);
+
+// --- 輔助函數 ---
+function clearSubmitMessage() {
+  submitMessage.value = '';
+}
+
 function goBack() {
-  // router.back(); // router.back() 可能會回到非預期頁面
-  router.push({name: 'ManagementCenter', query: {tab: 'members'}});
+  router.push({name: 'ManagementCenter'});
 }
 </script>
 

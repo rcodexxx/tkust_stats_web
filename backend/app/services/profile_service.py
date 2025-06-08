@@ -41,7 +41,13 @@ class ProfileService:
         # --- 更新 Member 模型的欄位 ---
         if member_to_update:
             # 遍歷 data 中的鍵，如果 Member 模型有對應的屬性，則更新
-            for field in ["gender", "position", "organization_id"]:  # 以及您在 Schema 中允許更新的其他欄位
+            for field in [
+                "name",
+                "student_id",
+                "gender",
+                "position",
+                "organization_id",
+            ]:  # 以及您在 Schema 中允許更新的其他欄位
                 if field in data:
                     setattr(member_to_update, field, data[field])
         elif any(key in data for key in ["gender", "position", "organization_id"]):

@@ -87,7 +87,7 @@ class Member(db.Model):
     @property
     def score(self):
         """一個基於 TrueSkill 的保守評分。"""
-        return round((self.mu - 3 * self.sigma))
+        return (self.mu - 3 * self.sigma) * 100
 
     def to_dict(self, org_detail=True, racket_detail=True, user_detail=True) -> Dict:
         """將 Member 物件轉換為字典。"""

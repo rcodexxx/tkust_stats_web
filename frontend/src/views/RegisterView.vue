@@ -12,7 +12,6 @@
           :model="registrationData"
           :rules="formRules"
           label-placement="top"
-          require-mark-placement="right-hanging"
           @submit.prevent="handleRegister"
           class="register-form"
       >
@@ -30,13 +29,11 @@
           </n-input>
         </n-form-item>
 
-        <n-alert v-if="authStore.status.registerError" title="註冊失敗" type="error" closable class="mb-3 form-alert"
-                 @close="authStore.clearRegisterError()">
-          {{ authStore.status.registerError }}
-        </n-alert>
-        <n-alert v-if="successMessage" title="提示" type="info" closable class="mb-3 form-alert"
-                 @close="successMessage = ''">
-          {{ successMessage }}
+        <!-- 修正：移除對不存在的 successMessage 的依賴 -->
+        <!-- 錯誤訊息現在由本地的 registerError ref 控制 -->
+        <n-alert v-if="registerError" title="註冊失敗" type="error" closable class="mb-3 form-alert"
+                 @close="registerError = null">
+          {{ registerError }}
         </n-alert>
 
         <n-form-item :show-label="false" class="submit-button-form-item">
@@ -46,11 +43,11 @@
               block
               strong
               size="large"
-              :loading="authStore.status.registering"
-              :disabled="authStore.status.registering"
+              :loading="registering"
+              :disabled="registering"
               class="register-button main-submit-button"
           >
-            {{ authStore.status.registering ? '註冊中...' : '確認註冊並登入' }}
+            {{ registering ? '註冊中...' : '確認註冊' }}
           </n-button>
         </n-form-item>
       </n-form>
@@ -70,7 +67,7 @@
 </template>
 
 <script setup>
-import {onMounted, reactive, ref} from 'vue';
+import {reactive, ref} from 'vue';
 import {useAuthStore} from '@/stores/authStore';
 import {useRouter} from 'vue-router';
 import {
@@ -89,16 +86,19 @@ import {
   useMessage
 } from 'naive-ui';
 import {PhonePortraitOutline as PhoneIcon} from '@vicons/ionicons5';
+import apiClient from '@/services/apiClient';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const message = useMessage();
 
 const formRef = ref(null);
+const registering = ref(false);
+const registerError = ref(null); // 組件本地的錯誤狀態
+
 const registrationData = reactive({
   phone_number: '',
 });
-const successMessage = ref(''); // 保持，用於顯示註冊成功後的特定後端訊息
 
 const formRules = {
   phone_number: [
@@ -111,40 +111,35 @@ const formRules = {
   ]
 };
 
-onMounted(() => {
-  authStore.clearRegisterError();
-});
-
-
 const handleRegister = () => {
   formRef.value?.validate(async (validationErrors) => {
     if (!validationErrors) {
-      successMessage.value = '';
+      registering.value = true;
+      registerError.value = null;
+      try {
+        // --- 修正：傳送的 payload 的鍵名必須是 phone_number (camelCase) ---
+        const response = await apiClient.post('/auth/register', {
+          phone_number: registrationData.phone_number
+        });
 
-      // 確保 payload 與 authStore.register action 期望的一致
-      // 根據您之前的 store action 註釋，它期望 { phone_number: '...' }
-      const payload = {
-        phone_number: registrationData.phone_number,
-      };
-      // 如果您的 store action 期望 { username: '...' }，則用下面這個
-      // const payload = { username: registrationData.phone_number };
+        // 註冊成功後，不再自動登入，而是顯示成功訊息並引導至登入頁面
+        message.success(response.data.message || "註冊成功！請前往登入頁面。", {duration: 5000});
 
-      const registrationResult = await authStore.register(payload); // register action 應返回包含成功狀態和消息的對象
+        // 跳轉到登入頁面
+        await router.push({name: 'Leaderboard'});
 
-      if (registrationResult && registrationResult.success) {
-        // 註冊成功後的跳轉等邏輯已在 authStore.register 中處理
-        // (例如 router.push('/') 和 alert(initial_password_info))
-        // 如果 store action 返回了 initial_password_info，可以在這裡用 successMessage 顯示
-        if (registrationResult.initial_password_info) {
-          successMessage.value = registrationResult.initial_password_info + " 請妥善保管並盡快登入修改。";
+      } catch (error) {
+        // 將後端返回的錯誤訊息顯示在 alert 中
+        const errorData = error.response?.data;
+        if (errorData && errorData.details) {
+          // 處理來自 Marshmallow 的詳細驗證錯誤
+          registerError.value = `輸入數據有誤: ${Object.values(errorData.details).flat().join(' ')}`;
         } else {
-          // 也可以在這裡用 Naive UI message 提示
-          // message.success("註冊成功並已自動登入！");
+          registerError.value = errorData?.message || '註冊失敗，請稍後再試。';
         }
+      } finally {
+        registering.value = false;
       }
-      // 註冊失敗的錯誤訊息由 authStore.status.registerError 在模板的 n-alert 中顯示
-    } else {
-      message.error('請修正表單中的錯誤。');
     }
   });
 };
