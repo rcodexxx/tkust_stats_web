@@ -55,9 +55,9 @@ const searchTerm = ref('');
 
 const searchPlaceholder = computed(() => {
   if (currentView.value === 'members') {
-    return '搜尋成員 (姓名、學號、組織、角色)...';
+    return '搜尋成員...';
   } else if (currentView.value === 'organizations') {
-    return '搜尋組織 (名稱、簡稱、城市)...';
+    return '搜尋組織...';
   }
   return '搜尋...';
 });

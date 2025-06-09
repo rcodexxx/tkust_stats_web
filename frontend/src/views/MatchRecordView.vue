@@ -5,17 +5,6 @@
       記錄賽果
     </n-h1>
 
-    <div v-if="matchResultDisplay" class="winner-display-section mt-2 mb-3 text-center">
-      <n-tag :type="getWinnerTagType()" size="large" round>
-        <template #icon>
-          <n-icon :component="getWinnerIcon()"/>
-        </template>
-        {{ matchResultDisplay }}
-      </n-tag>
-    </div>
-
-    <n-divider style="margin-top: 1.5rem; margin-bottom: 1.5rem;"/>
-
     <n-card :bordered="false" class="form-card">
       <n-form
           ref="formRef"
@@ -26,7 +15,7 @@
       >
         <!-- 比賽基本資訊 -->
         <n-grid :x-gap="15" :y-gap="20" cols="1 s:3" responsive="screen" align-items="start">
-          <n-form-item-gi label="比賽日期*" path="match_date">
+          <n-form-item-gi label="比賽日期" path="match_date">
             <n-date-picker
                 v-model:value="matchForm.match_date_ts"
                 type="date"
@@ -34,24 +23,24 @@
                 style="width:100%"
             />
           </n-form-item-gi>
-          <n-form-item-gi label="比賽類型*" path="match_type">
+          <n-form-item-gi label="比賽類型" path="match_type">
             <n-select v-model:value="matchForm.match_type" :options="matchTypeOptions"/>
           </n-form-item-gi>
-          <n-form-item-gi label="賽制*" path="match_format">
+          <n-form-item-gi label="賽制" path="match_format">
             <n-select v-model:value="matchForm.match_format" :options="matchFormatOptions"/>
           </n-form-item-gi>
         </n-grid>
 
         <n-divider style="margin-top: 1.5rem; margin-bottom: 1.5rem;"/>
 
-        <!-- 比賽對戰網格 -->
-        <div class="match-details-grid-wrapper">
-          <n-grid :x-gap="16" :y-gap="20" cols="1 s:4" responsive="screen" align-items="start"
-                  class="match-details-grid">
-
-            <!-- A隊球員 -->
-            <n-gi :s="16" class="grid-cell team-players-cell">
-              <n-h5 class="cell-title">A隊球員</n-h5>
+        <!-- 對戰視覺區塊 -->
+        <n-grid cols="1 s:2" x-gap="24" y-gap="24" responsive="screen" align-items="center"
+                class="match-visual-grid mb-3">
+          <!-- A隊卡片 -->
+          <n-gi>
+            <n-card :bordered="true" :class="['team-card', matchForm.side_a_outcome === 'WIN' ? 'highlight-win' : '']">
+              <n-h4 class="mb-2">A隊</n-h4>
+              <!-- A隊球員選擇 -->
               <div class="player-entry">
                 <n-form-item path="player1_id" :show-label="false" class="player-select-form-item">
                   <n-select
@@ -84,12 +73,8 @@
                   <span v-else class="score-placeholder">-</span>
                 </div>
               </div>
-            </n-gi>
-
-            <!-- A隊得分 -->
-            <n-gi :s="16" class="grid-cell score-input-cell">
-              <n-h5 class="cell-title text-center">A隊得分</n-h5>
-              <n-form-item path="a_games" :show-label="false" class="score-form-item-wrapper">
+              <!-- A隊得分 -->
+              <n-form-item path="a_games" :show-label="false" class="score-form-item-wrapper mt-3">
                 <div class="score-input-slider-group">
                   <n-input-number
                       class="score-input-number"
@@ -105,12 +90,57 @@
                   />
                 </div>
               </n-form-item>
-            </n-gi>
+            </n-card>
+          </n-gi>
 
-            <!-- B隊得分 -->
-            <n-gi :s="16" class="grid-cell score-input-cell">
-              <n-h5 class="cell-title text-center">B隊得分</n-h5>
-              <n-form-item path="b_games" :show-label="false" class="score-form-item-wrapper">
+          <!-- VS 標誌 -->
+          <!--          <n-gi v-if="$screen && $screen.s">-->
+          <!--            <div class="vs-divider text-center" style="font-size:2rem; font-weight:bold; margin: 0 8px;">VS</div>-->
+          <!--          </n-gi>-->
+          <!--          <template v-else>-->
+          <!--            <div class="vs-divider text-center" style="font-size:2rem; font-weight:bold; margin: 12px 0;">VS</div>-->
+          <!--          </template>-->
+
+          <!-- B隊卡片 -->
+          <n-gi>
+            <n-card :bordered="true" :class="['team-card', matchForm.side_a_outcome === 'LOSS' ? 'highlight-win' : '']">
+              <n-h4 class="mb-2">B隊</n-h4>
+              <!-- B隊球員選擇 -->
+              <div class="player-entry">
+                <n-form-item path="player3_id" :show-label="false" class="player-select-form-item">
+                  <n-select
+                      v-model:value="matchForm.player3_id"
+                      :options="availablePlayersFor('b3')"
+                      placeholder="選擇球員 1*" filterable clearable
+                      label-field="name" value-field="id" class="player-select-control"
+                  />
+                </n-form-item>
+                <div class="player-score-display">
+                  <span v-if="getPlayerById(matchForm.player3_id)"
+                        class="score-value">{{ getPlayerById(matchForm.player3_id).score }} <span
+                      class="score-unit"></span></span>
+                  <span v-else class="score-placeholder">-</span>
+                </div>
+              </div>
+              <div class="player-entry mt-2" v-if="matchForm.match_type === 'doubles'">
+                <n-form-item path="player4_id" :show-label="false" class="player-select-form-item">
+                  <n-select
+                      v-model:value="matchForm.player4_id"
+                      :options="availablePlayersFor('b4')"
+                      placeholder="選擇球員 2*" filterable clearable
+                      label-field="name" value-field="id" class="player-select-control"
+                  />
+                </n-form-item>
+                <div class="player-score-display">
+                  <span v-if="getPlayerById(matchForm.player4_id)"
+                        class="score-value">{{ getPlayerById(matchForm.player4_id).score }}
+                    <span class="score-unit"></span>
+                  </span>
+                  <span v-else class="score-placeholder">-</span>
+                </div>
+              </div>
+              <!-- B隊得分 -->
+              <n-form-item path="b_games" :show-label="false" class="score-form-item-wrapper mt-3">
                 <div class="score-input-slider-group">
                   <n-input-number
                       class="score-input-number"
@@ -126,46 +156,9 @@
                   />
                 </div>
               </n-form-item>
-            </n-gi>
-
-            <!-- B隊球員 -->
-            <n-gi :s="16" class="grid-cell team-players-cell">
-              <n-h5 class="cell-title text-right">B隊球員</n-h5>
-              <div class="player-entry">
-                <n-form-item path="player3_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                      v-model:value="matchForm.player3_id"
-                      :options="availablePlayersFor('b3')"
-                      placeholder="選擇球員 1*" filterable clearable
-                      label-field="name" value-field="id" class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player3_id)"
-                        class="score-value">{{ getPlayerById(matchForm.player3_id).score }} <span
-                      class="score-unit">分</span></span>
-                  <span v-else class="score-placeholder">-</span>
-                </div>
-              </div>
-              <div class="player-entry mt-2" v-if="matchForm.match_type === 'doubles'">
-                <n-form-item path="player4_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                      v-model:value="matchForm.player4_id"
-                      :options="availablePlayersFor('b4')"
-                      placeholder="選擇球員 2*" filterable clearable
-                      label-field="name" value-field="id" class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player4_id)"
-                        class="score-value">{{ getPlayerById(matchForm.player4_id).score }} <span
-                      class="score-unit">分</span></span>
-                  <span v-else class="score-placeholder">-</span>
-                </div>
-              </div>
-            </n-gi>
-          </n-grid>
-        </div>
+            </n-card>
+          </n-gi>
+        </n-grid>
 
         <n-space justify="center" class="mt-4 action-buttons">
           <n-button @click="goBack" size="large" ghost>返回排行榜</n-button>
@@ -204,13 +197,11 @@ import {
   NGi,
   NGrid,
   NH1,
-  NH5,
   NIcon,
   NInputNumber,
   NSelect,
   NSlider,
   NSpace,
-  NTag,
   useMessage
 } from 'naive-ui';
 import {
@@ -338,7 +329,7 @@ async function fetchActiveMembers() {
     const response = await apiClient.get('/members', {params: {all: 'false'}});
     allActiveMembers.value = response.data.map(m => ({
       id: m.id,
-      name: m.display_name || m.name,
+      name: m.name || m.display_name,
       score: m.score,
     }));
   } catch (error) {
@@ -422,4 +413,5 @@ function goBack() {
 
 <style scoped>
 /* 您的 CSS 樣式保持不變 */
+
 </style>

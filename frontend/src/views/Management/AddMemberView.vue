@@ -228,12 +228,11 @@ const handleAddMember = () => {
       // 呼叫後端的 /members 端點來創建成員
       const response = await apiClient.post('/members', payload);
       message.success(response.data.message || "成員已成功新增！");
-      router.push({name: 'ManagementCenter'});
+      await router.push({name: 'ManagementCenter'});
     } catch (err) {
       const errorData = err.response?.data;
       if (errorData?.details) {
-        let errorMsg = "新增失敗，請檢查以下欄位：\n" + Object.values(errorData.details).flat().join('\n');
-        submitMessage.value = errorMsg;
+        submitMessage.value = "新增失敗，請檢查以下欄位：\n" + Object.values(errorData.details).flat().join('\n');
       } else {
         submitMessage.value = errorData?.message || "新增成員時發生未預期錯誤。";
       }

@@ -29,7 +29,6 @@
         :bottom-bordered="true"
         :single-line="false"
         size="small"
-        flex-height
         style="min-height: 400px; max-height: 70vh;"
         :scroll-x="tableScrollXWidth"
         :resizable="true"
@@ -281,13 +280,22 @@ function confirmDeleteMember(member) {
 </script>
 
 <style scoped>
-.member-management-section {
-  /* padding: 15px; */ /* 由父組件 .management-content-area 控制 */
-  /* border-radius: 8px; */ /* 由父組件 .management-content-area 控制 */
+
+:deep(.table-link) {
+  color: var(--n-text-color); /* 使用 Naive UI 的基本文字顏色變數 */
+  text-decoration: none;
+  font-weight: 500;
 }
 
-/* .table-actions-header { */ /* 如果沒有特殊樣式，可以移除 */
-/* } */
+:deep(.table-link:hover) {
+  color: var(--n-primary-color); /* 滑鼠懸停時使用主題主要顏色 */
+  text-decoration: underline;
+}
+
+/* 讓已訪問和未訪問的連結顏色保持一致 */
+:deep(.table-link:visited) {
+  color: var(--n-text-color);
+}
 
 /* Naive UI 表格的 sticky column 背景通常由其主題控制，
    如果需要覆蓋，可以使用 :deep() 選擇器 */

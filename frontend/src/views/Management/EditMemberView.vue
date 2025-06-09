@@ -320,7 +320,7 @@ const handleUpdateMember = () => {
       updateMessage.value = response.data.message || "成員資料已成功更新！";
       message.success(updateMessage.value);
 
-      await fetchData();
+      goBack();
 
     } catch (err) {
       updateStatus.value = 'error';
