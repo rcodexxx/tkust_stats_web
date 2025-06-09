@@ -3,8 +3,8 @@ import trueskill
 from flask import current_app
 
 from ..extensions import db
-from ..models import Member, MatchRecord
-from ..models.enums import GenderEnum, MatchOutcomeEnum  # 確保導入 OutcomeEnum
+from ..models import Member, MatchRecord, Match
+from ..models.enums import GenderEnum, MatchOutcomeEnum
 
 # --- 評分相關常數 ---
 GENDER_BONUS_MU = 0.6
@@ -93,12 +93,20 @@ class RatingService:
 
         current_app.logger.info(f"正在為球員 ID {player_ids} 重新計算評分...")
 
-        Member.query.filter(Member.id.in_(player_ids)).update(
-            {"mu": trueskill_env.mu, "sigma": trueskill_env.sigma}, synchronize_session="fetch"
-        )
+        # 1. 一次性獲取所有相關的 Member 物件
+        players_to_recalculate = RatingService._get_player_data(player_ids)
 
+        # 2. 在 Python 中將他們的評分重設為初始值
+        current_ratings = {}
+        for p_id, member in players_to_recalculate.items():
+            member.mu = trueskill_env.mu
+            member.sigma = trueskill_env.sigma
+            current_ratings[p_id] = trueskill_env.create_rating(mu=member.mu, sigma=member.sigma)
+
+        # 3. 獲取所有與這些球員相關的比賽記錄，並按時間順序排序
         relevant_matches = (
-            MatchRecord.query.filter(
+            MatchRecord.query.join(MatchRecord.match)
+            .filter(
                 db.or_(
                     MatchRecord.player1_id.in_(player_ids),
                     MatchRecord.player2_id.in_(player_ids),
@@ -106,11 +114,33 @@ class RatingService:
                     MatchRecord.player4_id.in_(player_ids),
                 )
             )
-            .order_by(MatchRecord.match_date.asc(), MatchRecord.id.asc())
+            .order_by(Match.match_date.asc(), MatchRecord.id.asc())
             .all()
         )
 
+        # 4. 按時間順序，逐場在記憶體中重新演算評分
         for match in relevant_matches:
-            RatingService.update_ratings_from_match(match)
+            side_a_ids = [p_id for p_id in [match.player1_id, match.player2_id] if p_id]
+            side_b_ids = [p_id for p_id in [match.player3_id, match.player4_id] if p_id]
 
-        current_app.logger.info(f"為球員 ID {player_ids} 的評分重新計算完成。")
+            team1_current_ratings = {p_id: current_ratings[p_id] for p_id in side_a_ids if p_id in current_ratings}
+            team2_current_ratings = {p_id: current_ratings[p_id] for p_id in side_b_ids if p_id in current_ratings}
+
+            if not team1_current_ratings or not team2_current_ratings:
+                continue
+
+            ranks = [0, 1] if match.side_a_outcome == MatchOutcomeEnum.WIN else [1, 0]
+            new_team1_ratings, new_team2_ratings = trueskill_env.rate(
+                [team1_current_ratings, team2_current_ratings], ranks=ranks
+            )
+
+            # 更新 current_ratings 字典
+            for p_id, rating in {**new_team1_ratings, **new_team2_ratings}.items():
+                current_ratings[p_id] = rating
+
+        # 5. 在所有計算完成後，將最終的評分更新回 Member 物件
+        for p_id, final_rating in current_ratings.items():
+            member = players_to_recalculate.get(p_id)
+            if member:
+                member.mu = final_rating.mu
+                member.sigma = final_rating.sigma

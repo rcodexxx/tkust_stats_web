@@ -10,6 +10,7 @@ import ManagementCenterView from "@/views/Management/ManagementCenterView.vue";
 import AddMemberView from "../views/Management/AddMemberView.vue";
 import EditMemberView from "@/views/Management/EditMemberView.vue";
 import MatchRecordView from "../views/MatchRecordView.vue";
+import MatchManagementView from "@/views/MatchManagementView.vue";
 
 const routes = [
     {
@@ -34,21 +35,26 @@ const routes = [
         path: '/profile/edit',
         name: 'EditProfile',
         component: EditProfileView,
-        meta: {requiresAuth: true} // 標籤：需要登入才能訪問
+        meta: {requiresAuth: true}
     },
     {
-        path: '/match/record',
+        path: '/match-records/create',
         name: 'RecordMatch',
         component: MatchRecordView,
-        meta: {requiresAuth: true} // 標籤：需要登入才能訪問 (通常如此)
+        meta: {requiresAuth: true}
+    },
+    {
+        path: '/matches/management',
+        name: 'MatchManagement', // 新的路由名稱
+        component: MatchManagementView,
+        meta: {requiresAuth: true}
     },
     // --- 管理相關路由 ---
     {
         path: '/management',
         name: 'ManagementCenter',
         component: ManagementCenterView,
-        meta: {requiresAuth: true} // 標籤：需要登入才能訪問
-        // 您也可以加入更細的權限，例如 meta: { requiresAdmin: true }
+        meta: {requiresAuth: true}
     },
     {
         path: '/members/add',

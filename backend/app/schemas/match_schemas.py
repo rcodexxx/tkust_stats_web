@@ -66,9 +66,9 @@ class MatchRecordCreateSchema(Schema):
 # --- 顯示比賽記錄的回應 Schema ---
 class MatchRecordResponseSchema(Schema):
     id = fields.Int(dump_only=True)
-    match_date = fields.Date(dump_only=True)
-    match_type = EnumField(MatchTypeEnum, by_value=True, dump_only=True)
-    match_format = EnumField(MatchFormatEnum, by_value=True, dump_only=True)
+    match_date = fields.Date(attribute="match.match_date", dump_only=True)
+    match_type = EnumField(MatchTypeEnum, by_value=True, attribute="match.match_type", dump_only=True)
+    match_format = EnumField(MatchFormatEnum, by_value=True, attribute="match.match_format", dump_only=True)
 
     # 更新 player 欄位以匹配模型，並使用我們定義的 SimpleMemberSchema
     player1 = fields.Nested(SimpleMemberSchema, dump_only=True)

@@ -133,12 +133,13 @@ import {
 import {
   ChevronDownOutline as ChevronDownIcon,
   ClipboardOutline as RecordMatchIcon,
+  ListCircleOutline as MatchManagementIcon,
   LogOutOutline as LogoutIcon,
   MenuOutline as MenuIcon,
   PeopleOutline as TeamManagementIcon,
   PersonCircleOutline as PersonCircleOutlineIcon,
   PodiumOutline as HomeIcon,
-  SettingsOutline as SettingsIcon,
+  SettingsOutline as SettingsIcon
 } from '@vicons/ionicons5';
 
 const authStore = useAuthStore();
@@ -155,7 +156,7 @@ const activeMenuKey = ref(route.name);
 
 watch(() => route.name, (newName) => {
   activeMenuKey.value = newName;
-});
+}, {immediate: true});
 
 const renderIcon = (icon) => () => h(NIcon, null, {default: () => h(icon)});
 // 修改 renderRouterLink 以便在點擊後關閉抽屜
@@ -180,7 +181,13 @@ const menuOptions = computed(() => [
     label: renderRouterLink('RecordMatch', '記錄比賽'),
     key: 'RecordMatch',
     icon: renderIcon(RecordMatchIcon),
-    show: authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin)
+    // show: authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin)
+  },
+  {
+    label: renderRouterLink('MatchManagement', '比賽管理'), // 新增的選單項目
+    key: 'MatchManagement',
+    icon: renderIcon(MatchManagementIcon),
+    show: authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin || authStore.isCoach) // 設定顯示權限
   },
   {
     label: renderRouterLink('ManagementCenter', '團隊管理'),

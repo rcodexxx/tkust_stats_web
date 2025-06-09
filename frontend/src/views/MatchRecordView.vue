@@ -93,14 +93,6 @@
             </n-card>
           </n-gi>
 
-          <!-- VS 標誌 -->
-          <!--          <n-gi v-if="$screen && $screen.s">-->
-          <!--            <div class="vs-divider text-center" style="font-size:2rem; font-weight:bold; margin: 0 8px;">VS</div>-->
-          <!--          </n-gi>-->
-          <!--          <template v-else>-->
-          <!--            <div class="vs-divider text-center" style="font-size:2rem; font-weight:bold; margin: 12px 0;">VS</div>-->
-          <!--          </template>-->
-
           <!-- B隊卡片 -->
           <n-gi>
             <n-card :bordered="true" :class="['team-card', matchForm.side_a_outcome === 'LOSS' ? 'highlight-win' : '']">
