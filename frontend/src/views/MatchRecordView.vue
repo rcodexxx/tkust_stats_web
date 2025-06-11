@@ -14,184 +14,387 @@
         @submit.prevent="handleRecordMatch"
       >
         <!-- 比賽基本資訊 -->
-        <n-grid :x-gap="15" :y-gap="20" cols="1 s:3" responsive="screen" align-items="start">
+        <n-divider style="margin-top: 2rem; margin-bottom: 2rem">
+          <n-text style="font-size: 14px; color: #666">比賽基本資訊</n-text>
+        </n-divider>
+        <n-grid :x-gap="20" :y-gap="20" cols="1 s:3" responsive="screen" align-items="start">
           <n-form-item-gi label="比賽日期" path="match_date">
             <n-date-picker
               v-model:value="matchForm.match_date_ts"
               type="date"
               placeholder="選擇比賽日期"
               style="width: 100%"
+              size="large"
             />
           </n-form-item-gi>
           <n-form-item-gi label="比賽類型" path="match_type">
-            <n-select v-model:value="matchForm.match_type" :options="matchTypeOptions" />
+            <n-select v-model:value="matchForm.match_type" :options="matchTypeOptions" size="large" />
           </n-form-item-gi>
           <n-form-item-gi label="賽制" path="match_format">
-            <n-select v-model:value="matchForm.match_format" :options="matchFormatOptions" />
+            <n-select v-model:value="matchForm.match_format" :options="matchFormatOptions" size="large" />
           </n-form-item-gi>
         </n-grid>
 
-        <n-divider style="margin-top: 1.5rem; margin-bottom: 1.5rem" />
+        <!--        <n-divider style="margin-top: 2rem; margin-bottom: 2rem">-->
+        <!--          <n-text style="font-size: 14px; color: #666">選擇參賽球員</n-text>-->
+        <!--        </n-divider>-->
+
+        <!-- 球員快速選擇區域 -->
+        <!--        <div class="player-selection-area mb-4">-->
+        <!--          <n-h4 class="selection-title">-->
+        <!--            <n-icon :component="PersonIcon" class="mr-2" />-->
+        <!--            快速選擇球員-->
+        <!--          </n-h4>-->
+
+        <!--          &lt;!&ndash; 常用球員快捷按鈕 &ndash;&gt;-->
+        <!--          <div class="quick-players mb-3">-->
+        <!--            <n-space wrap>-->
+        <!--              <n-button-->
+        <!--                v-for="player in topPlayers"-->
+        <!--                :key="player.id"-->
+        <!--                :type="isPlayerSelected(player.id) ? 'primary' : 'default'"-->
+        <!--                :ghost="!isPlayerSelected(player.id)"-->
+        <!--                size="small"-->
+        <!--                round-->
+        <!--                @click="quickSelectPlayer(player.id)"-->
+        <!--                class="player-quick-btn"-->
+        <!--              >-->
+        <!--                {{ player.name }}-->
+        <!--                <n-tag :type="getScoreTagType(player.score)" size="small" round class="ml-1">-->
+        <!--                  {{ player.score }}-->
+        <!--                </n-tag>-->
+        <!--              </n-button>-->
+        <!--            </n-space>-->
+        <!--          </div>-->
+
+        <!--          &lt;!&ndash; 搜尋框 &ndash;&gt;-->
+        <!--          <n-input-->
+        <!--            v-model:value="playerSearchTerm"-->
+        <!--            placeholder="搜尋球員名稱..."-->
+        <!--            clearable-->
+        <!--            size="large"-->
+        <!--            class="player-search"-->
+        <!--          >-->
+        <!--            <template #prefix>-->
+        <!--              <n-icon :component="SearchIcon" />-->
+        <!--            </template>-->
+        <!--          </n-input>-->
+        <!--        </div>-->
+
+        <n-divider style="margin: 2rem 0">
+          <n-text style="font-size: 14px; color: #666">對戰配置</n-text>
+        </n-divider>
 
         <!-- 對戰視覺區塊 -->
-        <n-grid
-          cols="1 s:2"
-          x-gap="24"
-          y-gap="24"
-          responsive="screen"
-          align-items="center"
-          class="match-visual-grid mb-3"
+        <div class="match-arena">
+          <div class="team-vs-container">
+            <!-- A隊卡片 -->
+            <div class="team-section team-a">
+              <div
+                class="team-card"
+                :class="{
+                  'winner-glow': matchForm.side_a_outcome === 'WIN',
+                  'has-players': hasTeamAPlayers
+                }"
+              >
+                <div class="team-header">
+                  <n-h3 class="team-title">A隊</n-h3>
+                  <div v-if="matchForm.side_a_outcome === 'WIN'" class="winner-badge">
+                    <n-icon :component="TrophyIcon" />
+                    勝利
+                  </div>
+                </div>
+
+                <!-- A隊球員 -->
+                <div class="players-container">
+                  <div class="player-slot">
+                    <div class="player-avatar">
+                      <n-avatar
+                        v-if="getPlayerById(matchForm.player1_id)"
+                        :size="60"
+                        :style="{ backgroundColor: getPlayerColor(matchForm.player1_id) }"
+                      >
+                        {{ getPlayerInitials(matchForm.player1_id) }}
+                      </n-avatar>
+                      <n-avatar
+                        v-else
+                        :size="60"
+                        style="background-color: #f0f0f0; color: #ccc"
+                        @click="openPlayerSelector('player1_id')"
+                        class="empty-slot"
+                      >
+                        <n-icon :component="AddIcon" />
+                      </n-avatar>
+                    </div>
+                    <div class="player-info">
+                      <div class="player-name">
+                        {{ getPlayerById(matchForm.player1_id)?.name || '點擊選擇球員' }}
+                      </div>
+                      <div class="player-score">{{ getPlayerById(matchForm.player1_id)?.score || '-' }} 分</div>
+                    </div>
+                    <n-button
+                      v-if="getPlayerById(matchForm.player1_id)"
+                      quaternary
+                      size="small"
+                      @click="clearPlayer('player1_id')"
+                      class="clear-btn"
+                    >
+                      <n-icon :component="CloseIcon" />
+                    </n-button>
+                  </div>
+
+                  <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                    <div class="player-avatar">
+                      <n-avatar
+                        v-if="getPlayerById(matchForm.player2_id)"
+                        :size="60"
+                        :style="{ backgroundColor: getPlayerColor(matchForm.player2_id) }"
+                      >
+                        {{ getPlayerInitials(matchForm.player2_id) }}
+                      </n-avatar>
+                      <n-avatar
+                        v-else
+                        :size="60"
+                        style="background-color: #f0f0f0; color: #ccc"
+                        @click="openPlayerSelector('player2_id')"
+                        class="empty-slot"
+                      >
+                        <n-icon :component="AddIcon" />
+                      </n-avatar>
+                    </div>
+                    <div class="player-info">
+                      <div class="player-name">
+                        {{ getPlayerById(matchForm.player2_id)?.name || '點擊選擇球員' }}
+                      </div>
+                      <div class="player-score">{{ getPlayerById(matchForm.player2_id)?.score || '-' }} 分</div>
+                    </div>
+                    <n-button
+                      v-if="getPlayerById(matchForm.player2_id)"
+                      quaternary
+                      size="small"
+                      @click="clearPlayer('player2_id')"
+                      class="clear-btn"
+                    >
+                      <n-icon :component="CloseIcon" />
+                    </n-button>
+                  </div>
+                </div>
+
+                <!-- A隊得分控制 -->
+                <div class="score-control">
+                  <div class="score-display">
+                    <span class="score-number" :class="{ winning: matchForm.side_a_outcome === 'WIN' }">
+                      {{ matchForm.a_games }}
+                    </span>
+                    <span class="score-label">局</span>
+                  </div>
+                  <div class="score-buttons">
+                    <n-button
+                      circle
+                      size="small"
+                      @click="adjustScore('a_games', -1)"
+                      :disabled="matchForm.a_games <= 0"
+                    >
+                      <n-icon :component="RemoveIcon" />
+                    </n-button>
+                    <n-button
+                      circle
+                      size="small"
+                      type="primary"
+                      @click="adjustScore('a_games', 1)"
+                      :disabled="matchForm.a_games >= scoreInputMax"
+                    >
+                      <n-icon :component="AddIcon" />
+                    </n-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VS 區域 -->
+            <div class="vs-section">
+              <div class="vs-circle">
+                <span class="vs-text">VS</span>
+              </div>
+            </div>
+
+            <!-- B隊卡片 -->
+            <div class="team-section team-b">
+              <div
+                class="team-card"
+                :class="{
+                  'winner-glow': matchForm.side_a_outcome === 'LOSS',
+                  'has-players': hasTeamBPlayers
+                }"
+              >
+                <div class="team-header">
+                  <n-h3 class="team-title">B隊</n-h3>
+                  <div v-if="matchForm.side_a_outcome === 'LOSS'" class="winner-badge">
+                    <n-icon :component="TrophyIcon" />
+                    勝利
+                  </div>
+                </div>
+
+                <!-- B隊球員 -->
+                <div class="players-container">
+                  <div class="player-slot">
+                    <div class="player-avatar">
+                      <n-avatar
+                        v-if="getPlayerById(matchForm.player3_id)"
+                        :size="60"
+                        :style="{ backgroundColor: getPlayerColor(matchForm.player3_id) }"
+                      >
+                        {{ getPlayerInitials(matchForm.player3_id) }}
+                      </n-avatar>
+                      <n-avatar
+                        v-else
+                        :size="60"
+                        style="background-color: #f0f0f0; color: #ccc"
+                        @click="openPlayerSelector('player3_id')"
+                        class="empty-slot"
+                      >
+                        <n-icon :component="AddIcon" />
+                      </n-avatar>
+                    </div>
+                    <div class="player-info">
+                      <div class="player-name">
+                        {{ getPlayerById(matchForm.player3_id)?.name || '點擊選擇球員' }}
+                      </div>
+                      <div class="player-score">{{ getPlayerById(matchForm.player3_id)?.score || '-' }} 分</div>
+                    </div>
+                    <n-button
+                      v-if="getPlayerById(matchForm.player3_id)"
+                      quaternary
+                      size="small"
+                      @click="clearPlayer('player3_id')"
+                      class="clear-btn"
+                    >
+                      <n-icon :component="CloseIcon" />
+                    </n-button>
+                  </div>
+
+                  <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                    <div class="player-avatar">
+                      <n-avatar
+                        v-if="getPlayerById(matchForm.player4_id)"
+                        :size="60"
+                        :style="{ backgroundColor: getPlayerColor(matchForm.player4_id) }"
+                      >
+                        {{ getPlayerInitials(matchForm.player4_id) }}
+                      </n-avatar>
+                      <n-avatar
+                        v-else
+                        :size="60"
+                        style="background-color: #f0f0f0; color: #ccc"
+                        @click="openPlayerSelector('player4_id')"
+                        class="empty-slot"
+                      >
+                        <n-icon :component="AddIcon" />
+                      </n-avatar>
+                    </div>
+                    <div class="player-info">
+                      <div class="player-name">
+                        {{ getPlayerById(matchForm.player4_id)?.name || '點擊選擇球員' }}
+                      </div>
+                      <div class="player-score">{{ getPlayerById(matchForm.player4_id)?.score || '-' }} 分</div>
+                    </div>
+                    <n-button
+                      v-if="getPlayerById(matchForm.player4_id)"
+                      quaternary
+                      size="small"
+                      @click="clearPlayer('player4_id')"
+                      class="clear-btn"
+                    >
+                      <n-icon :component="CloseIcon" />
+                    </n-button>
+                  </div>
+                </div>
+
+                <!-- B隊得分控制 -->
+                <div class="score-control">
+                  <div class="score-display">
+                    <span class="score-number" :class="{ winning: matchForm.side_a_outcome === 'LOSS' }">
+                      {{ matchForm.b_games }}
+                    </span>
+                    <span class="score-label">局</span>
+                  </div>
+                  <div class="score-buttons">
+                    <n-button
+                      circle
+                      size="small"
+                      @click="adjustScore('b_games', -1)"
+                      :disabled="matchForm.b_games <= 0"
+                    >
+                      <n-icon :component="RemoveIcon" />
+                    </n-button>
+                    <n-button
+                      circle
+                      size="small"
+                      type="primary"
+                      @click="adjustScore('b_games', 1)"
+                      :disabled="matchForm.b_games >= scoreInputMax"
+                    >
+                      <n-icon :component="AddIcon" />
+                    </n-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 球員選擇模態框 -->
+        <n-modal
+          v-model:show="showPlayerSelector"
+          preset="card"
+          style="width: 90%; max-width: 600px"
+          title="選擇球員"
+          size="huge"
+          :bordered="false"
+          :segmented="{ content: 'soft', footer: 'soft' }"
         >
-          <!-- A隊卡片 -->
-          <n-gi>
-            <n-card
-              :bordered="true"
-              :class="['team-card', matchForm.side_a_outcome === 'WIN' ? 'highlight-win' : '']"
-            >
-              <n-h4 class="mb-2">A隊</n-h4>
-              <!-- A隊球員選擇 -->
-              <div class="player-entry">
-                <n-form-item path="player1_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                    v-model:value="matchForm.player1_id"
-                    :options="availablePlayersFor('a1')"
-                    placeholder="選擇球員 1*"
-                    filterable
-                    clearable
-                    label-field="name"
-                    value-field="id"
-                    class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player1_id)" class="score-value"
-                    >{{ getPlayerById(matchForm.player1_id).score }}
-                    <span class="score-unit">分</span></span
-                  >
-                  <span v-else class="score-placeholder">-</span>
-                </div>
-              </div>
-              <div v-if="matchForm.match_type === 'doubles'" class="player-entry mt-2">
-                <n-form-item path="player2_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                    v-model:value="matchForm.player2_id"
-                    :options="availablePlayersFor('a2')"
-                    placeholder="選擇球員 2*"
-                    filterable
-                    clearable
-                    label-field="name"
-                    value-field="id"
-                    class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player2_id)" class="score-value"
-                    >{{ getPlayerById(matchForm.player2_id).score }}
-                    <span class="score-unit">分</span></span
-                  >
-                  <span v-else class="score-placeholder">-</span>
-                </div>
-              </div>
-              <!-- A隊得分 -->
-              <n-form-item path="a_games" :show-label="false" class="score-form-item-wrapper mt-3">
-                <div class="score-input-slider-group">
-                  <n-input-number
-                    v-model:value="matchForm.a_games"
-                    class="score-input-number"
-                    :class="{ 'winning-score': matchForm.side_a_outcome === 'WIN' }"
-                    :min="0"
-                    :max="scoreInputMax"
-                    placeholder="局數"
-                  />
-                  <n-slider
-                    v-model:value="matchForm.a_games"
-                    class="score-slider"
-                    :class="{ 'winning-score-slider': matchForm.side_a_outcome === 'WIN' }"
-                    :min="0"
-                    :max="scoreInputMax"
-                    :step="1"
-                  />
-                </div>
-              </n-form-item>
-            </n-card>
-          </n-gi>
+          <n-input v-model:value="modalSearchTerm" placeholder="搜尋球員..." clearable size="large" class="mb-3">
+            <template #prefix>
+              <n-icon :component="SearchIcon" />
+            </template>
+          </n-input>
 
-          <!-- B隊卡片 -->
-          <n-gi>
-            <n-card
-              :bordered="true"
-              :class="['team-card', matchForm.side_a_outcome === 'LOSS' ? 'highlight-win' : '']"
-            >
-              <n-h4 class="mb-2">B隊</n-h4>
-              <!-- B隊球員選擇 -->
-              <div class="player-entry">
-                <n-form-item path="player3_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                    v-model:value="matchForm.player3_id"
-                    :options="availablePlayersFor('b3')"
-                    placeholder="選擇球員 1*"
-                    filterable
-                    clearable
-                    label-field="name"
-                    value-field="id"
-                    class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player3_id)" class="score-value"
-                    >{{ getPlayerById(matchForm.player3_id).score }} <span class="score-unit"></span
-                  ></span>
-                  <span v-else class="score-placeholder">-</span>
+          <n-scrollbar style="max-height: 400px">
+            <n-grid :x-gap="12" :y-gap="12" cols="2 s:3 m:4" responsive="screen">
+              <n-gi v-for="player in filteredPlayersForModal" :key="player.id">
+                <div
+                  class="player-card"
+                  @click="selectPlayerFromModal(player.id)"
+                  :class="{
+                    selected: currentSelectingField && matchForm[currentSelectingField] === player.id
+                  }"
+                >
+                  <n-avatar :size="50" :style="{ backgroundColor: getPlayerColor(player.id) }">
+                    {{ getPlayerInitials(player.id) }}
+                  </n-avatar>
+                  <div class="player-card-info">
+                    <div class="player-card-name">{{ player.name }}</div>
+                    <n-tag :type="getScoreTagType(player.score)" size="small" round> {{ player.score }} 分 </n-tag>
+                  </div>
                 </div>
-              </div>
-              <div v-if="matchForm.match_type === 'doubles'" class="player-entry mt-2">
-                <n-form-item path="player4_id" :show-label="false" class="player-select-form-item">
-                  <n-select
-                    v-model:value="matchForm.player4_id"
-                    :options="availablePlayersFor('b4')"
-                    placeholder="選擇球員 2*"
-                    filterable
-                    clearable
-                    label-field="name"
-                    value-field="id"
-                    class="player-select-control"
-                  />
-                </n-form-item>
-                <div class="player-score-display">
-                  <span v-if="getPlayerById(matchForm.player4_id)" class="score-value"
-                    >{{ getPlayerById(matchForm.player4_id).score }}
-                    <span class="score-unit"></span>
-                  </span>
-                  <span v-else class="score-placeholder">-</span>
-                </div>
-              </div>
-              <!-- B隊得分 -->
-              <n-form-item path="b_games" :show-label="false" class="score-form-item-wrapper mt-3">
-                <div class="score-input-slider-group">
-                  <n-input-number
-                    v-model:value="matchForm.b_games"
-                    class="score-input-number"
-                    :class="{ 'winning-score': matchForm.side_a_outcome === 'LOSS' }"
-                    :min="0"
-                    :max="scoreInputMax"
-                    placeholder="局數"
-                  />
-                  <n-slider
-                    v-model:value="matchForm.b_games"
-                    class="score-slider"
-                    :class="{ 'winning-score-slider': matchForm.side_a_outcome === 'LOSS' }"
-                    :min="0"
-                    :max="scoreInputMax"
-                    :step="1"
-                  />
-                </div>
-              </n-form-item>
-            </n-card>
-          </n-gi>
-        </n-grid>
+              </n-gi>
+            </n-grid>
+          </n-scrollbar>
 
-        <n-space justify="center" class="mt-4 action-buttons">
-          <n-button size="large" ghost @click="goBack">返回排行榜</n-button>
+          <template #footer>
+            <n-space justify="end">
+              <n-button @click="showPlayerSelector = false">取消</n-button>
+            </n-space>
+          </template>
+        </n-modal>
+
+        <n-space justify="center" class="mt-5 action-buttons">
+          <n-button size="large" ghost @click="goBack">
+            <template #icon>
+              <n-icon :component="ArrowBackIcon" />
+            </template>
+            返回
+          </n-button>
           <n-button
             type="primary"
             attr-type="submit"
@@ -217,27 +420,37 @@
   import apiClient from '@/services/apiClient'
   import '@/assets/css/match-record.css'
   import {
+    NAvatar,
     NButton,
     NCard,
     NDatePicker,
     NDivider,
     NForm,
-    NFormItem,
     NFormItemGi,
     NGi,
     NGrid,
     NH1,
+    NH3,
     NIcon,
-    NInputNumber,
+    NInput,
+    NModal,
+    NScrollbar,
     NSelect,
-    NSlider,
     NSpace,
+    NTag,
+    NText,
     useMessage
   } from 'naive-ui'
   import {
+    AddOutline as AddIcon,
+    ArrowBackOutline as ArrowBackIcon,
     CheckmarkCircleOutline as WinIcon,
     ClipboardOutline as ClipboardIcon,
-    SaveOutline as SaveIcon
+    CloseOutline as CloseIcon,
+    RemoveOutline as RemoveIcon,
+    SaveOutline as SaveIcon,
+    SearchOutline as SearchIcon,
+    TrophyOutline as TrophyIcon
   } from '@vicons/ionicons5'
 
   // --- Hooks ---
@@ -248,6 +461,10 @@
   const formRef = ref(null)
   const allActiveMembers = ref([])
   const submitting = ref(false)
+  const playerSearchTerm = ref('')
+  const showPlayerSelector = ref(false)
+  const currentSelectingField = ref(null)
+  const modalSearchTerm = ref('')
 
   const matchForm = reactive({
     match_date_ts: new Date().getTime(),
@@ -268,7 +485,7 @@
     { label: '雙打', value: 'doubles' },
     { label: '單打', value: 'singles' }
   ]
-  // --- 修正：為賽制選項加入 meta 資料 ---
+
   const matchFormatOptions = [
     { label: '五局制', value: 'games_5', meta: { gamesToWin: 3 } },
     { label: '七局制', value: 'games_7', meta: { gamesToWin: 4 } },
@@ -319,32 +536,122 @@
     return null
   })
 
+  const topPlayers = computed(() => {
+    return allActiveMembers.value
+      .slice()
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+  })
+
+  const filteredPlayersForModal = computed(() => {
+    if (!modalSearchTerm.value) return availablePlayersForCurrentField.value
+    return availablePlayersForCurrentField.value.filter(player =>
+      player.name.toLowerCase().includes(modalSearchTerm.value.toLowerCase())
+    )
+  })
+
+  const availablePlayersForCurrentField = computed(() => {
+    if (!currentSelectingField.value) return allActiveMembers.value
+
+    const selectedIds = new Set(
+      [matchForm.player1_id, matchForm.player2_id, matchForm.player3_id, matchForm.player4_id].filter(id => id != null)
+    )
+
+    const currentId = matchForm[currentSelectingField.value]
+
+    return allActiveMembers.value.filter(m => !selectedIds.has(m.id) || m.id === currentId)
+  })
+
+  const hasTeamAPlayers = computed(() => {
+    return matchForm.player1_id || matchForm.player2_id
+  })
+
+  const hasTeamBPlayers = computed(() => {
+    return matchForm.player3_id || matchForm.player4_id
+  })
+
+  // --- Helper Functions ---
   const getPlayerById = playerId => {
     if (!playerId) return null
     return allActiveMembers.value.find(m => m.id === playerId)
   }
 
-  const availablePlayersFor = slotKey => {
-    const selectedIds = new Set(
-      [
-        matchForm.player1_id,
-        matchForm.player2_id,
-        matchForm.player3_id,
-        matchForm.player4_id
-      ].filter(id => id != null)
-    )
+  const isPlayerSelected = playerId => {
+    return [matchForm.player1_id, matchForm.player2_id, matchForm.player3_id, matchForm.player4_id].includes(playerId)
+  }
 
-    let currentId = null
-    if (slotKey === 'a1') currentId = matchForm.player1_id
-    if (slotKey === 'a2') currentId = matchForm.player2_id
-    if (slotKey === 'b3') currentId = matchForm.player3_id
-    if (slotKey === 'b4') currentId = matchForm.player4_id
+  const getPlayerInitials = playerId => {
+    const player = getPlayerById(playerId)
+    if (!player) return '?'
+    return player.name.charAt(0).toUpperCase()
+  }
 
-    return allActiveMembers.value.filter(m => !selectedIds.has(m.id) || m.id === currentId)
+  const getPlayerColor = playerId => {
+    if (!playerId) return '#f0f0f0'
+    const colors = ['#18a058', '#2080f0', '#f0a020', '#d03050', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b']
+    return colors[playerId % colors.length]
+  }
+
+  const getScoreTagType = score => {
+    if (score >= 2000) return 'error'
+    if (score >= 1500) return 'warning'
+    if (score >= 1000) return 'info'
+    return 'default'
+  }
+
+  // --- Methods ---
+  const quickSelectPlayer = playerId => {
+    if (isPlayerSelected(playerId)) {
+      // 如果已選中，則取消選擇
+      clearPlayerFromAll(playerId)
+      return
+    }
+
+    // 找到第一個空位置
+    if (!matchForm.player1_id) {
+      matchForm.player1_id = playerId
+    } else if (!matchForm.player3_id) {
+      matchForm.player3_id = playerId
+    } else if (matchForm.match_type === 'doubles' && !matchForm.player2_id) {
+      matchForm.player2_id = playerId
+    } else if (matchForm.match_type === 'doubles' && !matchForm.player4_id) {
+      matchForm.player4_id = playerId
+    }
+  }
+
+  const openPlayerSelector = field => {
+    currentSelectingField.value = field
+    modalSearchTerm.value = ''
+    showPlayerSelector.value = true
+  }
+
+  const selectPlayerFromModal = playerId => {
+    if (currentSelectingField.value) {
+      matchForm[currentSelectingField.value] = playerId
+    }
+    showPlayerSelector.value = false
+    currentSelectingField.value = null
+  }
+
+  const clearPlayer = field => {
+    matchForm[field] = null
+  }
+
+  const clearPlayerFromAll = playerId => {
+    if (matchForm.player1_id === playerId) matchForm.player1_id = null
+    if (matchForm.player2_id === playerId) matchForm.player2_id = null
+    if (matchForm.player3_id === playerId) matchForm.player3_id = null
+    if (matchForm.player4_id === playerId) matchForm.player4_id = null
+  }
+
+  const adjustScore = (field, delta) => {
+    const newValue = matchForm[field] + delta
+    if (newValue >= 0 && newValue <= scoreInputMax.value) {
+      matchForm[field] = newValue
+    }
   }
 
   // --- Watchers ---
-  // --- 修正：監聽分數變化以計算勝負 ---
   watch(
     [() => matchForm.a_games, () => matchForm.b_games, () => matchForm.match_format],
     () => {
@@ -352,7 +659,6 @@
       const gamesA = matchForm.a_games
       const gamesB = matchForm.b_games
 
-      // 只有當其中一方達到勝利局數，且分數不相同時，才確定勝負
       if (gamesA === gamesToWin && gamesA > gamesB) {
         matchForm.side_a_outcome = 'WIN'
       } else if (gamesB === gamesToWin && gamesB > gamesA) {
@@ -374,7 +680,7 @@
     }
   )
 
-  // --- Methods ---
+  // --- API Methods ---
   async function fetchActiveMembers() {
     try {
       const response = await apiClient.get('/members', { params: { all: 'false' } })
@@ -394,7 +700,7 @@
         message.error('請修正表單中的錯誤。')
         return
       }
-      // --- 修正：根據新的賽制規則進行驗證 ---
+
       const gamesToWin = scoreInputMax.value
       if (matchForm.a_games < gamesToWin && matchForm.b_games < gamesToWin) {
         message.error(`比賽尚未結束，需要有一方達到 ${gamesToWin} 局才能儲存。`)
@@ -462,6 +768,4 @@
   }
 </script>
 
-<style scoped>
-  /* 您的 CSS 樣式保持不變 */
-</style>
+<style scoped></style>

@@ -1,19 +1,12 @@
 <template>
-  <n-config-provider
-    :theme-overrides="themeOverrides"
-    :locale="zhTW"
-    :date-locale="dateZhTW"
-    style="height: 100%"
-  >
+  <n-config-provider :theme-overrides="themeOverrides" :locale="zhTW" :date-locale="dateZhTW" style="height: 100%">
     <n-message-provider>
       <n-notification-provider>
         <n-dialog-provider>
           <n-layout style="height: 100vh" :native-scrollbar="false">
             <n-layout-header bordered class="app-header">
               <div class="navbar-content">
-                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom">
-                  TKU Soft Tennis Web
-                </router-link>
+                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom"> TKU Soft Tennis Web </router-link>
 
                 <div v-if="isMobile" class="mobile-nav-trigger">
                   <n-button text @click="showMobileDrawer = true">
@@ -60,9 +53,7 @@
                         <n-button size="small" ghost round @click="navigate"> 快速註冊 </n-button>
                       </router-link>
                       <router-link v-slot="{ navigate }" :to="{ name: 'Login' }">
-                        <n-button type="primary" size="small" round @click="navigate">
-                          登入
-                        </n-button>
+                        <n-button type="primary" size="small" round @click="navigate"> 登入 </n-button>
                       </router-link>
                     </n-space>
                   </template>
@@ -109,45 +100,45 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { useAuthStore } from './stores/authStore'
-import { useWindowSize } from '@vueuse/core'
-import '@/assets/css/main.css'
-import {
-  dateZhTW,
-  NButton,
-  NConfigProvider,
-  NDialogProvider,
-  NDrawer,
-  NDrawerContent,
-  NDropdown,
-  NIcon,
-  NLayout,
-  NLayoutContent,
-  NLayoutFooter,
-  NLayoutHeader,
-  NMenu,
-  NMessageProvider,
-  NNotificationProvider,
-  NSpace,
-  NSpin,
-  zhTW
-} from 'naive-ui'
-import {
-  ChevronDownOutline as ChevronDownIcon,
-  ClipboardOutline as RecordMatchIcon,
-  ListCircleOutline as MatchManagementIcon,
-  LogOutOutline as LogoutIcon,
-  MenuOutline as MenuIcon,
-  PeopleOutline as TeamManagementIcon,
-  PersonCircleOutline as PersonCircleOutlineIcon,
-  PodiumOutline as HomeIcon,
-  SettingsOutline as SettingsIcon
-} from '@vicons/ionicons5'
-import { themeOverrides } from '@/config/theme'
+  import { computed, h, onMounted, ref, watch } from 'vue'
+  import { RouterLink, useRoute } from 'vue-router'
+  import { useAuthStore } from './stores/authStore'
+  import { useWindowSize } from '@vueuse/core'
+  import '@/assets/css/main.css'
+  import {
+    dateZhTW,
+    NButton,
+    NConfigProvider,
+    NDialogProvider,
+    NDrawer,
+    NDrawerContent,
+    NDropdown,
+    NIcon,
+    NLayout,
+    NLayoutContent,
+    NLayoutFooter,
+    NLayoutHeader,
+    NMenu,
+    NMessageProvider,
+    NNotificationProvider,
+    NSpace,
+    NSpin,
+    zhTW
+  } from 'naive-ui'
+  import {
+    ChevronDownOutline as ChevronDownIcon,
+    ClipboardOutline as RecordMatchIcon,
+    ListCircleOutline as MatchManagementIcon,
+    LogOutOutline as LogoutIcon,
+    MenuOutline as MenuIcon,
+    PeopleOutline as TeamManagementIcon,
+    PersonCircleOutline as PersonCircleOutlineIcon,
+    PodiumOutline as HomeIcon,
+    SettingsOutline as SettingsIcon
+  } from '@vicons/ionicons5'
+  import { themeOverrides } from '@/config/theme'
 
-// Constants
+  // Constants
   const MOBILE_BREAKPOINT = 768
 
   // Stores and route
@@ -168,17 +159,15 @@ import { themeOverrides } from '@/config/theme'
 
   // 權限管理
   const hasManagementAccess = computed(
-    () =>
-      authStore.isAuthenticated &&
-      (authStore.isCadre || authStore.isAdmin || authStore.isCoach)
+    () => authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin || authStore.isCoach)
   )
 
   // 角色顯示映射
   const roleDisplayMap = {
-    ADMIN: '管理員',
-    CADRE: '幹部',
-    COACH: '教練',
-    PLAYER: '隊員'
+    admin: '管理員',
+    cadre: '幹部',
+    coach: '教練',
+    member: '隊員'
   }
 
   // Watch route changes
@@ -277,5 +266,5 @@ import { themeOverrides } from '@/config/theme'
 </script>
 
 <style scoped>
-/* 如果有特定的樣式，可以在這裡加入 */
+  /* 如果有特定的樣式，可以在這裡加入 */
 </style>
