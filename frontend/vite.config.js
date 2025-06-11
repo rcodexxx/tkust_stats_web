@@ -1,35 +1,34 @@
-// frontend/vite.config.js
-import {defineConfig} from 'vite'
+// vite.config.js
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import path from 'path'
 
+// https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [vue()],
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'),
-        },
-    },
-    server: {
-        proxy: {
-            '/api': {
-                // --- 修正：將 target 的 port 從 5000 改為 8000 ---
-                target: 'http://127.0.0.1:8000', // 您的 Flask 後端伺服器運行的正確 port
-                changeOrigin: true, // 允許跨域
-
-                // --- 代理事件監聽器 (您可以保留它們以供未來除錯) ---
-                configure: (proxy, options) => {
-                    proxy.on('error', (err, req, res) => {
-                        console.error('代理錯誤:', err);
-                    });
-                    proxy.on('proxyReq', (proxyReq, req, res) => {
-                        console.log(`正在代理請求: ${req.method} ${req.url} -> ${options.target.href}${proxyReq.path}`);
-                    });
-                    proxy.on('proxyRes', (proxyRes, req, res) => {
-                        console.log(`收到代理回應: ${proxyRes.statusCode} ${req.url}`);
-                    });
-                },
-            },
-        },
-    },
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        configure: (proxy, _req, _res) => {
+          proxy.on('error', err => {
+            console.log('proxy error', err)
+          })
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url)
+          })
+        }
+      }
+    }
+  }
 })

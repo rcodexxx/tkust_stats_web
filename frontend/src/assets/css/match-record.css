@@ -1,160 +1,158 @@
 /* 引用您期望的 CSS 樣式 */
 .record-match-page {
-    max-width: 1000px;
-    margin: 2rem auto;
+  max-width: 1000px;
+  margin: 2rem auto;
 }
 
 .page-main-title {
-    font-weight: 600;
-    display: flex;
-    align-items: center;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
 }
 
 .title-back-button {
-    margin-right: 12px;
-    font-size: 1.5rem;
+  margin-right: 12px;
+  font-size: 1.5rem;
 }
 
 .form-card {
-    margin-top: 1.5rem;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
+  margin-top: 1.5rem;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .section-divider {
-    margin-top: 1.5rem;
-    margin-bottom: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .section-divider .n-divider__title {
-    font-size: 0.95rem;
-    font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .action-buttons {
-    padding-top: 1rem;
+  padding-top: 1rem;
 }
 
 .player-entry {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .player-entry .player-select-form-item {
-    flex-grow: 1;
-    margin-bottom: 0;
-    min-width: 0;
+  flex-grow: 1;
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .player-score-display {
-    flex-shrink: 0;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    padding: 0px 10px;
-    min-width: 65px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9em;
+  flex-shrink: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0px 10px;
+  min-width: 65px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
 }
 
 .player-score-display .score-value {
-    font-weight: 600;
-    color: #18a058;
+  font-weight: 600;
+  color: #18a058;
 }
 
 .player-score-display .score-placeholder {
-    color: #aaa;
+  color: #aaa;
 }
 
 .player-score-display .score-unit {
-    font-size: 0.9em;
-    margin-left: 3px;
-    color: #888;
+  font-size: 0.9em;
+  margin-left: 3px;
+  color: #888;
 }
 
 .player-entry.mt-2 {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 .match-details-grid-wrapper {
-    display: flex;
-    justify-content: center;
-    width: 100%;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .match-details-grid {
-    width: 100%;
-    max-width: 960px;
+  width: 100%;
+  max-width: 960px;
 }
 
 .match-details-grid .grid-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .match-details-grid .grid-cell .cell-title {
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 12px;
-    width: 100%;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+  width: 100%;
 }
 
 .team-a-players-cell .cell-title {
-    text-align: left;
+  text-align: left;
 }
 
 .team-b-players-cell .cell-title {
-    text-align: right;
+  text-align: right;
 }
 
 .score-input-cell .cell-title {
-    text-align: center;
+  text-align: center;
 }
 
 .score-input-slider-group .score-input-number .n-input__input-el {
-    font-size: 2.2em !important;
-    font-weight: bold;
-    text-align: center;
-    height: auto !important;
+  font-size: 2.2em !important;
+  font-weight: bold;
+  text-align: center;
+  height: auto !important;
 }
 
 .score-input-number.winning-score {
-    border-color: #FFC107 !important;
+  border-color: #ffc107 !important;
 }
 
 .score-input-number.winning-score .n-input__input-el {
-    color: #D97706 !important;
+  color: #d97706 !important;
 }
 
-
 .highlight-win {
-    background: #fef6e0 !important;
-    border-color: #ffd66b !important;
-    box-shadow: 0 0 0 2px #ffe9b6;
+  background: #fef6e0 !important;
+  border-color: #ffd66b !important;
+  box-shadow: 0 0 0 2px #ffe9b6;
 }
 
 .team-card {
-    background: #FFFFFF !important;
-    transition: background 0.16s,
+  background: #ffffff !important;
+  transition:
+    background 0.16s,
     border-color 0.16s;
-    padding: 1rem;
+  padding: 1rem;
 }
 
 .vs-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #f39c12;
-    letter-spacing: 0.2em;
-    user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #f39c12;
+  letter-spacing: 0.2em;
+  user-select: none;
 }
-
-

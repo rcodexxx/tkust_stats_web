@@ -1,199 +1,201 @@
 /* --- General Page Elements --- */
 .leaderboard-page .page-main-title {
-    color: #333;
-    font-weight: 600;
+  color: #333;
+  font-weight: 600;
 }
 
 /* --- Naive UI Component Overrides & List Structure --- */
 .leaderboard-cards-list .n-list-item,
 .leaderboard-cards-list .n-list-item .n-list-item__content {
-    padding: 0 !important;
+  padding: 0 !important;
 }
 
 .leaderboard-cards-list .n-list-item .n-card.leaderboard-card-entry {
-    margin-bottom: 8px;
+  margin-bottom: 8px;
 }
 
 .leaderboard-card-entry.n-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out !important;
-    border: 1px solid transparent; /* For layout stability on hover if transform is used */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition:
+    box-shadow 0.2s ease-in-out,
+    transform 0.2s ease-in-out !important;
+  border: 1px solid transparent; /* For layout stability on hover if transform is used */
 }
 
 .leaderboard-card-entry.n-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
-    transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-2px);
 }
 
 .n-card > .n-card__content {
-    padding: 0 !important;
+  padding: 0 !important;
 }
 
 /* --- Desktop Header Row Styling --- */
 .leaderboard-header-row-naive {
-    display: flex;
-    align-items: center;
-    padding: 10px 8px; /* MODIFIED: Reduced horizontal padding */
-    font-weight: 600;
-    color: #4a5568;
-    background-color: #f7fafc;
-    border-bottom: 1px solid #e2e8f0;
-    gap: 0.5rem; /* MODIFIED: Reduced gap */
-    border-radius: 6px 6px 0 0;
-    box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
-    width: 100%; /* ADDED: Ensure it tries to fit its container */
+  display: flex;
+  align-items: center;
+  padding: 10px 8px; /* MODIFIED: Reduced horizontal padding */
+  font-weight: 600;
+  color: #4a5568;
+  background-color: #f7fafc;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 0.5rem; /* MODIFIED: Reduced gap */
+  border-radius: 6px 6px 0 0;
+  box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
+  width: 100%; /* ADDED: Ensure it tries to fit its container */
 }
 
 .leaderboard-header-row-naive .entry-rank {
-    flex-shrink: 0;
-    width: 35px; /* MODIFIED: Reduced width */
-    text-align: center;
-    font-size: 0.9em;
+  flex-shrink: 0;
+  width: 35px; /* MODIFIED: Reduced width */
+  text-align: center;
+  font-size: 0.9em;
 }
 
 .leaderboard-header-row-naive .entry-player {
-    flex-grow: 1;
-    min-width: 0;
-    text-align: left;
+  flex-grow: 1;
+  min-width: 0;
+  text-align: left;
 }
 
 .leaderboard-header-row-naive .entry-record {
-    flex-shrink: 0;
-    min-width: 60px; /* MODIFIED: Reduced min-width */
-    text-align: center;
-    font-size: 0.9em;
+  flex-shrink: 0;
+  min-width: 60px; /* MODIFIED: Reduced min-width */
+  text-align: center;
+  font-size: 0.9em;
 }
 
 .leaderboard-header-row-naive .entry-score {
-    flex-shrink: 0;
-    margin-left: auto;
-    min-width: 55px; /* MODIFIED: Reduced min-width */
-    text-align: right;
-    font-size: 0.9em;
+  flex-shrink: 0;
+  margin-left: auto;
+  min-width: 55px; /* MODIFIED: Reduced min-width */
+  text-align: right;
+  font-size: 0.9em;
 }
 
 /* --- Leaderboard Card Content Styling --- */
 .leaderboard-card-content {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* MODIFIED: Reduced gap from 0.75rem (e.g., 8px if 1rem=16px) */
-    width: 100%;
-    padding: 10px 8px; /* MODIFIED: Reduced horizontal padding from 10px to 8px */
-    overflow: hidden; /* ADDED: Crucial for preventing children from visually overflowing this container */
-    box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* MODIFIED: Reduced gap from 0.75rem (e.g., 8px if 1rem=16px) */
+  width: 100%;
+  padding: 10px 8px; /* MODIFIED: Reduced horizontal padding from 10px to 8px */
+  overflow: hidden; /* ADDED: Crucial for preventing children from visually overflowing this container */
+  box-sizing: border-box; /* ADDED: Ensure padding/border included in width */
 }
 
 .leaderboard-card-content .entry-rank {
-    flex-shrink: 0;
-    width: 35px; /* MODIFIED: Reduced width from 40px */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 1.1em;
+  flex-shrink: 0;
+  width: 35px; /* MODIFIED: Reduced width from 40px */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1em;
 }
 
 .leaderboard-card-content .entry-rank .rank-icon-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .leaderboard-card-content .entry-rank .rank-number {
-    color: #4a5568;
+  color: #4a5568;
 }
 
 .leaderboard-card-content .entry-details-middle {
-    flex-grow: 1;
-    min-width: 0; /* Crucial for allowing this block to shrink */
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* MODIFIED: Reduced gap */
+  flex-grow: 1;
+  min-width: 0; /* Crucial for allowing this block to shrink */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* MODIFIED: Reduced gap */
 }
 
 .leaderboard-card-content .entry-details-middle .entry-player {
-    flex-grow: 1;
-    min-width: 0; /* Crucial for text ellipsis to work */
+  flex-grow: 1;
+  min-width: 0; /* Crucial for text ellipsis to work */
 }
 
 .leaderboard-card-content .entry-player .player-name {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #2d3748;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .leaderboard-card-content .entry-player .player-org {
-    font-size: 0.8em;
-    color: #718096;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 0.8em;
+  color: #718096;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .leaderboard-card-content .entry-details-middle .entry-record {
-    flex-shrink: 0;
-    min-width: 60px; /* MODIFIED: Reduced min-width from 65px */
-    font-size: 0.875rem;
-    white-space: nowrap; /* Important for "W - L" format */
-    color: #4a5568;
-    text-align: center;
+  flex-shrink: 0;
+  min-width: 60px; /* MODIFIED: Reduced min-width from 65px */
+  font-size: 0.875rem;
+  white-space: nowrap; /* Important for "W - L" format */
+  color: #4a5568;
+  text-align: center;
 }
 
 .leaderboard-card-content .entry-record .wins {
-    color: #38a169;
-    font-weight: 500;
+  color: #38a169;
+  font-weight: 500;
 }
 
 .leaderboard-card-content .entry-record .losses {
-    color: #e53e3e;
-    font-weight: 500;
+  color: #e53e3e;
+  font-weight: 500;
 }
 
 .leaderboard-card-content .entry-score {
-    flex-shrink: 0; /* Score part should not shrink */
-    margin-left: auto; /* Pushes it to the right */
-    text-align: right;
-    min-width: 55px; /* MODIFIED: Reduced min-width from 60px */
-    font-size: 1rem;
+  flex-shrink: 0; /* Score part should not shrink */
+  margin-left: auto; /* Pushes it to the right */
+  text-align: right;
+  min-width: 55px; /* MODIFIED: Reduced min-width from 60px */
+  font-size: 1rem;
 }
 
 .leaderboard-card-content .entry-score .score-number {
-    font-weight: 700;
-    font-size: 1.2em;
-    /* Color is set via :style binding in template */
+  font-weight: 700;
+  font-size: 1.2em;
+  /* Color is set via :style binding in template */
 }
 
 .leaderboard-card-content .entry-score .score-label {
-    font-size: 0.8em;
-    margin-left: 3px;
-    color: #718096;
+  font-size: 0.8em;
+  margin-left: 3px;
+  color: #718096;
 }
 
 /* --- Top 3 Rank Highlighting (border and background) --- */
 .leaderboard-card-entry.rank-card-first {
-    border-left: 4px solid #ECC94B;
-    background-color: #FFFAF0;
+  border-left: 4px solid #ecc94b;
+  background-color: #fffaf0;
 }
 
 .leaderboard-card-entry.rank-card-second {
-    border-left: 4px solid #A0AEC0;
-    background-color: #F8F9FA;
+  border-left: 4px solid #a0aec0;
+  background-color: #f8f9fa;
 }
 
 .leaderboard-card-entry.rank-card-third {
-    border-left: 4px solid #C05621;
-    background-color: #FFF5EB;
+  border-left: 4px solid #c05621;
+  background-color: #fff5eb;
 }
 
 .leaderboard-card-entry.rank-card-other {
-    border-left: 4px solid #E2E8F0;
+  border-left: 4px solid #e2e8f0;
 }
 
 /* Optional: Explicitly set box-sizing for n-card if needed, though usually inherited */
 .leaderboard-card-entry.n-card {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }

@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .vue,.js,.jsx --fix",
+    "format:check": "prettier --check .",
+    "lint:check": "eslint . --ext .vue,.js,.jsx"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
@@ -22,6 +26,12 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/language-server": "^2.2.10",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-vue": "^10.2.0",
+    "prettier": "^3.5.3",
     "vite": "^6.3.5"
   }
 }
