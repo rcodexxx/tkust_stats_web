@@ -17,19 +17,18 @@ const routes = [
     path: '/',
     name: 'Leaderboard',
     component: LeaderboardView
-    // 預設所有人都可以訪問
   },
   {
     path: '/login',
     name: 'Login',
     component: LoginView,
-    meta: { guestOnly: true } // 標籤：只允許未登入使用者訪問
+    meta: { guestOnly: true }
   },
   {
     path: '/register',
     name: 'Register',
     component: RegisterView,
-    meta: { guestOnly: true } // 標籤：只允許未登入使用者訪問
+    meta: { guestOnly: true }
   },
   {
     path: '/profile/edit',
@@ -45,7 +44,7 @@ const routes = [
   },
   {
     path: '/matches/management',
-    name: 'MatchManagement', // 新的路由名稱
+    name: 'MatchManagement',
     component: MatchManagementView,
     meta: { requiresAuth: true }
   },

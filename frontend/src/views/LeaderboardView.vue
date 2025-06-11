@@ -2,11 +2,7 @@
   <div class="leaderboard-page pa-md-4">
     <div class="leaderboard-header mb-4">
       <n-h1 align="center" class="page-main-title">
-        <n-icon
-          :component="RankingIcon"
-          size="32"
-          style="vertical-align: -5px; margin-right: 10px"
-        />
+        <n-icon :component="RankingIcon" size="32" style="vertical-align: -5px; margin-right: 10px" />
         排行榜
       </n-h1>
       <!--      <n-space justify="center" class="mt-3 mb-4"-->
@@ -50,10 +46,15 @@
             <n-list hoverable clickable class="leaderboard-cards-list">
               <n-list-item v-for="member in paginatedMembers" :key="member.id">
                 <n-card
-                  :class="['leaderboard-card-entry', getRankHighlightClass(member.rank)]"
+                  :class="[
+                    'leaderboard-card-entry',
+                    getRankHighlightClass(member.rank),
+                    member.score < 0 ? 'negative-score-card' : ''
+                  ]"
                   hoverable
                 >
                   <div class="leaderboard-card-content">
+                    <!-- 排名部分保持不變 -->
                     <div class="entry-rank">
                       <span v-if="member.rank <= 3 && member.rank > 0" class="rank-icon-wrapper">
                         <n-icon
@@ -65,6 +66,7 @@
                       <span v-else class="rank-number">{{ member.rank }}</span>
                     </div>
 
+                    <!-- 中間詳細資訊保持不變 -->
                     <div class="entry-details-middle">
                       <div class="entry-player">
                         <div class="player-name">{{ member.display_name || member.name }}</div>
@@ -78,11 +80,15 @@
                       </div>
                     </div>
 
+                    <!-- 分數部分 - 添加負分數class -->
                     <div class="entry-score">
-                      <span class="score-number" :style="{ color: getScoreColor(member.rank) }">
+                      <span
+                        :class="['score-number', member.score < 0 ? 'negative-score' : '']"
+                        :style="{ color: member.score >= 0 ? getScoreColor(member.rank) : '' }"
+                      >
                         {{ member.score }}
                       </span>
-                      <span class="score-label"></span>
+                      <!--                      <span class="score-label">{{ member.score < 0 ? '負分' : '分' }}</span>-->
                     </div>
                   </div>
                 </n-card>
@@ -103,10 +109,7 @@
             <template #prefix="{ itemCount }"> 共 {{ itemCount }} 位球員 </template>
           </n-pagination>
         </div>
-        <div
-          v-if="allMembersWithRank.length > 0 && totalPages <= 1 && !loading"
-          class="text-center mt-3 text-muted"
-        >
+        <div v-if="allMembersWithRank.length > 0 && totalPages <= 1 && !loading" class="text-center mt-3 text-muted">
           <small>共 {{ allMembersWithRank.length }} 位球員</small>
         </div>
       </n-spin>
@@ -151,10 +154,7 @@
           rank: index + 1
         }))
       } else {
-        console.error(
-          'LeaderboardView: API response data is not an array or is missing!',
-          response.data
-        )
+        console.error('LeaderboardView: API response data is not an array or is missing!', response.data)
         error.value = 'API 回應數據格式不正確。'
         allMembersWithRank.value = []
       }
