@@ -5,17 +5,6 @@
         <n-icon :component="RankingIcon" size="32" style="vertical-align: -5px; margin-right: 10px" />
         排行榜
       </n-h1>
-      <!--      <n-space justify="center" class="mt-3 mb-4"-->
-      <!--               v-if="authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin)">-->
-      <!--        <router-link :to="{name: 'RecordMatch'}" v-slot="{ navigate }">-->
-      <!--          <n-button type="primary" strong round @click="navigate">-->
-      <!--            <template #icon>-->
-      <!--              <n-icon :component="PencilIcon"/>-->
-      <!--            </template>-->
-      <!--            記錄比賽結果-->
-      <!--          </n-button>-->
-      <!--        </router-link>-->
-      <!--      </n-space>-->
     </div>
 
     <div class="leaderboard-content-wrapper">
@@ -79,8 +68,6 @@
                         <span class="losses">{{ member.losses }}</span>
                       </div>
                     </div>
-
-                    <!-- 分數部分 - 添加負分數class -->
                     <div class="entry-score">
                       <span
                         :class="['score-number', member.score < 0 ? 'negative-score' : '']"
@@ -88,7 +75,6 @@
                       >
                         {{ member.score }}
                       </span>
-                      <!--                      <span class="score-label">{{ member.score < 0 ? '負分' : '分' }}</span>-->
                     </div>
                   </div>
                 </n-card>
@@ -106,11 +92,8 @@
             show-size-picker
             show-quick-jumper
           >
-            <template #prefix="{ itemCount }"> 共 {{ itemCount }} 位球員 </template>
+            <template #prefix="{ itemCount }"> 共 {{ itemCount }} 位 </template>
           </n-pagination>
-        </div>
-        <div v-if="allMembersWithRank.length > 0 && totalPages <= 1 && !loading" class="text-center mt-3 text-muted">
-          <small>共 {{ allMembersWithRank.length }} 位球員</small>
         </div>
       </n-spin>
     </div>

@@ -6,11 +6,11 @@ import LeaderboardView from '../views/LeaderboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import EditProfileView from '../views/EditProfileView.vue'
-import ManagementCenterView from '@/views/Management/ManagementCenterView.vue'
-import AddMemberView from '../views/Management/AddMemberView.vue'
-import EditMemberView from '@/views/Management/EditMemberView.vue'
-import MatchRecordView from '../views/MatchRecordView.vue'
-import MatchManagementView from '@/views/MatchManagementView.vue'
+import ManagementCenterView from '@/views/team/ManagementCenterView.vue'
+import AddMemberView from '../views/team/AddMemberView.vue'
+import EditMemberView from '@/views/team/EditMemberView.vue'
+import MatchRecordView from '../views/match/MatchRecordView.vue'
+import MatchManagementView from '@/views/match/MatchManagementView.vue'
 
 const routes = [
   {

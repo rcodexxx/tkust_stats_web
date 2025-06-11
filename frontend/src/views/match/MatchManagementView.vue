@@ -28,7 +28,7 @@
       size="small"
       flex-height
       style="min-height: 400px; max-height: 75vh"
-      :scroll-x="1000"
+      :scroll-x="1200"
       :row-key="row => row.id"
     />
   </div>
@@ -37,25 +37,14 @@
 <script setup>
   import { computed, h, onMounted, reactive, ref } from 'vue'
   import { useRouter } from 'vue-router'
-  import {
-    NAlert,
-    NButton,
-    NDataTable,
-    NH1,
-    NIcon,
-    NSpace,
-    NTag,
-    NTooltip,
-    useDialog,
-    useMessage
-  } from 'naive-ui'
+  import { NAlert, NButton, NDataTable, NH1, NIcon, NSpace, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
   import {
     AddCircleOutline as AddIcon,
     PencilOutline as EditIcon,
     TrashBinOutline as DeleteIcon
   } from '@vicons/ionicons5'
-  import apiClient from '@/services/apiClient'
-  import { format } from 'date-fns' // 推薦使用 date-fns 來格式化日期
+  import apiClient from '@/services/apiClient.js'
+  import { format } from 'date-fns'
 
   // --- Hooks ---
   const router = useRouter()
@@ -88,10 +77,8 @@
     }
   ]
 
-  const getMatchTypeDisplay = value =>
-    matchTypeOptions.find(opt => opt.value === value)?.label || value
-  const getMatchFormatDisplay = value =>
-    matchFormatOptions.find(opt => opt.value === value)?.label || value
+  const getMatchTypeDisplay = value => matchTypeOptions.find(opt => opt.value === value)?.label || value
+  const getMatchFormatDisplay = value => matchFormatOptions.find(opt => opt.value === value)?.label || value
 
   // --- 表格欄位定義 ---
   const tableColumns = computed(() => [
@@ -103,16 +90,59 @@
       render: row => (row.match_date ? format(new Date(row.match_date), 'yyyy-MM-dd') : '-')
     },
     {
-      title: '對戰組合',
-      key: 'matchup',
-      resizable: true,
-      width: 350,
-      ellipsis: { tooltip: true },
-      render(row) {
-        const sideA = [row.player1?.name, row.player2?.name].filter(Boolean).join(' / ')
-        const sideB = [row.player3?.name, row.player4?.name].filter(Boolean).join(' / ')
-        return `${sideA || 'N/A'} vs ${sideB || 'N/A'}`
-      }
+      title: 'Team A',
+      key: 'team_a',
+      children: [
+        {
+          title: '後排',
+          key: 'player2',
+          width: 120,
+          ellipsis: { tooltip: true },
+          render: row => {
+            // 如果是單打，顯示 "-"
+            if (!row.player1) return '-'
+            return row.player1.name
+          }
+        },
+        {
+          title: '前排',
+          key: 'player1',
+          width: 120,
+          ellipsis: { tooltip: true },
+          render: row => row.player2?.name || 'N/A'
+        }
+      ]
+    },
+    {
+      title: 'VS',
+      key: 'vs',
+      width: 50,
+      align: 'center',
+      render: () => h('span', { style: 'font-weight: bold; color: #666;' }, 'VS')
+    },
+    {
+      title: 'Team B',
+      key: 'team_b',
+      children: [
+        {
+          title: '後排',
+          key: 'player4',
+          width: 120,
+          ellipsis: { tooltip: true },
+          render: row => {
+            // 如果是單打，顯示 "-"
+            if (!row.player3) return '-'
+            return row.player3.name
+          }
+        },
+        {
+          title: '前排',
+          key: 'player3',
+          width: 120,
+          ellipsis: { tooltip: true },
+          render: row => row.player4?.name || 'N/A'
+        }
+      ]
     },
     {
       title: '比分',
@@ -122,17 +152,9 @@
       render(row) {
         let outcomeTag = null
         if (row.side_a_outcome === 'WIN') {
-          outcomeTag = h(
-            NTag,
-            { type: 'success', size: 'tiny', round: true },
-            { default: () => 'A勝' }
-          )
+          outcomeTag = h(NTag, { type: 'success', size: 'tiny', round: true }, { default: () => 'A勝' })
         } else if (row.side_a_outcome === 'LOSS') {
-          outcomeTag = h(
-            NTag,
-            { type: 'error', size: 'tiny', round: true },
-            { default: () => 'B勝' }
-          )
+          outcomeTag = h(NTag, { type: 'error', size: 'tiny', round: true }, { default: () => 'B勝' })
         }
 
         const elements = [h('span', `${row.a_games} : ${row.b_games}`)]
@@ -257,5 +279,47 @@
 
   .page-main-title {
     font-weight: 600;
+  }
+
+  /* 自定義表格樣式 */
+  .n-data-table .n-data-table-thead .n-data-table-th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  /* Team A 和 Team B 的父表頭樣式 */
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_a'],
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_b'] {
+    background-color: #e5e7eb;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* VS 欄位特殊樣式 */
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='vs'] {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  /* 前排/後排子表頭 */
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player1'],
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player2'] {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player3'],
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player4'] {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  /* 響應式調整 */
+  @media (max-width: 768px) {
+    .n-data-table .n-data-table-thead .n-data-table-th {
+      font-size: 0.8rem;
+      padding: 8px 4px;
+    }
   }
 </style>

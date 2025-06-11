@@ -203,6 +203,40 @@
   margin-bottom: 1.5rem;
 }
 
+/* 位置指示器樣式 */
+.position-indicator {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.position-label {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+/* 不同隊伍位置的顏色 */
+.team-a .position-label {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.team-b .position-label {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
 .player-slot {
   display: flex;
   align-items: center;
@@ -212,6 +246,7 @@
   border-radius: 12px;
   transition: all 0.3s ease;
   position: relative;
+  margin-top: 8px; /* 為位置標籤留出空間 */
 }
 
 .player-slot:hover {
@@ -221,6 +256,7 @@
 
 .player-avatar {
   flex-shrink: 0;
+  position: relative;
 }
 
 .empty-slot {
@@ -243,7 +279,7 @@
 .player-name {
   font-weight: 600;
   color: #1f2937;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -252,11 +288,13 @@
 .player-score {
   font-size: 0.875rem;
   color: #6b7280;
+  display: none; /* 隱藏分數顯示 */
 }
 
 .clear-btn {
   opacity: 0.6;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .clear-btn:hover {
@@ -327,30 +365,6 @@
   border: 3px solid #ffffff;
   position: relative;
 }
-
-/*.vs-circle::before {*/
-/*  content: '';*/
-/*  position: absolute;*/
-/*  top: 50%;*/
-/*  left: 20%;*/
-/*  right: 20%;*/
-/*  height: 2px;*/
-/*  background: #ff0000;*/
-/*  border-radius: 1px;*/
-/*  transform: translateY(-50%);*/
-/*}*/
-
-/*.vs-circle::after {*/
-/*  content: '';*/
-/*  position: absolute;*/
-/*  top: 20%;*/
-/*  bottom: 20%;*/
-/*  left: 50%;*/
-/*  width: 2px;*/
-/*  background: #ff0000;*/
-/*  border-radius: 1px;*/
-/*  transform: translateX(-50%) rotate(90deg);*/
-/*}*/
 
 @keyframes tennis-ball-bounce {
   0%,
@@ -459,6 +473,22 @@
 
   .match-arena {
     padding: 1rem;
+  }
+
+  /* 位置標籤手機版調整 */
+  .position-label {
+    font-size: 0.6rem;
+    padding: 3px 6px;
+  }
+
+  .player-slot {
+    padding: 0.5rem;
+    margin-top: 6px;
+  }
+
+  .player-avatar .n-avatar {
+    width: 50px !important;
+    height: 50px !important;
   }
 }
 

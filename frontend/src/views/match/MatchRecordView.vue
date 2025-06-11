@@ -107,7 +107,11 @@
 
                 <!-- A隊球員 -->
                 <div class="players-container">
+                  <!-- 第一位球員 (後排) -->
                   <div class="player-slot">
+                    <div class="position-indicator">
+                      <span class="position-label">後排</span>
+                    </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player1_id)"
@@ -130,7 +134,6 @@
                       <div class="player-name">
                         {{ getPlayerById(matchForm.player1_id)?.name || '點擊選擇球員' }}
                       </div>
-                      <div class="player-score">{{ getPlayerById(matchForm.player1_id)?.score || '-' }} 分</div>
                     </div>
                     <n-button
                       v-if="getPlayerById(matchForm.player1_id)"
@@ -143,7 +146,11 @@
                     </n-button>
                   </div>
 
+                  <!-- 第二位球員 (前排) - 只在雙打時顯示 -->
                   <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                    <div class="position-indicator">
+                      <span class="position-label">前排</span>
+                    </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player2_id)"
@@ -166,7 +173,6 @@
                       <div class="player-name">
                         {{ getPlayerById(matchForm.player2_id)?.name || '點擊選擇球員' }}
                       </div>
-                      <div class="player-score">{{ getPlayerById(matchForm.player2_id)?.score || '-' }} 分</div>
                     </div>
                     <n-button
                       v-if="getPlayerById(matchForm.player2_id)"
@@ -237,7 +243,11 @@
 
                 <!-- B隊球員 -->
                 <div class="players-container">
+                  <!-- 第一位球員 (後排) -->
                   <div class="player-slot">
+                    <div class="position-indicator">
+                      <span class="position-label">後排</span>
+                    </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player3_id)"
@@ -260,7 +270,6 @@
                       <div class="player-name">
                         {{ getPlayerById(matchForm.player3_id)?.name || '點擊選擇球員' }}
                       </div>
-                      <div class="player-score">{{ getPlayerById(matchForm.player3_id)?.score || '-' }} 分</div>
                     </div>
                     <n-button
                       v-if="getPlayerById(matchForm.player3_id)"
@@ -273,7 +282,11 @@
                     </n-button>
                   </div>
 
+                  <!-- 第二位球員 (前排) - 只在雙打時顯示 -->
                   <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                    <div class="position-indicator">
+                      <span class="position-label">前排</span>
+                    </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player4_id)"
@@ -296,7 +309,6 @@
                       <div class="player-name">
                         {{ getPlayerById(matchForm.player4_id)?.name || '點擊選擇球員' }}
                       </div>
-                      <div class="player-score">{{ getPlayerById(matchForm.player4_id)?.score || '-' }} 分</div>
                     </div>
                     <n-button
                       v-if="getPlayerById(matchForm.player4_id)"
@@ -417,7 +429,7 @@
 <script setup>
   import { computed, onMounted, reactive, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
-  import apiClient from '@/services/apiClient'
+  import apiClient from '@/services/apiClient.js'
   import '@/assets/css/match-record.css'
   import {
     NAvatar,
