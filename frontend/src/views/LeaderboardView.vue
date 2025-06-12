@@ -1,12 +1,5 @@
 <template>
   <div class="leaderboard-page pa-md-4">
-    <div class="leaderboard-header mb-4">
-      <n-h1 align="center" class="page-main-title">
-        <n-icon :component="RankingIcon" size="32" style="vertical-align: -5px; margin-right: 10px" />
-        排行榜
-      </n-h1>
-    </div>
-
     <div class="leaderboard-content-wrapper">
       <n-spin :show="loading" size="large">
         <template #description>排行榜載入中...</template>
@@ -104,13 +97,8 @@
   import { computed, onMounted, ref } from 'vue'
   import { useAuthStore } from '@/stores/authStore'
   import apiClient from '@/services/apiClient.js'
-  import { NAlert, NCard, NEmpty, NH1, NIcon, NList, NListItem, NPagination, NSpin } from 'naive-ui'
-  import {
-    Medal as Rank3Icon,
-    PodiumOutline as RankingIcon,
-    ShieldSharp as Rank2Icon,
-    TrophySharp as Rank1Icon
-  } from '@vicons/ionicons5'
+  import { NAlert, NCard, NEmpty, NIcon, NList, NListItem, NPagination, NSpin } from 'naive-ui'
+  import { Medal as Rank3Icon, ShieldSharp as Rank2Icon, TrophySharp as Rank1Icon } from '@vicons/ionicons5'
 
   import '../assets/css/leaderboard.css'
 
