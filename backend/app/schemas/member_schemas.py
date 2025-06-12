@@ -1,11 +1,10 @@
-# your_project/app/schemas/member_schemas.py
-from marshmallow import Schema, fields, validate, EXCLUDE
+# backend/app/schemas/member_schemas.py
+from marshmallow import EXCLUDE, Schema, fields, validate
 from marshmallow_enum import EnumField
 
 from ..models.enums import UserRoleEnum
 from ..models.enums.bio_enums import GenderEnum
 from ..models.enums.match_enums import MatchPositionEnum
-
 
 # --- 巢狀 Schema (用於在 Member 回應中顯示關聯物件的摘要) ---
 
@@ -43,12 +42,16 @@ class MemberSchema(Schema):
     display_name = fields.Method("get_display_name", dump_only=True)
     student_id = fields.Str(dump_only=True, allow_none=True)
     gender = EnumField(GenderEnum, by_value=True, dump_only=True, allow_none=True)
-    position = EnumField(MatchPositionEnum, by_value=True, dump_only=True, allow_none=True)
+    position = EnumField(
+        MatchPositionEnum, by_value=True, dump_only=True, allow_none=True
+    )
     mu = fields.Float(dump_only=True)
     sigma = fields.Float(dump_only=True)
     score = fields.Int(dump_only=True)
     is_active = fields.Bool(attribute="user.is_active", dump_only=True)
-    organization = fields.Nested(SimpleOrganizationSchema, dump_only=True, allow_none=True)
+    organization = fields.Nested(
+        SimpleOrganizationSchema, dump_only=True, allow_none=True
+    )
     user = fields.Nested(SimpleUserSchema, dump_only=True)
 
     def get_display_name(self, obj):
@@ -92,16 +95,25 @@ class LeaderboardMemberSchema(Schema):
 
 class MemberCreateSchema(Schema):
     # User 帳號資訊
-    username = fields.Str(required=True, validate=validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效。"))
+    username = fields.Str(
+        required=True,
+        validate=validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效。"),
+    )
     email = fields.Email(required=False, allow_none=True)
-    password = fields.Str(required=False, allow_none=True, load_only=True, validate=validate.Length(min=6))
-    display_name = fields.Str(required=False, allow_none=True, validate=validate.Length(max=50))
+    password = fields.Str(
+        required=False, allow_none=True, load_only=True, validate=validate.Length(min=6)
+    )
+    display_name = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=50)
+    )
     role = EnumField(UserRoleEnum, by_value=True, required=True)
 
     # Member Bio 資訊
     name = fields.Str(required=True, validate=validate.Length(min=1, max=80))
     student_id = fields.Str(
-        required=False, allow_none=True, validate=validate.Regexp(r"^\d{7,9}$", error="學號必須是7到9位數字。")
+        required=False,
+        allow_none=True,
+        validate=validate.Regexp(r"^\d{7,9}$", error="學號必須是7到9位數字。"),
     )
     gender = EnumField(GenderEnum, by_value=True, allow_none=True)
     position = EnumField(MatchPositionEnum, by_value=True, allow_none=True)
@@ -119,7 +131,10 @@ class MemberUpdateSchema(Schema):
 
     # Member Fields
     name = fields.Str(validate=validate.Length(min=1, max=80))
-    student_id = fields.Str(allow_none=True, validate=validate.Regexp(r"^\d{7,9}$", error="學號必須是7到9位數字。"))
+    student_id = fields.Str(
+        allow_none=True,
+        validate=validate.Regexp(r"^\d{7,9}$", error="學號必須是7到9位數字。"),
+    )
     gender = EnumField(GenderEnum, by_value=True, allow_none=True)
     position = EnumField(MatchPositionEnum, by_value=True, allow_none=True)
     organization_id = fields.Int(allow_none=True)
@@ -128,10 +143,14 @@ class MemberUpdateSchema(Schema):
     notes = fields.Str(allow_none=True)
 
     # User Fields (管理員可以修改這些)
-    username = fields.Str(validate=validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效。"))
+    username = fields.Str(
+        validate=validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效。")
+    )
     email = fields.Email(allow_none=True)
     display_name = fields.Str(allow_none=True, validate=validate.Length(max=50))
-    role = EnumField(UserRoleEnum, by_value=True)  # by_value=True 表示它期望接收 'member', 'admin' 等字串
+    role = EnumField(
+        UserRoleEnum, by_value=True
+    )  # by_value=True 表示它期望接收 'member', 'admin' 等字串
     is_active = fields.Bool()  # is_active 屬性現在被正確地歸類到 User Fields
 
     class Meta:

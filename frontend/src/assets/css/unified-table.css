@@ -1,0 +1,395 @@
+/*!* =================================================================== *!*/
+/*!* 統一表格表頭樣式 - 可在多個頁面中重複使用                              *!*/
+/*!* =================================================================== *!*/
+
+/*!* 基礎表格樣式 *!*/
+/*.unified-table {*/
+/*  border-radius: 12px;*/
+/*  overflow: hidden;*/
+/*  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);*/
+/*  animation: slide-up 0.6s cubic-bezier(0.4, 0, 0.2, 1);*/
+/*}*/
+
+/*@keyframes slide-up {*/
+/*  from {*/
+/*    opacity: 0;*/
+/*    transform: translateY(20px);*/
+/*  }*/
+/*  to {*/
+/*    opacity: 1;*/
+/*    transform: translateY(0);*/
+/*  }*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 基礎表頭樣式                                                        *!*/
+/*!* =================================================================== *!*/
+
+/*!* 所有表頭的基礎樣式 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th) {*/
+/*  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);*/
+/*  font-weight: 700;*/
+/*  color: #374151;*/
+/*  border-bottom: 2px solid #e5e7eb;*/
+/*  font-size: 0.875rem;*/
+/*  text-transform: uppercase;*/
+/*  letter-spacing: 0.5px;*/
+/*  padding: 1rem 0.75rem;*/
+/*  position: relative;*/
+/*  transition: all 0.3s ease;*/
+/*}*/
+
+/*!* 表頭懸停效果 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th:hover) {*/
+/*  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);*/
+/*  color: #1f2937;*/
+/*}*/
+
+/*!* 可排序表頭的特殊樣式 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th--sortable) {*/
+/*  cursor: pointer;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th--sortable::after) {*/
+/*  content: '';*/
+/*  position: absolute;*/
+/*  bottom: 0;*/
+/*  left: 0;*/
+/*  right: 0;*/
+/*  height: 2px;*/
+/*  background: linear-gradient(90deg, transparent, #3b82f6, transparent);*/
+/*  opacity: 0;*/
+/*  transition: opacity 0.3s ease;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th--sortable:hover::after) {*/
+/*  opacity: 1;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 特殊欄位樣式 - 用於比賽記錄表格                                      *!*/
+/*!* =================================================================== *!*/
+
+/*!* Team A 欄位組 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_a']) {*/
+/*  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);*/
+/*  color: #1e40af;*/
+/*  font-weight: 800;*/
+/*  border-bottom: 3px solid #3b82f6;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player1']),*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player2']) {*/
+/*  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);*/
+/*  color: #1e40af;*/
+/*  font-weight: 600;*/
+/*  border-bottom: 2px solid #93c5fd;*/
+/*}*/
+
+/*!* Team B 欄位組 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_b']) {*/
+/*  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);*/
+/*  color: #c2410c;*/
+/*  font-weight: 800;*/
+/*  border-bottom: 3px solid #f97316;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player3']),*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player4']) {*/
+/*  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);*/
+/*  color: #c2410c;*/
+/*  font-weight: 600;*/
+/*  border-bottom: 2px solid #fb923c;*/
+/*}*/
+
+/*!* VS 欄位特殊樣式 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='vs']) {*/
+/*  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);*/
+/*  color: white;*/
+/*  font-weight: 900;*/
+/*  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);*/
+/*  border-bottom: 3px solid #1e40af;*/
+/*  position: relative;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='vs']::before) {*/
+/*  content: '';*/
+/*  position: absolute;*/
+/*  top: 50%;*/
+/*  left: 50%;*/
+/*  transform: translate(-50%, -50%);*/
+/*  width: 30px;*/
+/*  height: 30px;*/
+/*  background: rgba(255, 255, 255, 0.2);*/
+/*  border-radius: 50%;*/
+/*  z-index: -1;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 狀態相關欄位樣式                                                     *!*/
+/*!* =================================================================== *!*/
+
+/*!* 分數/結果欄位 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='score']) {*/
+/*  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);*/
+/*  color: #059669;*/
+/*  font-weight: 700;*/
+/*  border-bottom: 2px solid #10b981;*/
+/*}*/
+
+/*!* 操作欄位 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='actions']) {*/
+/*  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);*/
+/*  color: #6b7280;*/
+/*  font-weight: 600;*/
+/*  border-bottom: 2px solid #9ca3af;*/
+/*}*/
+
+/*!* 選擇框欄位 *!*/
+/*:deep(.n-data-table .n-data-table-thead .n-data-table-th[data-col-key='selection']) {*/
+/*  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);*/
+/*  color: #d97706;*/
+/*  font-weight: 600;*/
+/*  border-bottom: 2px solid #f59e0b;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 表格內容樣式                                                        *!*/
+/*!* =================================================================== *!*/
+
+/*!* 表格行基礎樣式 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-tr) {*/
+/*  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);*/
+/*  border-bottom: 1px solid #f3f4f6;*/
+/*}*/
+
+/*!* 表格行懸停效果 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-tr:hover) {*/
+/*  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);*/
+/*  transform: translateX(2px);*/
+/*  box-shadow:*/
+/*    -3px 0 0 #3b82f6,*/
+/*    0 2px 8px rgba(59, 130, 246, 0.1);*/
+/*}*/
+
+/*!* 選中行樣式 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-tr--checked) {*/
+/*  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);*/
+/*  box-shadow: -3px 0 0 #3b82f6;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-tr--checked:hover) {*/
+/*  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);*/
+/*}*/
+
+/*!* 表格單元格樣式 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td) {*/
+/*  padding: 0.75rem;*/
+/*  font-size: 0.875rem;*/
+/*  color: #374151;*/
+/*  border-bottom: 1px solid #f3f4f6;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 特殊內容樣式                                                        *!*/
+/*!* =================================================================== *!*/
+
+/*!* Team A 相關單元格 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='player1']),*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='player2']) {*/
+/*  color: #1e40af;*/
+/*  font-weight: 600;*/
+/*}*/
+
+/*!* Team B 相關單元格 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='player3']),*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='player4']) {*/
+/*  color: #c2410c;*/
+/*  font-weight: 600;*/
+/*}*/
+
+/*!* VS 單元格 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='vs']) {*/
+/*  text-align: center;*/
+/*  font-weight: 900;*/
+/*  color: #6b7280;*/
+/*  position: relative;*/
+/*}*/
+
+/*!* 分數單元格 *!*/
+/*:deep(.n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='score']) {*/
+/*  text-align: center;*/
+/*  font-weight: 700;*/
+/*  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 響應式設計                                                          *!*/
+/*!* =================================================================== *!*/
+
+/*@media (max-width: 1024px) {*/
+/*  :deep(.n-data-table .n-data-table-thead .n-data-table-th) {*/
+/*    padding: 0.75rem 0.5rem;*/
+/*    font-size: 0.8rem;*/
+/*  }*/
+
+/*  :deep(.n-data-table .n-data-table-tbody .n-data-table-td) {*/
+/*    padding: 0.5rem;*/
+/*    font-size: 0.8rem;*/
+/*  }*/
+/*}*/
+
+/*@media (max-width: 768px) {*/
+/*  :deep(.n-data-table .n-data-table-thead .n-data-table-th) {*/
+/*    padding: 0.5rem 0.25rem;*/
+/*    font-size: 0.75rem;*/
+/*    letter-spacing: 0.25px;*/
+/*  }*/
+
+/*  :deep(.n-data-table .n-data-table-tbody .n-data-table-td) {*/
+/*    padding: 0.5rem 0.25rem;*/
+/*    font-size: 0.75rem;*/
+/*  }*/
+
+/*  !* 隱藏部分欄位在小螢幕上 *!*/
+/*  :deep(.n-data-table .n-data-table-th[data-col-key='match_format']),*/
+/*  :deep(.n-data-table .n-data-table-td[data-col-key='match_format']) {*/
+/*    display: none;*/
+/*  }*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 載入和空狀態樣式                                                     *!*/
+/*!* =================================================================== *!*/
+
+/*.table-loading {*/
+/*  opacity: 0.6;*/
+/*  pointer-events: none;*/
+/*  position: relative;*/
+/*}*/
+
+/*.table-loading::after {*/
+/*  content: '';*/
+/*  position: absolute;*/
+/*  top: 0;*/
+/*  left: 0;*/
+/*  right: 0;*/
+/*  bottom: 0;*/
+/*  background: rgba(255, 255, 255, 0.8);*/
+/*  z-index: 10;*/
+/*}*/
+
+/*.table-empty {*/
+/*  text-align: center;*/
+/*  padding: 3rem 1rem;*/
+/*  color: #6b7280;*/
+/*}*/
+
+/*.table-empty .empty-icon {*/
+/*  font-size: 4rem;*/
+/*  margin-bottom: 1rem;*/
+/*  opacity: 0.5;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 動畫效果                                                            *!*/
+/*!* =================================================================== *!*/
+
+/*.table-row-enter-active,*/
+/*.table-row-leave-active {*/
+/*  transition: all 0.3s ease;*/
+/*}*/
+
+/*.table-row-enter-from {*/
+/*  opacity: 0;*/
+/*  transform: translateX(-20px);*/
+/*}*/
+
+/*.table-row-leave-to {*/
+/*  opacity: 0;*/
+/*  transform: translateX(20px);*/
+/*}*/
+
+/*!* 表頭排序指示器動畫 *!*/
+/*:deep(.n-data-table .n-data-table-sorter) {*/
+/*  transition: all 0.3s ease;*/
+/*}*/
+
+/*:deep(.n-data-table .n-data-table-sorter--asc),*/
+/*:deep(.n-data-table .n-data-table-sorter--desc) {*/
+/*  color: #3b82f6 !important;*/
+/*  transform: scale(1.2);*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 自定義滾動條                                                        *!*/
+/*!* =================================================================== *!*/
+
+/*.unified-table ::-webkit-scrollbar {*/
+/*  width: 8px;*/
+/*  height: 8px;*/
+/*}*/
+
+/*.unified-table ::-webkit-scrollbar-track {*/
+/*  background: #f1f5f9;*/
+/*  border-radius: 4px;*/
+/*}*/
+
+/*.unified-table ::-webkit-scrollbar-thumb {*/
+/*  background: linear-gradient(135deg, #3b82f6, #8b5cf6);*/
+/*  border-radius: 4px;*/
+/*}*/
+
+/*.unified-table ::-webkit-scrollbar-thumb:hover {*/
+/*  background: linear-gradient(135deg, #1d4ed8, #7c3aed);*/
+/*}*/
+
+/*.unified-table ::-webkit-scrollbar-corner {*/
+/*  background: #f1f5f9;*/
+/*}*/
+
+/*!* =================================================================== *!*/
+/*!* 工具類別                                                            *!*/
+/*!* =================================================================== *!*/
+
+/*!* 高亮行 *!*/
+/*.table-row-highlight {*/
+/*  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;*/
+/*  animation: highlight-pulse 2s ease-in-out;*/
+/*}*/
+
+/*@keyframes highlight-pulse {*/
+/*  0%,*/
+/*  100% {*/
+/*    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);*/
+/*  }*/
+/*  50% {*/
+/*    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);*/
+/*  }*/
+/*}*/
+
+/*!* 錯誤行 *!*/
+/*.table-row-error {*/
+/*  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;*/
+/*  border-left: 4px solid #ef4444 !important;*/
+/*}*/
+
+/*!* 成功行 *!*/
+/*.table-row-success {*/
+/*  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;*/
+/*  border-left: 4px solid #10b981 !important;*/
+/*}*/
+
+/*!* 緊湊模式 *!*/
+/*.table-compact :deep(.n-data-table .n-data-table-thead .n-data-table-th),*/
+/*.table-compact :deep(.n-data-table .n-data-table-tbody .n-data-table-td) {*/
+/*  padding: 0.5rem 0.75rem;*/
+/*  font-size: 0.8rem;*/
+/*}*/
+
+/*!* 寬鬆模式 *!*/
+/*.table-spacious :deep(.n-data-table .n-data-table-thead .n-data-table-th),*/
+/*.table-spacious :deep(.n-data-table .n-data-table-tbody .n-data-table-td) {*/
+/*  padding: 1.25rem 1rem;*/
+/*  font-size: 0.95rem;*/
+/*}*/

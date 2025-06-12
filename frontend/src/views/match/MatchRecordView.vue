@@ -1,10 +1,5 @@
 <template>
   <div class="record-match-page container-fluid mt-4 mb-5 px-md-4">
-    <n-h1 align="center" class="page-main-title mb-4">
-      <n-icon :component="ClipboardIcon" size="32" class="title-icon" />
-      記錄賽果
-    </n-h1>
-
     <n-card :bordered="false" class="form-card">
       <n-form
         ref="formRef"
@@ -441,7 +436,6 @@
     NFormItemGi,
     NGi,
     NGrid,
-    NH1,
     NH3,
     NIcon,
     NInput,
@@ -457,7 +451,6 @@
     AddOutline as AddIcon,
     ArrowBackOutline as ArrowBackIcon,
     CheckmarkCircleOutline as WinIcon,
-    ClipboardOutline as ClipboardIcon,
     CloseOutline as CloseIcon,
     RemoveOutline as RemoveIcon,
     SaveOutline as SaveIcon,

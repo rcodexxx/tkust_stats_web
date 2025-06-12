@@ -2,26 +2,210 @@
   <div class="match-management-page container mt-4 mb-5 px-md-4">
     <n-h1 class="page-main-title">比賽記錄管理</n-h1>
 
-    <div class="table-actions-header d-flex justify-content-end mb-3">
-      <n-button type="primary" size="small" @click="goToRecordMatchPage">
-        <template #icon>
-          <n-icon :component="AddIcon" />
-        </template>
-        記錄新比賽
-      </n-button>
+    <!-- 頁面操作按鈕 -->
+    <div class="page-actions mb-4">
+      <n-space>
+        <n-button type="primary" size="medium" @click="goToRecordMatchPage">
+          <template #icon>
+            <n-icon :component="AddIcon" />
+          </template>
+          記錄新比賽
+        </n-button>
+        <n-button @click="handleRefreshData" :loading="loading">
+          <template #icon>
+            <n-icon :component="RefreshIcon" />
+          </template>
+          重新整理
+        </n-button>
+      </n-space>
     </div>
 
+    <!-- 進階搜尋區域 -->
+    <div class="search-section">
+      <div class="search-header">
+        <n-button @click="toggleSearchPanel" :type="searchPanelVisible ? 'primary' : 'default'">
+          <template #icon>
+            <n-icon :component="searchPanelVisible ? ChevronUpIcon : SearchIcon" />
+          </template>
+          {{ searchPanelVisible ? '收起搜尋' : '進階搜尋' }}
+          <span v-if="activeFiltersCount > 0" class="filter-count">
+            {{ activeFiltersCount }}
+          </span>
+        </n-button>
+      </div>
+
+      <!-- 搜尋面板 -->
+      <n-collapse-transition :show="searchPanelVisible">
+        <div class="search-panel">
+          <n-form ref="searchFormRef" :model="searchForm" label-placement="left" label-width="100" size="small">
+            <n-grid :cols="24" :x-gap="16" :y-gap="12">
+              <!-- 球員搜尋 -->
+              <n-form-item-gi :span="12" label="球員">
+                <n-select
+                  v-model:value="searchForm.player_ids"
+                  :options="playerOptions"
+                  multiple
+                  filterable
+                  clearable
+                  placeholder="選擇或搜尋球員"
+                  :loading="playersLoading"
+                  @search="handlePlayerSearch"
+                  @update:value="handleFormChange"
+                />
+              </n-form-item-gi>
+
+              <!-- 位置 -->
+              <n-form-item-gi :span="12" label="位置">
+                <n-select
+                  v-model:value="searchForm.player_position"
+                  :options="positionOptions"
+                  clearable
+                  placeholder="選擇位置"
+                  @update:value="handleFormChange"
+                  :disabled="!searchForm.player_ids || searchForm.player_ids.length === 0"
+                />
+              </n-form-item-gi>
+
+              <!-- 比賽類型 -->
+              <n-form-item-gi :span="8" label="類型">
+                <n-select
+                  v-model:value="searchForm.match_type"
+                  :options="matchTypeOptions"
+                  clearable
+                  placeholder="選擇類型"
+                  @update:value="handleFormChange"
+                />
+              </n-form-item-gi>
+
+              <!-- 賽制 -->
+              <n-form-item-gi :span="8" label="賽制">
+                <n-select
+                  v-model:value="searchForm.match_format"
+                  :options="matchFormatOptions"
+                  clearable
+                  placeholder="選擇賽制"
+                  @update:value="handleFormChange"
+                />
+              </n-form-item-gi>
+
+              <!-- 勝方 -->
+              <n-form-item-gi :span="8" label="勝方">
+                <n-select
+                  v-model:value="searchForm.winner_side"
+                  :options="winnerOptions"
+                  clearable
+                  placeholder="選擇勝方"
+                  @update:value="handleFormChange"
+                />
+              </n-form-item-gi>
+
+              <!-- 日期範圍 -->
+              <n-form-item-gi :span="12" label="日期範圍">
+                <n-date-picker
+                  v-model:value="searchForm.dateRange"
+                  type="daterange"
+                  clearable
+                  format="yyyy-MM-dd"
+                  placeholder="選擇日期範圍"
+                  style="width: 100%"
+                  @update:value="handleFormChange"
+                />
+              </n-form-item-gi>
+
+              <!-- 分數差距 -->
+              <n-form-item-gi :span="12" label="分數差距">
+                <n-input-group>
+                  <n-input-number
+                    v-model:value="searchForm.min_score_diff"
+                    placeholder="最小"
+                    :min="0"
+                    :max="20"
+                    style="width: 50%"
+                    @update:value="handleFormChange"
+                  />
+                  <n-input-number
+                    v-model:value="searchForm.max_score_diff"
+                    placeholder="最大"
+                    :min="0"
+                    :max="20"
+                    style="width: 50%"
+                    @update:value="handleFormChange"
+                  />
+                </n-input-group>
+              </n-form-item-gi>
+            </n-grid>
+
+            <!-- 搜尋按鈕 -->
+            <div class="search-actions">
+              <n-space>
+                <n-button type="primary" @click="handleSearch" :loading="searching">
+                  <template #icon>
+                    <n-icon :component="SearchIcon" />
+                  </template>
+                  搜尋
+                </n-button>
+                <n-button @click="handleResetSearch">
+                  <template #icon>
+                    <n-icon :component="RefreshIcon" />
+                  </template>
+                  重置
+                </n-button>
+                <n-button @click="handleExport" v-if="searchExecuted && displayRecords.length > 0">
+                  <template #icon>
+                    <n-icon :component="DownloadIcon" />
+                  </template>
+                  匯出結果
+                </n-button>
+              </n-space>
+            </div>
+          </n-form>
+        </div>
+      </n-collapse-transition>
+
+      <!-- 活躍篩選條件 -->
+      <div v-if="activeFilters.length > 0" class="active-filters">
+        <n-space size="small" align="center">
+          <span class="filter-label">篩選條件:</span>
+          <n-tag
+            v-for="filter in activeFilters"
+            :key="filter.key"
+            closable
+            @close="removeFilter(filter.key)"
+            type="info"
+            size="small"
+          >
+            {{ filter.label }}
+          </n-tag>
+          <n-button size="tiny" text @click="handleResetSearch">清除全部</n-button>
+        </n-space>
+      </div>
+
+      <!-- 搜尋結果統計 -->
+      <div v-if="searchExecuted" class="search-stats">
+        <n-space justify="space-between" align="center">
+          <span class="search-info">
+            找到 {{ totalResults }} 筆記錄
+            <span v-if="activeFiltersCount > 0" class="filter-info">
+              (已套用 {{ activeFiltersCount }} 個篩選條件)
+            </span>
+          </span>
+        </n-space>
+      </div>
+    </div>
+
+    <!-- 錯誤提示 -->
     <div v-if="fetchError" class="mb-3">
       <n-alert title="錯誤" type="error" closable @close="fetchError = null">
         {{ fetchError }}
       </n-alert>
     </div>
 
+    <!-- 比賽記錄表格 -->
     <n-data-table
       :columns="tableColumns"
-      :data="allMatchRecords"
+      :data="displayRecords"
       :loading="loading"
-      :pagination="pagination"
+      :pagination="paginationConfig"
       :bordered="false"
       :bottom-bordered="true"
       :single-line="false"
@@ -31,32 +215,86 @@
       :scroll-x="1200"
       :row-key="row => row.id"
     />
+
+    <!-- 空狀態 -->
+    <n-empty v-if="!loading && displayRecords.length === 0" description="沒有找到比賽記錄" style="margin: 2rem 0">
+      <template #extra>
+        <n-button type="primary" @click="goToRecordMatchPage"> 新增第一場比賽 </n-button>
+      </template>
+    </n-empty>
   </div>
 </template>
 
 <script setup>
-  import { computed, h, onMounted, reactive, ref } from 'vue'
+  import { computed, h, onMounted, reactive, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
-  import { NAlert, NButton, NDataTable, NH1, NIcon, NSpace, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
+  import {
+    NAlert,
+    NButton,
+    NCollapseTransition,
+    NDataTable,
+    NDatePicker,
+    NEmpty,
+    NForm,
+    NFormItemGi,
+    NGrid,
+    NH1,
+    NIcon,
+    NInputGroup,
+    NInputNumber,
+    NSelect,
+    NSpace,
+    NTag,
+    NTooltip,
+    useDialog,
+    useMessage
+  } from 'naive-ui'
   import {
     AddCircleOutline as AddIcon,
+    ChevronUpOutline as ChevronUpIcon,
+    DownloadOutline as DownloadIcon,
     PencilOutline as EditIcon,
+    RefreshOutline as RefreshIcon,
+    SearchOutline as SearchIcon,
     TrashBinOutline as DeleteIcon
   } from '@vicons/ionicons5'
   import apiClient from '@/services/apiClient.js'
   import { format } from 'date-fns'
 
-  // --- Hooks ---
+  // Hooks
   const router = useRouter()
   const dialog = useDialog()
   const message = useMessage()
 
-  // --- 狀態管理 (State) ---
-  const allMatchRecords = ref([])
+  // 基本狀態
   const loading = ref(true)
+  const searching = ref(false)
+  const playersLoading = ref(false)
+  const searchExecuted = ref(false)
+  const searchPanelVisible = ref(false)
   const fetchError = ref(null)
 
-  // --- 表格分頁設定 ---
+  // 數據狀態
+  const allMatchRecords = ref([])
+  const displayRecords = ref([])
+  const totalResults = ref(0)
+  const currentPage = ref(1)
+  const pageSize = ref(15)
+  const playerOptions = ref([])
+
+  // 搜尋表單
+  const searchForm = reactive({
+    player_ids: [],
+    player_position: null,
+    match_type: null,
+    match_format: null,
+    winner_side: null,
+    dateRange: null,
+    min_score_diff: null,
+    max_score_diff: null
+  })
+
+  // 分頁設定
   const pagination = reactive({
     page: 1,
     pageSize: 15,
@@ -64,23 +302,107 @@
     pageSizes: [15, 30, 50, 100]
   })
 
+  // 選項配置
+  const positionOptions = [
+    { label: '前排', value: 'front' },
+    { label: '後排', value: 'back' },
+    { label: '任意位置', value: 'any' }
+  ]
+
   const matchTypeOptions = [
     { label: '雙打', value: 'doubles' },
     { label: '單打', value: 'singles' }
   ]
+
   const matchFormatOptions = [
     { label: '五局制', value: 'games_5' },
     { label: '七局制', value: 'games_7' },
-    {
-      label: '九局制',
-      value: 'games_9'
-    }
+    { label: '九局制', value: 'games_9' }
   ]
 
+  const winnerOptions = [
+    { label: 'A隊', value: 'A' },
+    { label: 'B隊', value: 'B' }
+  ]
+
+  // 輔助函數
   const getMatchTypeDisplay = value => matchTypeOptions.find(opt => opt.value === value)?.label || value
   const getMatchFormatDisplay = value => matchFormatOptions.find(opt => opt.value === value)?.label || value
 
-  // --- 表格欄位定義 ---
+  // 計算屬性
+  const activeFilters = computed(() => {
+    const filters = []
+
+    if (searchForm.player_ids?.length > 0) {
+      const playerNames = searchForm.player_ids
+        .map(id => playerOptions.value.find(p => p.value === id)?.label || id)
+        .join(', ')
+      filters.push({ key: 'player_ids', label: `球員: ${playerNames}` })
+    }
+
+    if (searchForm.player_position) {
+      const positionLabel = positionOptions.find(p => p.value === searchForm.player_position)?.label
+      filters.push({ key: 'player_position', label: `位置: ${positionLabel}` })
+    }
+
+    if (searchForm.match_type) {
+      const typeLabel = matchTypeOptions.find(t => t.value === searchForm.match_type)?.label
+      filters.push({ key: 'match_type', label: `類型: ${typeLabel}` })
+    }
+
+    if (searchForm.match_format) {
+      const formatLabel = matchFormatOptions.find(f => f.value === searchForm.match_format)?.label
+      filters.push({ key: 'match_format', label: `賽制: ${formatLabel}` })
+    }
+
+    if (searchForm.winner_side) {
+      const winnerLabel = winnerOptions.find(w => w.value === searchForm.winner_side)?.label
+      filters.push({ key: 'winner_side', label: `勝方: ${winnerLabel}` })
+    }
+
+    if (searchForm.dateRange?.length === 2) {
+      const [start, end] = searchForm.dateRange
+      const startDate = new Date(start).toLocaleDateString()
+      const endDate = new Date(end).toLocaleDateString()
+      filters.push({ key: 'dateRange', label: `日期: ${startDate} ~ ${endDate}` })
+    }
+
+    if (searchForm.min_score_diff !== null || searchForm.max_score_diff !== null) {
+      const min = searchForm.min_score_diff ?? '不限'
+      const max = searchForm.max_score_diff ?? '不限'
+      filters.push({ key: 'score_diff', label: `分差: ${min} ~ ${max}` })
+    }
+
+    return filters
+  })
+
+  const activeFiltersCount = computed(() => activeFilters.value.length)
+
+  // 分頁配置
+  const paginationConfig = computed(() => ({
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    itemCount: totalResults.value,
+    showSizePicker: true,
+    pageSizes: [10, 15, 20, 50],
+    showQuickJumper: true,
+    prefix: ({ itemCount }) => `共 ${itemCount} 項`,
+    onUpdatePage: page => {
+      handlePageChange(page)
+    },
+    onUpdatePageSize: newPageSize => {
+      pageSize.value = newPageSize
+      currentPage.value = 1
+      if (searchExecuted.value) {
+        handleSearch()
+      } else {
+        pagination.pageSize = newPageSize
+        pagination.page = 1
+      }
+    }
+  }))
+
+  // 表格欄位定義
   const tableColumns = computed(() => [
     {
       title: '比賽日期',
@@ -95,21 +417,23 @@
       children: [
         {
           title: '後排',
-          key: 'player2',
+          key: 'player1',
           width: 120,
           ellipsis: { tooltip: true },
           render: row => {
-            // 如果是單打，顯示 "-"
             if (!row.player1) return '-'
             return row.player1.name
           }
         },
         {
           title: '前排',
-          key: 'player1',
+          key: 'player2',
           width: 120,
           ellipsis: { tooltip: true },
-          render: row => row.player2?.name || 'N/A'
+          render: row => {
+            if (!row.player2) return '-'
+            return row.player2.name
+          }
         }
       ]
     },
@@ -126,21 +450,23 @@
       children: [
         {
           title: '後排',
-          key: 'player4',
+          key: 'player3',
           width: 120,
           ellipsis: { tooltip: true },
           render: row => {
-            // 如果是單打，顯示 "-"
             if (!row.player3) return '-'
             return row.player3.name
           }
         },
         {
           title: '前排',
-          key: 'player3',
+          key: 'player4',
           width: 120,
           ellipsis: { tooltip: true },
-          render: row => row.player4?.name || 'N/A'
+          render: row => {
+            if (!row.player4) return '-'
+            return row.player4.name
+          }
         }
       ]
     },
@@ -151,9 +477,9 @@
       align: 'center',
       render(row) {
         let outcomeTag = null
-        if (row.side_a_outcome === 'WIN') {
+        if (row.side_a_outcome === 'win') {
           outcomeTag = h(NTag, { type: 'success', size: 'tiny', round: true }, { default: () => 'A勝' })
-        } else if (row.side_a_outcome === 'LOSS') {
+        } else if (row.side_a_outcome === 'loss') {
           outcomeTag = h(NTag, { type: 'error', size: 'tiny', round: true }, { default: () => 'B勝' })
         }
 
@@ -223,13 +549,186 @@
     }
   ])
 
-  // --- 方法 (Methods) ---
+  // 監聽球員選擇變更
+  watch(
+    () => searchForm.player_ids,
+    newIds => {
+      if (!newIds || newIds.length === 0) {
+        searchForm.player_position = null
+      }
+    }
+  )
+
+  // 方法
+  const toggleSearchPanel = () => {
+    searchPanelVisible.value = !searchPanelVisible.value
+  }
+
+  const handlePlayerSearch = async query => {
+    if (!query) return
+
+    playersLoading.value = true
+    try {
+      const response = await apiClient.get(`/members?name=${encodeURIComponent(query)}`)
+
+      playerOptions.value = response.data.map(member => ({
+        label: member.name,
+        value: member.id
+      }))
+    } catch (error) {
+      console.error('搜尋球員失敗:', error)
+      message.error('搜尋球員失敗')
+    } finally {
+      playersLoading.value = false
+    }
+  }
+
+  const handleFormChange = () => {
+    // 如果需要自動搜尋，可以在這裡加入邏輯
+  }
+
+  const buildSearchParams = () => {
+    const params = {
+      page: currentPage.value,
+      per_page: pageSize.value
+    }
+
+    if (searchForm.player_ids?.length > 0) {
+      params.player_ids = searchForm.player_ids.join(',')
+    }
+
+    if (searchForm.player_position) {
+      params.player_position = searchForm.player_position
+    }
+
+    if (searchForm.match_type) {
+      params.match_type = searchForm.match_type
+    }
+
+    if (searchForm.match_format) {
+      params.match_format = searchForm.match_format
+    }
+
+    if (searchForm.winner_side) {
+      params.winner_side = searchForm.winner_side
+    }
+
+    if (searchForm.dateRange?.length === 2) {
+      params.date_from = new Date(searchForm.dateRange[0]).toISOString().split('T')[0]
+      params.date_to = new Date(searchForm.dateRange[1]).toISOString().split('T')[0]
+    }
+
+    if (searchForm.min_score_diff !== null) {
+      params.min_score_diff = searchForm.min_score_diff
+    }
+
+    if (searchForm.max_score_diff !== null) {
+      params.max_score_diff = searchForm.max_score_diff
+    }
+
+    return params
+  }
+
+  const handleSearch = async () => {
+    searching.value = true
+
+    try {
+      const params = buildSearchParams()
+      const queryString = new URLSearchParams(params).toString()
+
+      const response = await apiClient.get(`/match-records/search?${queryString}`)
+
+      displayRecords.value = response.data.records || []
+      totalResults.value = response.data.pagination?.total || 0
+      currentPage.value = response.data.pagination?.current_page || 1
+      searchExecuted.value = true
+
+      message.success(`找到 ${totalResults.value} 筆符合條件的記錄`)
+    } catch (error) {
+      console.error('搜尋失敗:', error)
+      message.error('搜尋失敗，請稍後再試')
+      fetchError.value = error.response?.data?.message || '搜尋失敗'
+    } finally {
+      searching.value = false
+    }
+  }
+
+  const handleResetSearch = () => {
+    Object.keys(searchForm).forEach(key => {
+      if (Array.isArray(searchForm[key])) {
+        searchForm[key] = []
+      } else {
+        searchForm[key] = null
+      }
+    })
+
+    searchExecuted.value = false
+    totalResults.value = 0
+    currentPage.value = 1
+
+    // 回到顯示所有記錄
+    displayRecords.value = allMatchRecords.value
+    totalResults.value = allMatchRecords.value.length
+
+    message.info('搜尋條件已重置')
+  }
+
+  const removeFilter = filterKey => {
+    switch (filterKey) {
+      case 'player_ids':
+        searchForm.player_ids = []
+        break
+      case 'player_position':
+        searchForm.player_position = null
+        break
+      case 'match_type':
+        searchForm.match_type = null
+        break
+      case 'match_format':
+        searchForm.match_format = null
+        break
+      case 'winner_side':
+        searchForm.winner_side = null
+        break
+      case 'dateRange':
+        searchForm.dateRange = null
+        break
+      case 'score_diff':
+        searchForm.min_score_diff = null
+        searchForm.max_score_diff = null
+        break
+    }
+
+    // 自動重新搜尋
+    if (searchExecuted.value) {
+      handleSearch()
+    }
+  }
+
+  const handlePageChange = page => {
+    currentPage.value = page
+    if (searchExecuted.value) {
+      handleSearch()
+    } else {
+      pagination.page = page
+    }
+  }
+
+  const handleExport = () => {
+    const params = buildSearchParams()
+    message.info('匯出功能開發中...')
+    console.log('匯出參數:', params)
+  }
+
+  // 原有的方法
   async function fetchMatchRecords() {
     loading.value = true
     fetchError.value = null
     try {
       const response = await apiClient.get('/match-records')
       allMatchRecords.value = response.data || []
+      displayRecords.value = allMatchRecords.value
+      totalResults.value = allMatchRecords.value.length
     } catch (err) {
       fetchError.value = err.response?.data?.message || '無法載入比賽記錄。'
     } finally {
@@ -237,28 +736,33 @@
     }
   }
 
+  const handleRefreshData = () => {
+    if (searchExecuted.value) {
+      handleSearch()
+    } else {
+      fetchMatchRecords()
+    }
+  }
+
   function goToRecordMatchPage() {
-    // 跳轉到您之前建立的「記錄賽果」頁面
     router.push({ name: 'RecordMatch' })
   }
 
   function editMatchRecord(recordId) {
-    // 未來您可以建立一個「編輯比賽記錄」的頁面
     message.info(`編輯功能待開發，目標 ID: ${recordId}`)
-    // router.push({ name: 'EditMatchRecord', params: { id: recordId } });
   }
 
   function confirmDeleteMatch(record) {
     dialog.error({
       title: '確認刪除比賽記錄',
-      // content: `您確定要刪除這場比賽記錄嗎？`,
+      content: `您確定要刪除這場比賽記錄嗎？`,
       positiveText: '確認刪除',
       negativeText: '取消',
       onPositiveClick: async () => {
         try {
           await apiClient.delete(`/match-records/${record.id}`)
           message.success(`比賽記錄 #${record.id} 已成功刪除。`)
-          await fetchMatchRecords() // 重新獲取列表
+          await handleRefreshData()
         } catch (err) {
           message.error(err.response?.data?.message || `刪除失敗。`)
         }
@@ -266,60 +770,390 @@
     })
   }
 
-  // --- 生命週期鉤子 (Lifecycle Hooks) ---
-  onMounted(fetchMatchRecords)
+  // 載入球員選項
+  const loadPlayers = async () => {
+    try {
+      const response = await apiClient.get('/members?all=false&sort_by=name&sort_order=asc')
+
+      playerOptions.value = response.data.map(member => ({
+        label: member.name,
+        value: member.id
+      }))
+    } catch (error) {
+      console.error('載入球員列表失敗:', error)
+    }
+  }
+
+  // 生命週期
+  onMounted(() => {
+    fetchMatchRecords()
+    loadPlayers()
+  })
 </script>
 
 <style scoped>
-  /* 頁面和表格的基本樣式 */
+  /* === 品牌色彩系統（任天堂風格紅色） === */
+  :root {
+    --brand-primary: #e53e3e;
+    --brand-secondary: #c53030;
+    --brand-light: #fed7d7;
+    --brand-dark: #9b2c2c;
+  }
+
+  /* === 主要容器和佈局 === */
   .match-management-page {
-    max-width: 1200px; /* 您可以根據喜好調整寬度 */
-    margin: 2rem auto;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    min-height: 100vh;
   }
 
   .page-main-title {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #2c3e50;
+    text-align: center;
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
   }
 
-  /* 自定義表格樣式 */
+  .page-main-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+    border-radius: 2px;
+  }
+
+  /* === 頁面操作按鈕區域 === */
+  .page-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .page-actions .n-button {
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .page-actions .n-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* === 搜尋區域樣式 === */
+  .search-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  .search-header .n-button {
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .filter-count {
+    background: var(--brand-primary);
+    color: white;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 700;
+  }
+
+  /* === 搜尋面板 === */
+  .search-panel {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .search-panel .n-form-item {
+    margin-bottom: 1.25rem;
+  }
+
+  /* === 搜尋操作按鈕 === */
+  .search-actions {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .search-actions .n-button {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .search-actions .n-button:hover {
+    transform: translateY(-1px);
+  }
+
+  /* === 活躍篩選條件 === */
+  .active-filters {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-top: 1.5rem;
+    border: 1px solid #cbd5e1;
+  }
+
+  .filter-label {
+    font-weight: 700;
+    color: #475569;
+    margin-right: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .active-filters .n-tag {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-weight: 500;
+    border-radius: 6px;
+    margin: 0.25rem;
+    transition: all 0.2s ease;
+  }
+
+  .active-filters .n-tag:hover {
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+  }
+
+  /* === 搜尋結果統計 === */
+  .search-stats {
+    background: #f0f9ff;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    border: 1px solid #bae6fd;
+    margin-top: 1rem;
+  }
+
+  .search-info {
+    font-weight: 600;
+    color: #0369a1;
+    font-size: 1rem;
+  }
+
+  .filter-info {
+    color: #0284c7;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  /* === 簡潔表格樣式 === */
+  .n-data-table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+  }
+
+  /* 統一的表格標題列樣式 - 簡潔灰色 */
   .n-data-table .n-data-table-thead .n-data-table-th {
     background-color: #f8fafc;
     font-weight: 600;
     color: #374151;
-  }
-
-  /* Team A 和 Team B 的父表頭樣式 */
-  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_a'],
-  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_b'] {
-    background-color: #e5e7eb;
-    font-weight: 700;
+    font-size: 0.875rem;
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
     text-align: center;
   }
 
-  /* VS 欄位特殊樣式 */
+  /* 移除過多的顏色區分，使用邊框區分即可 */
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_a'] {
+    background-color: #f8fafc;
+    color: #374151;
+    font-weight: 700;
+    border-right: 2px solid var(--brand-primary);
+  }
+
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='team_b'] {
+    background-color: #f8fafc;
+    color: #374151;
+    font-weight: 700;
+    border-left: 2px solid var(--brand-primary);
+  }
+
   .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='vs'] {
-    background-color: #3b82f6;
+    background-color: var(--brand-primary);
     color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
   }
 
-  /* 前排/後排子表頭 */
+  /* 子表頭樣式 - 保持一致性 */
   .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player1'],
-  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player2'] {
-    background-color: #dbeafe;
-    color: #1e40af;
-  }
-
+  .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player2'],
   .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player3'],
   .n-data-table .n-data-table-thead .n-data-table-th[data-col-key='player4'] {
-    background-color: #fef3c7;
-    color: #92400e;
+    background-color: #f8fafc;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.8rem;
   }
 
-  /* 響應式調整 */
+  /* 表格行樣式 - 簡潔設計 */
+  .n-data-table .n-data-table-tbody .n-data-table-tr {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .n-data-table .n-data-table-tbody .n-data-table-tr:hover {
+    background-color: #f8fafc;
+  }
+
+  .n-data-table .n-data-table-tbody .n-data-table-td {
+    padding: 0.875rem 0.75rem;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+  }
+
+  /* 比分欄位樣式 */
+  .n-data-table .n-data-table-tbody .n-data-table-td[data-col-key='score'] {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* === 空狀態樣式 === */
+  .n-empty {
+    padding: 3rem 2rem;
+    background: white;
+    border-radius: 8px;
+    margin: 2rem 0;
+    border: 1px dashed #cbd5e1;
+  }
+
+  .n-empty .n-empty__description {
+    color: #6b7280;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  /* === 主要按鈕使用品牌色 === */
+  .n-button--primary {
+    background-color: var(--brand-primary) !important;
+    border-color: var(--brand-primary) !important;
+  }
+
+  .n-button--primary:hover {
+    background-color: var(--brand-secondary) !important;
+    border-color: var(--brand-secondary) !important;
+  }
+
+  /* === 載入動畫 === */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .search-section,
+  .n-data-table {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  /* === 響應式設計 === */
+  @media (max-width: 1200px) {
+    .match-management-page {
+      padding: 1.5rem;
+    }
+  }
+
   @media (max-width: 768px) {
+    .match-management-page {
+      padding: 1rem;
+    }
+
+    .page-main-title {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .page-actions {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .search-section {
+      padding: 1.5rem;
+    }
+
+    .search-panel {
+      padding: 1.5rem;
+    }
+
+    .search-actions {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .active-filters {
+      padding: 1rem;
+    }
+
     .n-data-table .n-data-table-thead .n-data-table-th {
-      font-size: 0.8rem;
-      padding: 8px 4px;
+      font-size: 0.75rem;
+      padding: 0.75rem 0.5rem;
+    }
+
+    .n-data-table .n-data-table-tbody .n-data-table-td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page-main-title {
+      font-size: 1.75rem;
+    }
+
+    .search-section {
+      padding: 1rem;
+    }
+
+    .search-panel {
+      padding: 1rem;
     }
   }
 </style>

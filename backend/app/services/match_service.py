@@ -1,12 +1,13 @@
 # your_project/app/services/match_service.py
 from flask import current_app
+from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 
-from .rating_service import RatingService  # 導入評分服務
 from ..extensions import db
-from ..models import Match, MatchRecord  # 導入 Match 和 MatchRecord
+from ..models import Match, MatchRecord, Member  # 導入 Match 和 MatchRecord
 from ..models.enums.match_enums import MatchOutcomeEnum
 from ..tools.exceptions import AppException, ValidationError
+from .rating_service import RatingService  # 導入評分服務
 
 
 class MatchRecordService:
@@ -43,7 +44,9 @@ class MatchRecordService:
                 b_games=data["b_games"],
             )
             # 根據 a_games 和 b_games 計算 side_a_outcome
-            new_record.side_a_outcome = MatchRecordService._calculate_outcome(new_record.a_games, new_record.b_games)
+            new_record.side_a_outcome = MatchRecordService._calculate_outcome(
+                new_record.a_games, new_record.b_games
+            )
             db.session.add(new_record)
 
             # 3. 呼叫 RatingService 更新評分
@@ -88,7 +91,14 @@ class MatchRecordService:
 
         # 獲取所有受影響的球員 ID
         affected_player_ids = [
-            p_id for p_id in [record.player1_id, record.player2_id, record.player3_id, record.player4_id] if p_id
+            p_id
+            for p_id in [
+                record.player1_id,
+                record.player2_id,
+                record.player3_id,
+                record.player4_id,
+            ]
+            if p_id
         ]
 
         try:
@@ -102,5 +112,125 @@ class MatchRecordService:
             return True
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"刪除比賽記錄 ID {record.id} 時出錯: {e}", exc_info=True)
+            current_app.logger.error(
+                f"刪除比賽記錄 ID {record.id} 時出錯: {e}", exc_info=True
+            )
             raise AppException("刪除比賽記錄時發生未預期錯誤。")
+
+    @staticmethod
+    def search_match_records(filters: dict, page: int = 1, per_page: int = 15):
+        """
+        根據篩選條件搜尋比賽記錄
+        """
+        try:
+            # 基礎查詢，包含預載入
+            query = MatchRecord.query.options(
+                joinedload(MatchRecord.player1).joinedload(Member.organization),
+                joinedload(MatchRecord.player2).joinedload(Member.organization),
+                joinedload(MatchRecord.player3).joinedload(Member.organization),
+                joinedload(MatchRecord.player4).joinedload(Member.organization),
+                joinedload(MatchRecord.match),
+            )
+
+            # 球員篩選
+            if filters.get("player_ids"):
+                player_ids = filters["player_ids"]
+                # 搜尋任何一個位置包含這些球員的比賽
+                player_conditions = or_(
+                    MatchRecord.player1_id.in_(player_ids),
+                    MatchRecord.player2_id.in_(player_ids),
+                    MatchRecord.player3_id.in_(player_ids),
+                    MatchRecord.player4_id.in_(player_ids),
+                )
+                query = query.filter(player_conditions)
+
+            # 位置篩選（需要與球員ID一起使用）
+            if filters.get("player_position") and filters.get("player_ids"):
+                position = filters["player_position"]
+                player_ids = filters["player_ids"]
+
+                if position == "front":
+                    # 前排位置（player1 和 player3）
+                    position_conditions = or_(
+                        MatchRecord.player1_id.in_(player_ids),
+                        MatchRecord.player3_id.in_(player_ids),
+                    )
+                elif position == "back":
+                    # 後排位置（player2 和 player4）
+                    position_conditions = or_(
+                        MatchRecord.player2_id.in_(player_ids),
+                        MatchRecord.player4_id.in_(player_ids),
+                    )
+                else:  # any position
+                    position_conditions = or_(
+                        MatchRecord.player1_id.in_(player_ids),
+                        MatchRecord.player2_id.in_(player_ids),
+                        MatchRecord.player3_id.in_(player_ids),
+                        MatchRecord.player4_id.in_(player_ids),
+                    )
+                query = query.filter(position_conditions)
+
+            # 比賽類型篩選（通過關聯的 Match 表）
+            if filters.get("match_type"):
+                query = query.join(Match).filter(
+                    Match.match_type == filters["match_type"]
+                )
+
+            # 賽制篩選
+            if filters.get("match_format"):
+                query = query.join(Match).filter(
+                    Match.match_format == filters["match_format"]
+                )
+
+            # 勝方篩選
+            if filters.get("winner_side"):
+                if filters["winner_side"] == "A":
+                    query = query.filter(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN
+                    )
+                elif filters["winner_side"] == "B":
+                    query = query.filter(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS
+                    )
+
+            # 日期範圍篩選
+            if filters.get("date_from"):
+                query = query.join(Match).filter(
+                    Match.match_date >= filters["date_from"]
+                )
+
+            if filters.get("date_to"):
+                query = query.join(Match).filter(Match.match_date <= filters["date_to"])
+
+            # 分數差距篩選
+            if filters.get("min_score_diff") is not None:
+                score_diff = func.abs(MatchRecord.a_games - MatchRecord.b_games)
+                query = query.filter(score_diff >= filters["min_score_diff"])
+
+            if filters.get("max_score_diff") is not None:
+                score_diff = func.abs(MatchRecord.a_games - MatchRecord.b_games)
+                query = query.filter(score_diff <= filters["max_score_diff"])
+
+            # 排序（最新的在前）
+            query = query.join(Match).order_by(
+                Match.match_date.desc(), MatchRecord.id.desc()
+            )
+
+            # 分頁
+            paginated_result = query.paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+
+            return {
+                "records": paginated_result.items,
+                "total": paginated_result.total,
+                "pages": paginated_result.pages,
+                "current_page": paginated_result.page,
+                "per_page": paginated_result.per_page,
+                "has_next": paginated_result.has_next,
+                "has_prev": paginated_result.has_prev,
+            }
+
+        except Exception as e:
+            current_app.logger.error(f"搜尋比賽記錄時出錯: {e}", exc_info=True)
+            raise AppException("搜尋比賽記錄時發生錯誤。")
