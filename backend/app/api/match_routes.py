@@ -1,9 +1,15 @@
-# backend/app/api/match_record_routes.py
+# backend/app/api/match_routes.py
 from flask import current_app, jsonify, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError as MarshmallowValidationError
 
-from ..schemas.match_schemas import MatchRecordCreateSchema, MatchRecordResponseSchema
+from ..schemas.match_schemas import (
+    MatchBasicSchema,
+    MatchQuerySchema,
+    MatchRecordCreateSchema,
+    MatchRecordResponseSchema,
+    MatchUpdateSchema,
+)
 from ..services.match_service import MatchRecordService
 from ..tools.exceptions import AppException, ValidationError
 from . import api_bp
@@ -12,6 +18,9 @@ from . import api_bp
 create_schema = MatchRecordCreateSchema()
 response_schema = MatchRecordResponseSchema()
 responses_schema = MatchRecordResponseSchema(many=True)
+update_schema = MatchUpdateSchema()
+query_schema = MatchQuerySchema()
+basic_schema = MatchBasicSchema()
 
 
 @api_bp.route("/match-records", methods=["POST"])
@@ -19,13 +28,11 @@ responses_schema = MatchRecordResponseSchema(many=True)
 def create_match_record():
     """
     創建一場新的比賽記錄。
-    此路由取代了舊的 /matches/record。
+    包含所有新增的場地、時間、時長等資訊。
     """
     json_data = request.get_json()
     if not json_data:
-        return jsonify(
-            {"error": "missing_json", "message": "缺少 JSON 請求內容。"}
-        ), 400
+        return jsonify({"error": "missing_json", "message": "缺少 JSON 請求內容。"}), 400
 
     try:
         # 1. 使用 Schema 驗證請求數據
@@ -47,37 +54,59 @@ def create_match_record():
 
     except MarshmallowValidationError as err:
         # 處理 Schema 驗證失敗的錯誤
-        return jsonify(
-            {
-                "error": "validation_error",
-                "message": "輸入數據有誤。",
-                "details": err.messages,
-            }
-        ), 400
+        return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
     except (ValidationError, AppException) as e:
         # 處理服務層拋出的自訂業務異常
-        return jsonify(
-            e.to_dict() if hasattr(e, "to_dict") else {"error": str(e)}
-        ), getattr(e, "status_code", 400)
+        return jsonify(e.to_dict() if hasattr(e, "to_dict") else {"error": str(e)}), getattr(e, "status_code", 400)
     except Exception as e:
         # 處理未預期的伺服器錯誤
         current_app.logger.error(f"創建比賽記錄時發生錯誤: {e}", exc_info=True)
-        return jsonify(
-            {"error": "server_error", "message": "創建比賽記錄時發生未預期錯誤。"}
-        ), 500
+        return jsonify({"error": "server_error", "message": "創建比賽記錄時發生未預期錯誤。"}), 500
 
 
 @api_bp.route("/match-records", methods=["GET"])
 def get_all_match_records():
-    """獲取比賽記錄列表。"""
+    """
+    獲取比賽記錄列表，支援篩選、排序和分頁。
+    支援的查詢參數：
+    - start_date, end_date: 日期範圍
+    - match_type, match_format: 比賽類型和賽制
+    - court_surface, court_environment, time_slot: 場地相關
+    - player_id: 球員篩選
+    - page, per_page: 分頁
+    - sort_by, sort_order: 排序
+    """
     try:
-        records = MatchRecordService.get_all_match_records(request.args)
-        return jsonify(responses_schema.dump(records)), 200
+        # 驗證查詢參數
+        try:
+            query_params = query_schema.load(request.args)
+        except MarshmallowValidationError as err:
+            return jsonify({"error": "validation_error", "message": "查詢參數有誤。", "details": err.messages}), 400
+
+        # 獲取記錄（可能包含分頁資訊）
+        result = MatchRecordService.get_all_match_records(query_params)
+
+        # 檢查是否有分頁資訊
+        if isinstance(result, dict) and 'items' in result:
+            # 有分頁的回應
+            return jsonify({
+                "match_records": responses_schema.dump(result['items']),
+                "pagination": {
+                    "total": result['total'],
+                    "page": result['page'],
+                    "per_page": result['per_page'],
+                    "pages": result['pages'],
+                    "has_next": result['has_next'],
+                    "has_prev": result['has_prev'],
+                }
+            }), 200
+        else:
+            # 沒有分頁的回應（向後相容）
+            return jsonify({"match_records": responses_schema.dump(result)}), 200
+
     except Exception as e:
         current_app.logger.error(f"獲取比賽記錄列表時發生錯誤: {e}", exc_info=True)
-        return jsonify(
-            {"error": "server_error", "message": "獲取列表時發生錯誤。"}
-        ), 500
+        return jsonify({"error": "server_error", "message": "獲取列表時發生錯誤。"}), 500
 
 
 @api_bp.route("/match-records/<int:record_id>", methods=["GET"])
@@ -86,138 +115,155 @@ def get_single_match_record(record_id):
     try:
         record = MatchRecordService.get_match_record_by_id(record_id)
         if not record:
-            return jsonify(
-                {"error": "not_found", "message": "找不到指定的比賽記錄。"}
-            ), 404
-        return jsonify(response_schema.dump(record)), 200
+            return jsonify({"error": "not_found", "message": "找不到指定的比賽記錄。"}), 404
+        return jsonify({"match_record": response_schema.dump(record)}), 200
     except Exception as e:
-        current_app.logger.error(
-            f"獲取比賽記錄 ID {record_id} 時發生錯誤: {e}", exc_info=True
-        )
-        return jsonify(
-            {"error": "server_error", "message": "獲取記錄時發生錯誤。"}
-        ), 500
+        current_app.logger.error(f"獲取比賽記錄 ID {record_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取記錄時發生錯誤。"}), 500
+
+
+@api_bp.route("/match-records/<int:record_id>", methods=["PUT"])
+@jwt_required()
+def update_match_record(record_id):
+    """
+    更新比賽記錄。
+    可以更新比賽的基本資訊、場地資訊、比分等。
+    """
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify({"error": "missing_json", "message": "缺少 JSON 請求內容。"}), 400
+
+    try:
+        # 驗證更新數據
+        validated_data = update_schema.load(json_data)
+
+        # 執行更新
+        updated_record = MatchRecordService.update_match_record(record_id, validated_data)
+
+        return jsonify({
+            "message": "比賽記錄已成功更新。",
+            "match_record": response_schema.dump(updated_record)
+        }), 200
+
+    except MarshmallowValidationError as err:
+        return jsonify({"error": "validation_error", "message": "輸入數據有誤。", "details": err.messages}), 400
+    except AppException as e:
+        return jsonify(e.to_dict() if hasattr(e, "to_dict") else {"error": str(e)}), getattr(e, "status_code", 400)
+    except Exception as e:
+        current_app.logger.error(f"更新比賽記錄 ID {record_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "更新比賽記錄時發生錯誤。"}), 500
 
 
 @api_bp.route("/match-records/<int:record_id>", methods=["DELETE"])
 @jwt_required()
 def delete_match_record(record_id):
     """刪除一場比賽記錄，並觸發相關球員評分的重新計算。"""
-
     record = MatchRecordService.get_match_record_by_id(record_id)
     if not record:
-        return jsonify(
-            {"error": "not_found", "message": "找不到要刪除的比賽記錄。"}
-        ), 404
+        return jsonify({"error": "not_found", "message": "找不到要刪除的比賽記錄。"}), 404
 
     try:
         MatchRecordService.delete_match_record(record)
         return jsonify({"message": "比賽記錄已成功刪除，相關球員評分已更新。"}), 200
     except AppException as e:
-        return jsonify(e.to_dict()), e.status_code
+        return jsonify(e.to_dict() if hasattr(e, "to_dict") else {"error": str(e)}), getattr(e, "status_code", 400)
     except Exception as e:
-        current_app.logger.error(
-            f"刪除比賽記錄 ID {record_id} 時發生錯誤: {e}", exc_info=True
-        )
-        return jsonify(
-            {"error": "server_error", "message": "刪除比賽記錄時發生錯誤。"}
-        ), 500
+        current_app.logger.error(f"刪除比賽記錄 ID {record_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "刪除比賽記錄時發生錯誤。"}), 500
 
 
-@api_bp.route("/match-records/search", methods=["GET"])
-def search_match_records():
+@api_bp.route("/match-records/statistics", methods=["GET"])
+def get_match_statistics():
     """
-    搜尋比賽記錄
-    支援多種篩選條件：球員、位置、比賽類型、賽制、勝方、日期範圍、分數差距等
+    獲取比賽統計資訊。
+    支援與列表相同的篩選參數來計算特定條件下的統計。
     """
     try:
-        # 獲取查詢參數
-        filters = {}
-
-        # 球員ID列表（可以是多個，用逗號分隔）
-        if request.args.get("player_ids"):
-            try:
-                player_ids_str = request.args.get("player_ids")
-                filters["player_ids"] = [
-                    int(id.strip()) for id in player_ids_str.split(",") if id.strip()
-                ]
-            except ValueError:
-                return jsonify(
-                    {"error": "validation_error", "message": "球員ID格式不正確"}
-                ), 400
-
-        # 其他篩選條件
-        if request.args.get("player_position"):
-            filters["player_position"] = request.args.get("player_position")
-
-        if request.args.get("match_type"):
-            filters["match_type"] = request.args.get("match_type")
-
-        if request.args.get("match_format"):
-            filters["match_format"] = request.args.get("match_format")
-
-        if request.args.get("winner_side"):
-            filters["winner_side"] = request.args.get("winner_side")
-
-        if request.args.get("date_from"):
-            filters["date_from"] = request.args.get("date_from")
-
-        if request.args.get("date_to"):
-            filters["date_to"] = request.args.get("date_to")
-
-        # 分數差距
-        if request.args.get("min_score_diff"):
-            try:
-                filters["min_score_diff"] = int(request.args.get("min_score_diff"))
-            except ValueError:
-                return jsonify(
-                    {"error": "validation_error", "message": "最小分數差距必須是數字"}
-                ), 400
-
-        if request.args.get("max_score_diff"):
-            try:
-                filters["max_score_diff"] = int(request.args.get("max_score_diff"))
-            except ValueError:
-                return jsonify(
-                    {"error": "validation_error", "message": "最大分數差距必須是數字"}
-                ), 400
-
-        # 分頁參數
+        # 驗證查詢參數（重用查詢 schema）
         try:
-            page = int(request.args.get("page", 1))
-            per_page = min(
-                int(request.args.get("per_page", 15)), 100
-            )  # 限制最大每頁數量
-        except ValueError:
-            return jsonify(
-                {"error": "validation_error", "message": "分頁參數必須是數字"}
-            ), 400
+            query_params = query_schema.load(request.args)
+        except MarshmallowValidationError as err:
+            return jsonify({"error": "validation_error", "message": "查詢參數有誤。", "details": err.messages}), 400
 
-        # 執行搜尋
-        result = MatchRecordService.search_match_records(filters, page, per_page)
+        # 獲取統計資訊
+        statistics = MatchRecordService.get_match_statistics(query_params)
 
-        # 序列化結果 - 使用現有的 responses_schema
-        serialized_records = responses_schema.dump(result["records"])
+        return jsonify({
+            "statistics": statistics,
+            "filters_applied": query_params
+        }), 200
 
-        return jsonify(
-            {
-                "records": serialized_records,
-                "pagination": {
-                    "total": result["total"],
-                    "pages": result["pages"],
-                    "current_page": result["current_page"],
-                    "per_page": result["per_page"],
-                    "has_next": result["has_next"],
-                    "has_prev": result["has_prev"],
-                },
-                "filters_applied": filters,
-            }
-        ), 200
-
-    except AppException as e:
-        return jsonify(e.to_dict()), e.status_code
     except Exception as e:
-        current_app.logger.error(f"搜尋比賽記錄時發生錯誤: {e}", exc_info=True)
-        return jsonify(
-            {"error": "server_error", "message": "搜尋時發生未預期錯誤。"}
-        ), 500
+        current_app.logger.error(f"獲取比賽統計時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取統計資訊時發生錯誤。"}), 500
+
+
+# --- 附加的實用 API 端點 ---
+
+@api_bp.route("/match-records/recent", methods=["GET"])
+def get_recent_matches():
+    """獲取最近的比賽記錄（簡化版本）"""
+    try:
+        limit = min(int(request.args.get('limit', 10)), 50)  # 限制最多50筆
+
+        result = MatchRecordService.get_all_match_records({
+            'per_page': limit,
+            'page': 1,
+            'sort_by': 'match_date',
+            'sort_order': 'desc'
+        })
+
+        # 使用基本 schema 減少資料量
+        if isinstance(result, dict) and 'items' in result:
+            matches = [record.match for record in result['items'] if record.match]
+            return jsonify({
+                "recent_matches": [basic_schema.dump(match) for match in matches]
+            }), 200
+        else:
+            matches = [record.match for record in result if record.match]
+            return jsonify({
+                "recent_matches": [basic_schema.dump(match) for match in matches]
+            }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"獲取最近比賽時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取最近比賽時發生錯誤。"}), 500
+
+
+@api_bp.route("/match-records/player/<int:player_id>", methods=["GET"])
+def get_player_match_history(player_id):
+    """獲取特定球員的比賽歷史"""
+    try:
+        # 驗證查詢參數
+        try:
+            query_params = query_schema.load(request.args)
+        except MarshmallowValidationError as err:
+            return jsonify({"error": "validation_error", "message": "查詢參數有誤。", "details": err.messages}), 400
+
+        # 強制設定 player_id
+        query_params['player_id'] = player_id
+
+        result = MatchRecordService.get_all_match_records(query_params)
+
+        if isinstance(result, dict) and 'items' in result:
+            return jsonify({
+                "match_records": responses_schema.dump(result['items']),
+                "pagination": {
+                    "total": result['total'],
+                    "page": result['page'],
+                    "per_page": result['per_page'],
+                    "pages": result['pages'],
+                    "has_next": result['has_next'],
+                    "has_prev": result['has_prev'],
+                },
+                "player_id": player_id
+            }), 200
+        else:
+            return jsonify({
+                "match_records": responses_schema.dump(result),
+                "player_id": player_id
+            }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"獲取球員 {player_id} 比賽歷史時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "獲取球員比賽歷史時發生錯誤。"}), 500

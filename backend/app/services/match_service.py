@@ -1,10 +1,10 @@
-# your_project/app/services/match_service.py
+# backend/app/services/match_service.py
 from flask import current_app
-from sqlalchemy import and_, func, or_
+from sqlalchemy import asc, desc, or_
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models import Match, MatchRecord, Member  # 導入 Match 和 MatchRecord
+from ..models import Match, MatchRecord
 from ..models.enums.match_enums import MatchOutcomeEnum
 from ..tools.exceptions import AppException, ValidationError
 from .rating_service import RatingService  # 導入評分服務
@@ -28,8 +28,13 @@ class MatchRecordService:
                 match_date=data["match_date"],
                 match_type=data["match_type"],
                 match_format=data["match_format"],
-                # 注意：您最新的 Match 模型沒有 notes，如果需要，請在 Match 模型中加入
-                # notes=data.get('match_notes')
+                # 新增的欄位
+                court_surface=data.get("court_surface"),
+                court_environment=data.get("court_environment"),
+                time_slot=data.get("time_slot"),
+                total_points=data.get("total_points"),
+                duration_minutes=data.get("duration_minutes"),
+                youtube_url=data.get("youtube_url"),
             )
             db.session.add(new_match)
 
@@ -76,10 +81,174 @@ class MatchRecordService:
 
     @staticmethod
     def get_all_match_records(args: dict):
-        """獲取比賽記錄列表。"""
-        query = MatchRecord.query.order_by(MatchRecord.id.desc())  # 假設按 ID 降序
-        # 在此處可以根據 args 加入篩選和分頁邏輯
-        return query.all()
+        """獲取比賽記錄列表，支援篩選、排序和分頁。"""
+        query = MatchRecord.query.options(
+            joinedload(MatchRecord.player1),
+            joinedload(MatchRecord.player2),
+            joinedload(MatchRecord.player3),
+            joinedload(MatchRecord.player4),
+            joinedload(MatchRecord.match),
+        )
+
+        # 應用篩選條件
+        query = MatchRecordService._apply_filters(query, args)
+
+        # 應用排序
+        query = MatchRecordService._apply_sorting(query, args)
+
+        # 應用分頁
+        return MatchRecordService._apply_pagination(query, args)
+
+    @staticmethod
+    def _apply_filters(query, args: dict):
+        """應用篩選條件到查詢中"""
+        # 日期範圍篩選
+        if start_date := args.get("start_date"):
+            query = query.join(Match).filter(Match.match_date >= start_date)
+        if end_date := args.get("end_date"):
+            query = query.join(Match).filter(Match.match_date <= end_date)
+
+        # 比賽類型篩選
+        if match_type := args.get("match_type"):
+            query = query.join(Match).filter(Match.match_type == match_type)
+        if match_format := args.get("match_format"):
+            query = query.join(Match).filter(Match.match_format == match_format)
+
+        # 場地篩選
+        if court_surface := args.get("court_surface"):
+            query = query.join(Match).filter(Match.court_surface == court_surface)
+        if court_environment := args.get("court_environment"):
+            query = query.join(Match).filter(
+                Match.court_environment == court_environment
+            )
+        if time_slot := args.get("time_slot"):
+            query = query.join(Match).filter(Match.time_slot == time_slot)
+
+        # 球員篩選
+        if player_id := args.get("player_id"):
+            try:
+                player_id = int(player_id)
+                query = query.filter(
+                    or_(
+                        MatchRecord.player1_id == player_id,
+                        MatchRecord.player2_id == player_id,
+                        MatchRecord.player3_id == player_id,
+                        MatchRecord.player4_id == player_id,
+                    )
+                )
+            except (ValueError, TypeError):
+                pass  # 忽略無效的 player_id
+
+        return query
+
+    @staticmethod
+    def _apply_sorting(query, args: dict):
+        """應用排序到查詢中"""
+        sort_by = args.get("sort_by", "match_date")
+        sort_order = args.get("sort_order", "desc")
+
+        # 加入 Match 表的 join 如果還沒有
+        if "match_date" in sort_by or "duration_minutes" in sort_by:
+            query = query.join(Match)
+
+        if sort_by == "match_date":
+            order_column = Match.match_date
+        elif sort_by == "duration_minutes":
+            order_column = Match.duration_minutes
+        elif sort_by == "total_games":
+            # 使用 SQL 表達式計算總局數
+            order_column = MatchRecord.a_games + MatchRecord.b_games
+        else:
+            order_column = MatchRecord.id  # 預設排序
+
+        if sort_order == "asc":
+            query = query.order_by(asc(order_column))
+        else:
+            query = query.order_by(desc(order_column))
+
+        return query
+
+    @staticmethod
+    def _apply_pagination(query, args: dict):
+        """應用分頁到查詢中"""
+        try:
+            page = int(args.get("page", 1))
+            per_page = int(args.get("per_page", 20))
+
+            # 限制 per_page 的範圍
+            per_page = min(max(per_page, 1), 100)
+            page = max(page, 1)
+
+            # 使用 SQLAlchemy 的 paginate 方法
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+            return {
+                "items": pagination.items,
+                "total": pagination.total,
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "pages": pagination.pages,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev,
+            }
+        except (ValueError, TypeError):
+            # 如果分頁參數無效，返回所有結果
+            items = query.all()
+            return {
+                "items": items,
+                "total": len(items),
+                "page": 1,
+                "per_page": len(items),
+                "pages": 1,
+                "has_next": False,
+                "has_prev": False,
+            }
+
+    @staticmethod
+    def update_match_record(record_id: int, data: dict) -> MatchRecord:
+        """更新比賽記錄"""
+        record = MatchRecordService.get_match_record_by_id(record_id)
+        if not record:
+            raise AppException("找不到指定的比賽記錄。", status_code=404)
+
+        try:
+            # 更新 Match 相關欄位
+            match = record.match
+            if match:
+                for field in [
+                    "match_date",
+                    "match_type",
+                    "match_format",
+                    "court_surface",
+                    "court_environment",
+                    "time_slot",
+                    "total_points",
+                    "duration_minutes",
+                    "youtube_url",
+                ]:
+                    if field in data:
+                        setattr(match, field, data[field])
+
+            # 更新 MatchRecord 相關欄位
+            for field in ["a_games", "b_games"]:
+                if field in data:
+                    setattr(record, field, data[field])
+
+            # 重新計算結果
+            if "a_games" in data or "b_games" in data:
+                record.side_a_outcome = MatchRecordService._calculate_outcome(
+                    record.a_games, record.b_games
+                )
+
+            db.session.commit()
+            return record
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"更新比賽記錄 ID {record_id} 時出錯: {e}", exc_info=True
+            )
+            raise AppException("更新比賽記錄時發生未預期錯誤。")
 
     @staticmethod
     def delete_match_record(record: MatchRecord) -> bool:
@@ -118,155 +287,61 @@ class MatchRecordService:
             raise AppException("刪除比賽記錄時發生未預期錯誤。")
 
     @staticmethod
-    def search_match_records(filters: dict, page: int = 1, per_page: int = 20):
-        """
-        根據篩選條件搜尋比賽記錄
-        """
+    def get_match_statistics(args: dict = None):
+        """獲取比賽統計資訊"""
         try:
-            # 基礎查詢，包含預載入
-            query = MatchRecord.query.options(
-                joinedload(MatchRecord.player1).joinedload(Member.organization),
-                joinedload(MatchRecord.player2).joinedload(Member.organization),
-                joinedload(MatchRecord.player3).joinedload(Member.organization),
-                joinedload(MatchRecord.player4).joinedload(Member.organization),
-                joinedload(MatchRecord.match),
-            )
+            query = MatchRecord.query.join(Match)
 
-            # 球員篩選
-            if filters.get("player_ids"):
-                player_ids = filters["player_ids"]
-                # 搜尋任何一個位置包含這些球員的比賽
-                player_conditions = or_(
-                    MatchRecord.player1_id.in_(player_ids),
-                    MatchRecord.player2_id.in_(player_ids),
-                    MatchRecord.player3_id.in_(player_ids),
-                    MatchRecord.player4_id.in_(player_ids),
-                )
-                query = query.filter(player_conditions)
+            if args:
+                query = MatchRecordService._apply_filters(query, args)
 
-            # 位置篩選（需要與球員ID一起使用）
-            if filters.get("player_position") and filters.get("player_ids"):
-                position = filters["player_position"]
-                player_ids = filters["player_ids"]
+            records = query.all()
 
-                if position == "front":
-                    # 前排位置（player1 和 player3）
-                    position_conditions = or_(
-                        MatchRecord.player1_id.in_(player_ids),
-                        MatchRecord.player3_id.in_(player_ids),
+            # 計算統計資訊
+            total_matches = len(records)
+            total_games = sum(record.total_games for record in records)
+            avg_duration = None
+
+            if records:
+                durations = [
+                    record.match.duration_minutes
+                    for record in records
+                    if record.match.duration_minutes
+                ]
+                if durations:
+                    avg_duration = sum(durations) / len(durations)
+
+            # 場地類型統計
+            surface_stats = {}
+            environment_stats = {}
+            time_slot_stats = {}
+
+            for record in records:
+                match = record.match
+                if match.court_surface:
+                    surface_stats[match.court_surface.value] = (
+                        surface_stats.get(match.court_surface.value, 0) + 1
                     )
-                elif position == "back":
-                    # 後排位置（player2 和 player4）
-                    position_conditions = or_(
-                        MatchRecord.player2_id.in_(player_ids),
-                        MatchRecord.player4_id.in_(player_ids),
+                if match.court_environment:
+                    environment_stats[match.court_environment.value] = (
+                        environment_stats.get(match.court_environment.value, 0) + 1
                     )
-                else:  # any position
-                    position_conditions = or_(
-                        MatchRecord.player1_id.in_(player_ids),
-                        MatchRecord.player2_id.in_(player_ids),
-                        MatchRecord.player3_id.in_(player_ids),
-                        MatchRecord.player4_id.in_(player_ids),
+                if match.time_slot:
+                    time_slot_stats[match.time_slot.value] = (
+                        time_slot_stats.get(match.time_slot.value, 0) + 1
                     )
-                query = query.filter(position_conditions)
-
-            # 比賽類型篩選（通過關聯的 Match 表）
-            if filters.get("match_type"):
-                query = query.join(Match).filter(
-                    Match.match_type == filters["match_type"]
-                )
-
-            # 賽制篩選
-            if filters.get("match_format"):
-                query = query.join(Match).filter(
-                    Match.match_format == filters["match_format"]
-                )
-
-            # 勝負篩選（基於選中的球員）
-            if filters.get("win_loss") and filters.get("player_ids"):
-                win_loss = filters["win_loss"]
-                player_ids = filters["player_ids"]
-
-                if win_loss == "win":
-                    # 查找選中球員獲勝的比賽
-                    win_conditions = []
-                    # A方獲勝且包含選中球員
-                    a_side_win = and_(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN,
-                        or_(
-                            MatchRecord.player1_id.in_(player_ids),
-                            MatchRecord.player2_id.in_(player_ids),
-                        ),
-                    )
-                    # B方獲勝且包含選中球員
-                    b_side_win = and_(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS,
-                        or_(
-                            MatchRecord.player3_id.in_(player_ids),
-                            MatchRecord.player4_id.in_(player_ids),
-                        ),
-                    )
-                    query = query.filter(or_(a_side_win, b_side_win))
-
-                elif win_loss == "loss":
-                    # 查找選中球員失敗的比賽
-                    loss_conditions = []
-                    # A方失敗且包含選中球員
-                    a_side_loss = and_(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS,
-                        or_(
-                            MatchRecord.player1_id.in_(player_ids),
-                            MatchRecord.player2_id.in_(player_ids),
-                        ),
-                    )
-                    # B方失敗且包含選中球員
-                    b_side_loss = and_(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN,
-                        or_(
-                            MatchRecord.player3_id.in_(player_ids),
-                            MatchRecord.player4_id.in_(player_ids),
-                        ),
-                    )
-                    query = query.filter(or_(a_side_loss, b_side_loss))
-
-            # 日期範圍篩選
-            if filters.get("date_from"):
-                query = query.join(Match).filter(
-                    Match.match_date >= filters["date_from"]
-                )
-
-            if filters.get("date_to"):
-                query = query.join(Match).filter(Match.match_date <= filters["date_to"])
-
-            # 分數差距篩選
-            if filters.get("min_score_diff") is not None:
-                score_diff = func.abs(MatchRecord.a_games - MatchRecord.b_games)
-                query = query.filter(score_diff >= filters["min_score_diff"])
-
-            if filters.get("max_score_diff") is not None:
-                score_diff = func.abs(MatchRecord.a_games - MatchRecord.b_games)
-                query = query.filter(score_diff <= filters["max_score_diff"])
-
-            # 排序（最新的在前）
-            query = query.join(Match).order_by(
-                Match.match_date.desc(), MatchRecord.id.desc()
-            )
-
-            # 分頁
-            paginated_result = query.paginate(
-                page=page, per_page=per_page, error_out=False
-            )
 
             return {
-                "records": paginated_result.items,
-                "total": paginated_result.total,
-                "pages": paginated_result.pages,
-                "current_page": paginated_result.page,
-                "per_page": paginated_result.per_page,
-                "has_next": paginated_result.has_next,
-                "has_prev": paginated_result.has_prev,
+                "total_matches": total_matches,
+                "total_games": total_games,
+                "average_duration_minutes": round(avg_duration, 1)
+                if avg_duration
+                else None,
+                "court_surface_distribution": surface_stats,
+                "court_environment_distribution": environment_stats,
+                "time_slot_distribution": time_slot_stats,
             }
 
         except Exception as e:
-            current_app.logger.error(f"搜尋比賽記錄時出錯: {e}", exc_info=True)
-            raise AppException("搜尋比賽記錄時發生錯誤。")
+            current_app.logger.error(f"獲取比賽統計時出錯: {e}", exc_info=True)
+            raise AppException("獲取比賽統計時發生錯誤。")

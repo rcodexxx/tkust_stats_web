@@ -1,71 +1,187 @@
-# backend/app/commands/seed.py
+# backend/app/commands/init_admin.py
+
+import os
 
 import click
 from flask.cli import with_appcontext
 
 from ..extensions import db
-from ..models import User, Member
-from ..models.enums.user_enums import UserRoleEnum  # 導入您的 UserRoleEnum
+from ..models import Member, User
+from ..models.enums.user_enums import UserRoleEnum
 
 
 @click.command("init-admin")
+@click.option('--username', prompt='管理員帳號', help='管理員登入帳號')
+@click.option('--email', prompt='管理員 Email (可選)', default='', help='管理員電子郵件')
+@click.option('--name', prompt='管理員姓名', help='管理員顯示名稱')
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='管理員密碼')
+@click.option('--force', is_flag=True, help='強制覆蓋現有管理員')
 @with_appcontext
-def init_admin_command():
+def init_admin_command(username, email, name, password, force):
     """
-    建立一個初始的管理員帳號。
-    此指令會檢查帳號是否已存在，若已存在則會跳過，確保冪等性。
-    建議透過環境變數來設定憑證。
-    """
-    # 1. 從環境變數獲取管理員憑證，若無則使用安全的預設值
-    # 生產環境中，強烈建議透過環境變數設定所有這些值
-    # admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-    # admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_username}@example.com")
-    # admin_password = os.environ.get("ADMIN_PASSWORD")
-    # admin_name = os.environ.get("ADMIN_NAME", "網站管理員")
-    admin_username = "0976060398"
-    admin_password = admin_username
-    admin_name = "-_-Yu"
+    初始化管理員帳號。
 
-    # 2. 檢查密碼是否已設定 (非常重要)
-    if not admin_password:
-        click.echo(click.style("錯誤：ADMIN_PASSWORD 環境變數未設定。請設定管理員密碼後再執行。", fg="red"))
-        # 若希望在指令中互動式地設定密碼，可以取消以下註解：
-        # admin_password = click.prompt("請輸入管理員密碼", type=str, hide_input=True, confirmation_prompt=True)
+    建立一個具有管理員權限的使用者帳號和對應的 Member 資料。
+    支援互動式輸入或環境變數設定。
+    """
+
+    click.echo(click.style("🚀 開始初始化管理員帳號...", fg="blue"))
+
+    # 允許從環境變數覆蓋設定
+    username = username or os.environ.get("ADMIN_USERNAME")
+    email = email or os.environ.get("ADMIN_EMAIL") or None
+    name = name or os.environ.get("ADMIN_NAME")
+    password = password or os.environ.get("ADMIN_PASSWORD")
+
+    # 驗證必要欄位
+    if not username:
+        click.echo(click.style("❌ 錯誤：管理員帳號不能為空", fg="red"))
         return
 
-    # 3. 檢查管理員帳號是否已存在 (冪等性檢查)
-    if User.query.filter_by(username=admin_username).first():
-        click.echo(click.style(f"使用者名稱為 '{admin_username}' 的管理員已存在，跳過建立程序。", fg="yellow"))
+    if not name:
+        click.echo(click.style("❌ 錯誤：管理員姓名不能為空", fg="red"))
         return
-    # if User.query.filter_by(email=admin_email).first():
-    #     click.echo(click.style(f"Email 為 '{admin_email}' 的管理員已存在，跳過建立程序。", fg="yellow"))
-    #     return
-    #
-    # click.echo(f"正在建立管理員帳號: Username={admin_username}, Email={admin_email}")
+
+    if not password:
+        click.echo(click.style("❌ 錯誤：管理員密碼不能為空", fg="red"))
+        return
+
+    # 密碼強度檢查
+    if len(password) < 6:
+        click.echo(click.style("❌ 錯誤：密碼長度至少需要 6 個字元", fg="red"))
+        return
+
+    # 處理空的 email
+    if email == '':
+        email = None
 
     try:
-        # 4. 創建 User 和 Member 物件
-        user_profile = User(
-            username=admin_username,
-            # email=admin_email,
-            role=UserRoleEnum.ADMIN,  # 明確設定角色為管理員
-            is_active=True,  # 管理員帳號預設為啟用
-            display_name=admin_name,  # 管理員的顯示名稱
-        )
-        user_profile.set_password(admin_password)  # 使用 User 模型中的 set_password 方法來雜湊密碼
-        db.session.add(user_profile)
+        # 檢查是否已存在管理員
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            if not force:
+                click.echo(click.style(f"⚠️  警告：使用者名稱 '{username}' 已存在", fg="yellow"))
+                if click.confirm("是否要覆蓋現有的使用者？"):
+                    force = True
+                else:
+                    click.echo("操作已取消")
+                    return
 
-        # 根據您的模型設計，每個 User 都需要一個關聯的 Member profile
-        admin_member_profile = Member(
-            user_profile=user_profile,  # 直接關聯 User 物件，SQLAlchemy 會處理 user_id
-            name=admin_name,
-        )
-        db.session.add(admin_member_profile)
+            if force:
+                click.echo(click.style(f"🗑️  刪除現有使用者 '{username}'...", fg="yellow"))
+                # 刪除關聯的 Member（如果存在）
+                if existing_user.member_profile:
+                    db.session.delete(existing_user.member_profile)
+                db.session.delete(existing_user)
+                db.session.commit()
+                click.echo(click.style("✅ 現有使用者已刪除", fg="green"))
 
-        # 5. 提交到資料庫
+        # 檢查 email 是否已存在（如果提供了 email）
+        if email:
+            existing_email_user = User.query.filter_by(email=email).first()
+            if existing_email_user and existing_email_user.username != username:
+                click.echo(click.style(f"❌ 錯誤：Email '{email}' 已被其他使用者使用", fg="red"))
+                return
+
+        # 創建管理員使用者
+        click.echo(click.style("👤 創建管理員使用者...", fg="blue"))
+        admin_user = User(
+            username=username,
+            email=email,
+            role=UserRoleEnum.ADMIN,
+            display_name=name,
+            is_active=True
+        )
+        admin_user.set_password(password)
+        db.session.add(admin_user)
+
+        # 創建對應的 Member 資料
+        click.echo(click.style("👥 創建 Member 資料...", fg="blue"))
+        admin_member = Member(
+            user=admin_user,
+            name=name,
+            # 其他欄位使用預設值
+        )
+        db.session.add(admin_member)
+
+        # 提交到資料庫
         db.session.commit()
-        click.echo(click.style(f"✅ 管理員帳號 '{admin_username}' 及對應的 Member profile 已成功建立！", fg="green"))
+
+        # 成功訊息
+        click.echo(click.style("✨ 管理員帳號創建成功！", fg="green", bold=True))
+        click.echo("📋 帳號資訊:")
+        click.echo(f"   使用者名稱: {username}")
+        click.echo(f"   Email: {email or '未設定'}")
+        click.echo(f"   姓名: {name}")
+        click.echo("   角色: 管理員")
+        click.echo("   狀態: 啟用")
+
+        # 安全提醒
+        click.echo(click.style("\n🔒 安全提醒:", fg="yellow", bold=True))
+        click.echo("   • 請立即登入並更改密碼")
+        click.echo("   • 請確保帳號資訊安全")
+        click.echo("   • 建議設定強密碼和雙因子認證")
 
     except Exception as e:
-        db.session.rollback()  # 如果發生任何錯誤，回滾事務
-        click.echo(click.style(f"❌ 建立管理員帳號失敗：{str(e)}", fg="red"))
+        db.session.rollback()
+        click.echo(click.style(f"❌ 創建管理員帳號失敗: {str(e)}", fg="red"))
+        click.echo(click.style("🔄 資料庫已回滾", fg="yellow"))
+
+
+@click.command("list-admins")
+@with_appcontext
+def list_admins_command():
+    """列出所有管理員帳號"""
+
+    click.echo(click.style("👥 管理員帳號列表:", fg="blue", bold=True))
+
+    admins = User.query.filter_by(role=UserRoleEnum.ADMIN).all()
+
+    if not admins:
+        click.echo(click.style("❌ 未找到任何管理員帳號", fg="red"))
+        return
+
+    for i, admin in enumerate(admins, 1):
+        status_color = "green" if admin.is_active else "red"
+        status_text = "啟用" if admin.is_active else "停用"
+
+        click.echo(f"\n{i}. {admin.display_name or admin.username}")
+        click.echo(f"   📧 Email: {admin.email or '未設定'}")
+        click.echo(f"   👤 使用者名稱: {admin.username}")
+        click.echo(f"   📅 創建時間: {admin.created_at}")
+        click.echo(f"   🔄 更新時間: {admin.updated_at}")
+        click.echo(f"   📊 狀態: {click.style(status_text, fg=status_color)}")
+
+
+@click.command("reset-admin-password")
+@click.option('--username', prompt='管理員帳號', help='要重設密碼的管理員帳號')
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='新密碼')
+@with_appcontext
+def reset_admin_password_command(username, password):
+    """重設管理員密碼"""
+
+    click.echo(click.style(f"🔑 重設管理員 '{username}' 的密碼...", fg="blue"))
+
+    # 密碼強度檢查
+    if len(password) < 6:
+        click.echo(click.style("❌ 錯誤：密碼長度至少需要 6 個字元", fg="red"))
+        return
+
+    try:
+        # 查找管理員
+        admin = User.query.filter_by(username=username, role=UserRoleEnum.ADMIN).first()
+
+        if not admin:
+            click.echo(click.style(f"❌ 錯誤：找不到管理員帳號 '{username}'", fg="red"))
+            return
+
+        # 更新密碼
+        admin.set_password(password)
+        db.session.commit()
+
+        click.echo(click.style(f"✅ 管理員 '{username}' 的密碼已成功重設", fg="green"))
+        click.echo(click.style("🔒 請立即使用新密碼登入", fg="yellow"))
+
+    except Exception as e:
+        db.session.rollback()
+        click.echo(click.style(f"❌ 重設密碼失敗: {str(e)}", fg="red"))

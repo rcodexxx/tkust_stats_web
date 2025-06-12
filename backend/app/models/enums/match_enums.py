@@ -43,3 +43,28 @@ class MatchNatureEnum(BaseEnum):
     INTERNAL_RANKING = "internal_ranking"
     PRACTICE = "practice"
     NIAG = "NIAG"  # National Intercollegiate Athletic Games (全大運)
+
+
+class CourtSurfaceEnum(BaseEnum):
+    """場地材質"""
+
+    HARD_COURT = "hard_court"  # 硬地
+    CLAY_COURT = "clay_court"  # 紅土
+    GRASS_COURT = "grass_court"  # 草地
+    SYNTHETIC = "synthetic"  # 人工合成材質
+    CARPET = "carpet"  # 地毯
+
+
+class CourtEnvironmentEnum(BaseEnum):
+    """場地環境"""
+
+    INDOOR = "indoor"  # 室內
+    OUTDOOR = "outdoor"  # 室外
+
+
+class MatchTimeSlotEnum(BaseEnum):
+    """比賽時間段"""
+
+    MORNING = "morning"  # 早上
+    AFTERNOON = "afternoon"  # 下午
+    EVENING = "evening"  # 晚上

@@ -1,12 +1,10 @@
 # backend/app/models/match_record.py
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.orm import relationship
 
-from sqlalchemy import Integer, ForeignKey, Enum as SQLAlchemyEnum
-from sqlalchemy.orm import relationship  # foreign 用於指定 relationship 的 foreign_keys
-
-from .enums import (
-    MatchOutcomeEnum,
-)
 from ..extensions import db
+from .enums import MatchOutcomeEnum
 
 
 class MatchRecord(db.Model):
@@ -54,7 +52,7 @@ class MatchRecord(db.Model):
         ForeignKey("members.id", name="fk_match_records_p4_id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-    )  # 雙打時的隊友
+    )
     player4 = relationship("Member", foreign_keys=[player4_id], backref="match_records_p4")
 
     # --- Scores and Outcome ---
@@ -80,20 +78,23 @@ class MatchRecord(db.Model):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def total_games(self) -> int:
+        """總局數 = A方局數 + B方局數"""
+        return self.a_games + self.b_games
+
     def to_dict(self, details: bool = False) -> dict:
         data = {
             "id": self.id,
-            "match_date": self.match_date.isoformat() if self.match_date else None,
-            "match_type": self.match_type.value if self.match_type else None,
-            "match_format": self.match_format.value if self.match_format else None,
-            "player1": self.player1_id,
-            "player2": self.player2_id,
-            "player3": self.player3_id,
-            "player4": self.player4_id,
+            "match_id": self.match_id,
+            "player1_id": self.player1_id,
+            "player2_id": self.player2_id,
+            "player3_id": self.player3_id,
+            "player4_id": self.player4_id,
             "a_games": self.a_games,
             "b_games": self.b_games,
+            "total_games": self.total_games,
             "side_a_outcome": self.side_a_outcome.value if self.side_a_outcome else None,
-            "match_notes": self.match_notes,
         }
         if details:
             data["player_stats"] = (
@@ -102,4 +103,4 @@ class MatchRecord(db.Model):
         return data
 
     def __repr__(self) -> str:
-        return f"<MatchRecord id={self.id}, date='{self.match_date}', type='{self.match_type.value if self.match_type else ''}'>"
+        return f"<MatchRecord id={self.id}, match_id={self.match_id}, a_games={self.a_games}, b_games={self.b_games}>"

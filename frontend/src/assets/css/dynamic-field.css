@@ -1,0 +1,240 @@
+/* 基礎網球場樣式 */
+.match-arena {
+  width: 100%;
+  max-width: 900px;
+  min-width: 600px;
+  min-height: 500px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  aspect-ratio: 78 / 36;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+/* 球場線條基礎樣式 */
+.match-arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+
+  /* 基礎網球場線條 */
+  background:
+    /* 球網 */
+    linear-gradient(#fff, #fff) no-repeat center center / 4px 100%,
+    /* 中央發球線 */ linear-gradient(#fff, #fff) no-repeat center center / 53.84% 3px,
+    /* 發球線 */ linear-gradient(#fff, #fff) no-repeat 23.08% center / 3px 75%,
+    linear-gradient(#fff, #fff) no-repeat 76.92% center / 3px 75%,
+    /* 單打邊線 */ linear-gradient(#fff, #fff) no-repeat center 12.5% / 100% 3px,
+    linear-gradient(#fff, #fff) no-repeat center 87.5% / 100% 3px,
+    /* 外框 */ linear-gradient(#fff, #fff) no-repeat left center / 3px 100%,
+    linear-gradient(#fff, #fff) no-repeat right center / 3px 100%,
+    linear-gradient(#fff, #fff) no-repeat center top / 100% 3px,
+    linear-gradient(#fff, #fff) no-repeat center bottom / 100% 3px;
+}
+
+/* 🏟️ 硬地球場 (Hard Court) - 藍色系 */
+.match-arena.court-hard_court {
+  background: radial-gradient(ellipse at center, #377db8 0%, #1e8fd5 100%);
+  border: 2px solid #1e40af;
+  box-shadow:
+    0 8px 32px rgba(37, 99, 235, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-hard_court::before {
+  opacity: 0.95;
+}
+
+/* 🟤 紅土球場 (Clay Court) - 橘紅色系 */
+.match-arena.court-clay_court {
+  background: radial-gradient(ellipse at center, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  border: 2px solid #7f1d1d;
+  box-shadow:
+    0 8px 32px rgba(220, 38, 38, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-clay_court::before {
+  opacity: 0.9;
+  /* 紅土場的線條稍微透明一些，模擬塵土效果 */
+}
+
+.match-arena.court-clay_court::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(239, 68, 68, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(185, 28, 28, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* 🌱 草地球場 (Grass Court) - 綠色系 */
+.match-arena.court-grass_court {
+  background: radial-gradient(ellipse at center, #16a34a 0%, #15803d 50%, #166534 100%);
+  border: 2px solid #14532d;
+  box-shadow:
+    0 8px 32px rgba(22, 163, 74, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-grass_court::before {
+  opacity: 0.85;
+}
+
+.match-arena.court-grass_court::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0px,
+    rgba(34, 197, 94, 0.1) 1px,
+    transparent 2px,
+    transparent 8px
+  );
+  pointer-events: none;
+}
+
+/* 🔷 人工合成場地 (Synthetic) - 紫色系 */
+.match-arena.court-synthetic {
+  background: radial-gradient(ellipse at center, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+  border: 2px solid #4c1d95;
+  box-shadow:
+    0 8px 32px rgba(124, 58, 237, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-synthetic::before {
+  opacity: 0.9;
+}
+
+/* 🟫 地毯場地 (Carpet) - 棕色系 */
+.match-arena.court-carpet {
+  background: radial-gradient(ellipse at center, #a3a3a3 0%, #737373 50%, #525252 100%);
+  border: 2px solid #404040;
+  box-shadow:
+    0 8px 32px rgba(163, 163, 163, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-carpet::before {
+  opacity: 0.8;
+}
+
+.match-arena.court-carpet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0px, rgba(115, 115, 115, 0.1) 1px, transparent 2px, transparent 4px),
+    repeating-linear-gradient(90deg, transparent 0px, rgba(115, 115, 115, 0.1) 1px, transparent 2px, transparent 4px);
+  pointer-events: none;
+}
+
+/* ☀️ 時間段統一光線效果 */
+
+/* 早上 - 溫暖金色光線 */
+.match-arena.time-morning {
+  filter: brightness(1.05) saturate(1.1) hue-rotate(5deg);
+  box-shadow:
+    0 8px 32px rgba(255, 193, 7, 0.2),
+    0 0 50px rgba(255, 193, 7, 0.1);
+}
+
+.match-arena.time-morning::after {
+  background: radial-gradient(circle at 20% 20%, rgba(255, 193, 7, 0.08) 0%, transparent 60%);
+}
+
+/* 下午 - 標準自然光 */
+.match-arena.time-afternoon {
+  filter: brightness(1) saturate(1);
+}
+
+/* 晚上 - 保持亮度，添加暖色燈光 */
+.match-arena.time-evening {
+  filter: brightness(1) saturate(1.1) contrast(1.05);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 60px rgba(255, 255, 255, 0.15);
+}
+
+.match-arena.time-evening::after {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse at 25% 10%, rgba(255, 248, 220, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 10%, rgba(255, 248, 220, 0.08) 0%, transparent 50%);
+}
+
+/* 環境效果 */
+
+/* 室內 - 更均勻的光照 */
+.match-arena.env-indoor {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    inset 0 0 50px rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.env-indoor::after {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+}
+
+/* 室外 - 更自然的陰影 */
+.match-arena.env-outdoor {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.env-outdoor::after {
+  background: radial-gradient(ellipse at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+}
+
+/* 動畫效果 */
+@keyframes court-transition {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.match-arena.changing {
+  animation: court-transition 0.6s ease-out;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+  .match-arena {
+    aspect-ratio: 36 / 78;
+    min-width: 360px;
+    width: 90%;
+  }
+
+  /* 手機版的直立球場線條 */
+  .match-arena::before {
+    background:
+      /* 中央水平線 */
+      linear-gradient(#fff, #fff) no-repeat center center / 100% 2px,
+      /* 中央發球線 */ linear-gradient(#fff, #fff) no-repeat center center / 2px 53.84%,
+      /* 發球線 */ linear-gradient(#fff, #fff) no-repeat center 23.08% / 75% 2px,
+      linear-gradient(#fff, #fff) no-repeat center 76.92% / 75% 2px,
+      /* 單打邊線 */ linear-gradient(#fff, #fff) no-repeat 12.5% center / 2px 100%,
+      linear-gradient(#fff, #fff) no-repeat 87.5% center / 2px 100%,
+      /* 外框 */ linear-gradient(#fff, #fff) no-repeat center top / 100% 2px,
+      linear-gradient(#fff, #fff) no-repeat center bottom / 100% 2px,
+      linear-gradient(#fff, #fff) no-repeat left center / 2px 100%,
+      linear-gradient(#fff, #fff) no-repeat right center / 2px 100%;
+  }
+}

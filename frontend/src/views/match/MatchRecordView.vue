@@ -30,58 +30,99 @@
           </n-form-item-gi>
         </n-grid>
 
-        <!--        <n-divider style="margin-top: 2rem; margin-bottom: 2rem">-->
-        <!--          <n-text style="font-size: 14px; color: #666">選擇參賽球員</n-text>-->
-        <!--        </n-divider>-->
+        <!-- 可折疊的詳細設定區塊 -->
+        <n-divider style="margin-top: 2rem; margin-bottom: 1rem">
+          <n-button text @click="showAdvancedSettings = !showAdvancedSettings" style="color: #666; font-size: 14px">
+            <template #icon>
+              <n-icon :component="showAdvancedSettings ? ChevronUpIcon : ChevronDownIcon" />
+            </template>
+            詳細設定 (選填)
+          </n-button>
+        </n-divider>
 
-        <!-- 球員快速選擇區域 -->
-        <!--        <div class="player-selection-area mb-4">-->
-        <!--          <n-h4 class="selection-title">-->
-        <!--            <n-icon :component="PersonIcon" class="mr-2" />-->
-        <!--            快速選擇球員-->
-        <!--          </n-h4>-->
+        <!-- 可折疊內容 -->
+        <n-collapse-transition :show="showAdvancedSettings">
+          <div class="advanced-settings-container">
+            <!-- 場地資訊 -->
+            <div class="settings-section">
+              <n-grid :x-gap="16" :y-gap="16" cols="1 s:3" responsive="screen" class="mt-3">
+                <n-form-item-gi label="場地材質" path="court_surface">
+                  <n-select
+                    v-model:value="matchForm.court_surface"
+                    :options="courtSurfaceOptions"
+                    placeholder="選擇場地材質"
+                    clearable
+                    size="medium"
+                  />
+                </n-form-item-gi>
 
-        <!--          &lt;!&ndash; 常用球員快捷按鈕 &ndash;&gt;-->
-        <!--          <div class="quick-players mb-3">-->
-        <!--            <n-space wrap>-->
-        <!--              <n-button-->
-        <!--                v-for="player in topPlayers"-->
-        <!--                :key="player.id"-->
-        <!--                :type="isPlayerSelected(player.id) ? 'primary' : 'default'"-->
-        <!--                :ghost="!isPlayerSelected(player.id)"-->
-        <!--                size="small"-->
-        <!--                round-->
-        <!--                @click="quickSelectPlayer(player.id)"-->
-        <!--                class="player-quick-btn"-->
-        <!--              >-->
-        <!--                {{ player.name }}-->
-        <!--                <n-tag :type="getScoreTagType(player.score)" size="small" round class="ml-1">-->
-        <!--                  {{ player.score }}-->
-        <!--                </n-tag>-->
-        <!--              </n-button>-->
-        <!--            </n-space>-->
-        <!--          </div>-->
+                <n-form-item-gi label="場地環境" path="court_environment">
+                  <n-select
+                    v-model:value="matchForm.court_environment"
+                    :options="courtEnvironmentOptions"
+                    placeholder="選擇場地環境"
+                    clearable
+                    size="medium"
+                  />
+                </n-form-item-gi>
 
-        <!--          &lt;!&ndash; 搜尋框 &ndash;&gt;-->
-        <!--          <n-input-->
-        <!--            v-model:value="playerSearchTerm"-->
-        <!--            placeholder="搜尋球員名稱..."-->
-        <!--            clearable-->
-        <!--            size="large"-->
-        <!--            class="player-search"-->
-        <!--          >-->
-        <!--            <template #prefix>-->
-        <!--              <n-icon :component="SearchIcon" />-->
-        <!--            </template>-->
-        <!--          </n-input>-->
-        <!--        </div>-->
+                <n-form-item-gi label="比賽時段" path="time_slot">
+                  <n-select
+                    v-model:value="matchForm.time_slot"
+                    :options="timeSlotOptions"
+                    placeholder="選擇比賽時段"
+                    clearable
+                    size="medium"
+                  />
+                </n-form-item-gi>
+              </n-grid>
+            </div>
+
+            <!-- 比賽詳細資訊 -->
+            <div class="settings-section">
+              <n-grid :x-gap="16" :y-gap="16" cols="1 s:3" responsive="screen" class="mt-3">
+                <n-form-item-gi label="總得分數" path="total_points">
+                  <n-input-number
+                    v-model:value="matchForm.total_points"
+                    placeholder="總得分數"
+                    :min="0"
+                    clearable
+                    size="medium"
+                    style="width: 100%"
+                  />
+                </n-form-item-gi>
+
+                <n-form-item-gi label="比賽時長 (分鐘)" path="duration_minutes">
+                  <n-input-number
+                    v-model:value="matchForm.duration_minutes"
+                    placeholder="20-60分鐘"
+                    :min="20"
+                    :max="60"
+                    clearable
+                    size="medium"
+                    style="width: 100%"
+                  />
+                </n-form-item-gi>
+
+                <n-form-item-gi label="YouTube 連結" path="youtube_url">
+                  <n-input
+                    v-model:value="matchForm.youtube_url"
+                    placeholder="https://youtube.com/watch?v=..."
+                    clearable
+                    size="medium"
+                  />
+                </n-form-item-gi>
+              </n-grid>
+            </div>
+          </div>
+        </n-collapse-transition>
 
         <n-divider style="margin: 2rem 0">
           <n-text style="font-size: 14px; color: #666">對戰配置</n-text>
         </n-divider>
 
         <!-- 對戰視覺區塊 -->
-        <div class="match-arena">
+        <div :class="[...courtClasses, { changing: isChangingCourt }]">
           <div class="team-vs-container">
             <!-- A隊卡片 -->
             <div class="team-section team-a">
@@ -103,25 +144,19 @@
                 <!-- A隊球員 -->
                 <div class="players-container">
                   <!-- 第一位球員 (後排) -->
-                  <div class="player-slot">
+                  <div class="player-slot" @click="openPlayerSelector('player1_id')">
                     <div class="position-indicator">
                       <span class="position-label">後排</span>
                     </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player1_id)"
-                        :size="60"
+                        :size="48"
                         :style="{ backgroundColor: getPlayerColor(matchForm.player1_id) }"
                       >
                         {{ getPlayerInitials(matchForm.player1_id) }}
                       </n-avatar>
-                      <n-avatar
-                        v-else
-                        :size="60"
-                        style="background-color: #f0f0f0; color: #ccc"
-                        @click="openPlayerSelector('player1_id')"
-                        class="empty-slot"
-                      >
+                      <n-avatar v-else :size="48" style="background-color: #f0f0f0; color: #ccc" class="empty-slot">
                         <n-icon :component="AddIcon" />
                       </n-avatar>
                     </div>
@@ -133,8 +168,8 @@
                     <n-button
                       v-if="getPlayerById(matchForm.player1_id)"
                       quaternary
-                      size="small"
-                      @click="clearPlayer('player1_id')"
+                      size="tiny"
+                      @click.stop="clearPlayer('player1_id')"
                       class="clear-btn"
                     >
                       <n-icon :component="CloseIcon" />
@@ -142,25 +177,23 @@
                   </div>
 
                   <!-- 第二位球員 (前排) - 只在雙打時顯示 -->
-                  <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                  <div
+                    v-if="matchForm.match_type === 'doubles'"
+                    class="player-slot"
+                    @click="openPlayerSelector('player2_id')"
+                  >
                     <div class="position-indicator">
                       <span class="position-label">前排</span>
                     </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player2_id)"
-                        :size="60"
+                        :size="48"
                         :style="{ backgroundColor: getPlayerColor(matchForm.player2_id) }"
                       >
                         {{ getPlayerInitials(matchForm.player2_id) }}
                       </n-avatar>
-                      <n-avatar
-                        v-else
-                        :size="60"
-                        style="background-color: #f0f0f0; color: #ccc"
-                        @click="openPlayerSelector('player2_id')"
-                        class="empty-slot"
-                      >
+                      <n-avatar v-else :size="48" style="background-color: #f0f0f0; color: #ccc" class="empty-slot">
                         <n-icon :component="AddIcon" />
                       </n-avatar>
                     </div>
@@ -172,8 +205,8 @@
                     <n-button
                       v-if="getPlayerById(matchForm.player2_id)"
                       quaternary
-                      size="small"
-                      @click="clearPlayer('player2_id')"
+                      size="tiny"
+                      @click.stop="clearPlayer('player2_id')"
                       class="clear-btn"
                     >
                       <n-icon :component="CloseIcon" />
@@ -214,6 +247,13 @@
 
             <!-- VS 區域 -->
             <div class="vs-section">
+              <!--              &lt;!&ndash; 時間控制器 &ndash;&gt;-->
+              <!--              <div :class="timeControllerClasses" @click="toggleTimeSlot" title="點擊切換比賽時間">-->
+              <!--                <span class="time-icon">{{ currentTimeSlot.icon }}</span>-->
+              <!--                <div class="time-label">{{ currentTimeSlot.label }}</div>-->
+              <!--              </div>-->
+
+              <!-- VS 球 -->
               <div class="vs-circle">
                 <span class="vs-text">VS</span>
               </div>
@@ -239,25 +279,19 @@
                 <!-- B隊球員 -->
                 <div class="players-container">
                   <!-- 第一位球員 (後排) -->
-                  <div class="player-slot">
+                  <div class="player-slot" @click="openPlayerSelector('player3_id')">
                     <div class="position-indicator">
                       <span class="position-label">後排</span>
                     </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player3_id)"
-                        :size="60"
+                        :size="48"
                         :style="{ backgroundColor: getPlayerColor(matchForm.player3_id) }"
                       >
                         {{ getPlayerInitials(matchForm.player3_id) }}
                       </n-avatar>
-                      <n-avatar
-                        v-else
-                        :size="60"
-                        style="background-color: #f0f0f0; color: #ccc"
-                        @click="openPlayerSelector('player3_id')"
-                        class="empty-slot"
-                      >
+                      <n-avatar v-else :size="48" class="empty-slot">
                         <n-icon :component="AddIcon" />
                       </n-avatar>
                     </div>
@@ -269,8 +303,8 @@
                     <n-button
                       v-if="getPlayerById(matchForm.player3_id)"
                       quaternary
-                      size="small"
-                      @click="clearPlayer('player3_id')"
+                      size="tiny"
+                      @click.stop="clearPlayer('player3_id')"
                       class="clear-btn"
                     >
                       <n-icon :component="CloseIcon" />
@@ -278,25 +312,23 @@
                   </div>
 
                   <!-- 第二位球員 (前排) - 只在雙打時顯示 -->
-                  <div v-if="matchForm.match_type === 'doubles'" class="player-slot">
+                  <div
+                    v-if="matchForm.match_type === 'doubles'"
+                    class="player-slot"
+                    @click="openPlayerSelector('player4_id')"
+                  >
                     <div class="position-indicator">
                       <span class="position-label">前排</span>
                     </div>
                     <div class="player-avatar">
                       <n-avatar
                         v-if="getPlayerById(matchForm.player4_id)"
-                        :size="60"
+                        :size="48"
                         :style="{ backgroundColor: getPlayerColor(matchForm.player4_id) }"
                       >
                         {{ getPlayerInitials(matchForm.player4_id) }}
                       </n-avatar>
-                      <n-avatar
-                        v-else
-                        :size="60"
-                        style="background-color: #f0f0f0; color: #ccc"
-                        @click="openPlayerSelector('player4_id')"
-                        class="empty-slot"
-                      >
+                      <n-avatar v-else :size="48" style="background-color: #f0f0f0; color: #ccc" class="empty-slot">
                         <n-icon :component="AddIcon" />
                       </n-avatar>
                     </div>
@@ -308,8 +340,8 @@
                     <n-button
                       v-if="getPlayerById(matchForm.player4_id)"
                       quaternary
-                      size="small"
-                      @click="clearPlayer('player4_id')"
+                      size="tiny"
+                      @click.stop="clearPlayer('player4_id')"
                       class="clear-btn"
                     >
                       <n-icon :component="CloseIcon" />
@@ -381,7 +413,7 @@
                   </n-avatar>
                   <div class="player-card-info">
                     <div class="player-card-name">{{ player.name }}</div>
-                    <n-tag :type="getScoreTagType(player.score)" size="small" round> {{ player.score }} 分 </n-tag>
+                    <n-tag :type="getScoreTagType(player.score)" size="small" round> {{ player.score }} 分</n-tag>
                   </div>
                 </div>
               </n-gi>
@@ -430,6 +462,7 @@
     NAvatar,
     NButton,
     NCard,
+    NCollapseTransition,
     NDatePicker,
     NDivider,
     NForm,
@@ -439,6 +472,7 @@
     NH3,
     NIcon,
     NInput,
+    NInputNumber,
     NModal,
     NScrollbar,
     NSelect,
@@ -451,12 +485,14 @@
     AddOutline as AddIcon,
     ArrowBackOutline as ArrowBackIcon,
     CheckmarkCircleOutline as WinIcon,
+    ChevronDownOutline as ChevronDownIcon,
+    ChevronUpOutline as ChevronUpIcon,
     CloseOutline as CloseIcon,
     RemoveOutline as RemoveIcon,
     SaveOutline as SaveIcon,
     SearchOutline as SearchIcon,
     TrophyOutline as TrophyIcon
-  } from '@vicons/ionicons5'
+  } from '@vicons/ionicons5' // --- Hooks ---
 
   // --- Hooks ---
   const router = useRouter()
@@ -470,6 +506,7 @@
   const showPlayerSelector = ref(false)
   const currentSelectingField = ref(null)
   const modalSearchTerm = ref('')
+  const showAdvancedSettings = ref(false) // 新增: 控制詳細設定的顯示/隱藏
 
   const matchForm = reactive({
     match_date_ts: new Date().getTime(),
@@ -482,8 +519,35 @@
     a_games: 0,
     b_games: 0,
     side_a_outcome: '',
-    match_notes: ''
+    match_notes: '',
+
+    // 新增欄位，設定預設值
+    court_surface: 'hard_court', // 預設硬地
+    court_environment: 'outdoor', // 預設室外
+    time_slot: 'evening', // 預設晚上
+    total_points: null,
+    duration_minutes: null,
+    youtube_url: ''
   })
+
+  const courtSurfaceOptions = [
+    { label: '硬地', value: 'hard_court' },
+    { label: '紅土', value: 'clay_court' },
+    { label: '草地', value: 'grass_court' },
+    { label: '人工合成', value: 'synthetic' },
+    { label: '地毯', value: 'carpet' }
+  ]
+
+  const courtEnvironmentOptions = [
+    { label: '室內', value: 'indoor' },
+    { label: '室外', value: 'outdoor' }
+  ]
+
+  const timeSlotOptions = [
+    { label: '早上', value: 'morning' },
+    { label: '下午', value: 'afternoon' },
+    { label: '晚上', value: 'evening' }
+  ]
 
   // --- Options & Rules ---
   const matchTypeOptions = [
@@ -496,6 +560,25 @@
     { label: '七局制', value: 'games_7', meta: { gamesToWin: 4 } },
     { label: '九局制', value: 'games_9', meta: { gamesToWin: 5 } }
   ]
+
+  // 時間段配置
+  const timeSlotConfig = {
+    morning: {
+      icon: '☀️',
+      label: '早上',
+      next: 'afternoon'
+    },
+    afternoon: {
+      icon: '🌤️',
+      label: '下午',
+      next: 'evening'
+    },
+    evening: {
+      icon: '🌙',
+      label: '晚上',
+      next: 'morning'
+    }
+  }
 
   const formRules = {
     match_date_ts: [{ type: 'number', required: true, message: '比賽日期為必填' }],
@@ -526,7 +609,12 @@
           return true
         }
       }
-    ]
+    ],
+    youtube_url: {
+      type: 'url',
+      message: '請輸入有效的 YouTube 連結',
+      trigger: ['blur']
+    }
   }
 
   // --- Computed Properties ---
@@ -734,7 +822,15 @@
           player4_id: matchForm.match_type === 'doubles' ? matchForm.player4_id : null,
           a_games: matchForm.a_games,
           b_games: matchForm.b_games,
-          match_notes: matchForm.match_notes || null
+          match_notes: matchForm.match_notes || null,
+
+          // 新增欄位 - 只有在有值的時候才傳送
+          court_surface: matchForm.court_surface || null,
+          court_environment: matchForm.court_environment || null,
+          time_slot: matchForm.time_slot || null,
+          total_points: matchForm.total_points || null,
+          duration_minutes: matchForm.duration_minutes || null,
+          youtube_url: matchForm.youtube_url || null
         }
 
         const response = await apiClient.post('/match-records', payload)
@@ -756,6 +852,62 @@
       }
     })
   }
+  // 切換時間段
+  const toggleTimeSlot = () => {
+    const current = matchForm.time_slot || 'morning'
+    matchForm.time_slot = timeSlotConfig[current].next
+  }
+
+  // 獲取當前時間段信息
+  const currentTimeSlot = computed(() => {
+    return timeSlotConfig[matchForm.time_slot] || timeSlotConfig.morning
+  })
+
+  // 計算動態的球場 CSS 類別
+  const courtClasses = computed(() => {
+    const classes = ['match-arena']
+
+    // 場地材質類別
+    if (matchForm.court_surface) {
+      classes.push(`court-${matchForm.court_surface}`)
+    }
+
+    // 時間段類別
+    if (matchForm.time_slot) {
+      classes.push(`time-${matchForm.time_slot}`)
+    }
+
+    // 環境類別
+    if (matchForm.court_environment) {
+      classes.push(`env-${matchForm.court_environment}`)
+    }
+
+    return classes
+  })
+
+  // 時間控制器的 CSS 類別
+  const timeControllerClasses = computed(() => {
+    const classes = ['time-controller']
+    if (matchForm.time_slot) {
+      classes.push(matchForm.time_slot)
+    }
+    return classes
+  })
+
+  // 為了增加視覺效果，當設定改變時觸發動畫
+  const isChangingCourt = ref(false)
+
+  const triggerCourtAnimation = () => {
+    isChangingCourt.value = true
+    setTimeout(() => {
+      isChangingCourt.value = false
+    }, 600)
+  }
+
+  // 監聽場地設定變化，觸發動畫
+  watch([() => matchForm.court_surface, () => matchForm.court_environment, () => matchForm.time_slot], () => {
+    triggerCourtAnimation()
+  })
 
   onMounted(fetchActiveMembers)
 
@@ -773,4 +925,7 @@
   }
 </script>
 
-<style scoped></style>
+<style scoped>
+  @import '@/assets/css/match-record.css';
+  @import '@/assets/css/dynamic-field.css';
+</style>
