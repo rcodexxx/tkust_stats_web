@@ -135,88 +135,89 @@ def search_match_records():
         filters = {}
 
         # 球員ID列表（可以是多個，用逗號分隔）
-        if request.args.get('player_ids'):
+        if request.args.get("player_ids"):
             try:
-                player_ids_str = request.args.get('player_ids')
-                filters['player_ids'] = [int(id.strip()) for id in player_ids_str.split(',') if id.strip()]
+                player_ids_str = request.args.get("player_ids")
+                filters["player_ids"] = [
+                    int(id.strip()) for id in player_ids_str.split(",") if id.strip()
+                ]
             except ValueError:
-                return jsonify({
-                    "error": "validation_error",
-                    "message": "球員ID格式不正確"
-                }), 400
+                return jsonify(
+                    {"error": "validation_error", "message": "球員ID格式不正確"}
+                ), 400
 
         # 其他篩選條件
-        if request.args.get('player_position'):
-            filters['player_position'] = request.args.get('player_position')
+        if request.args.get("player_position"):
+            filters["player_position"] = request.args.get("player_position")
 
-        if request.args.get('match_type'):
-            filters['match_type'] = request.args.get('match_type')
+        if request.args.get("match_type"):
+            filters["match_type"] = request.args.get("match_type")
 
-        if request.args.get('match_format'):
-            filters['match_format'] = request.args.get('match_format')
+        if request.args.get("match_format"):
+            filters["match_format"] = request.args.get("match_format")
 
-        if request.args.get('winner_side'):
-            filters['winner_side'] = request.args.get('winner_side')
+        if request.args.get("winner_side"):
+            filters["winner_side"] = request.args.get("winner_side")
 
-        if request.args.get('date_from'):
-            filters['date_from'] = request.args.get('date_from')
+        if request.args.get("date_from"):
+            filters["date_from"] = request.args.get("date_from")
 
-        if request.args.get('date_to'):
-            filters['date_to'] = request.args.get('date_to')
+        if request.args.get("date_to"):
+            filters["date_to"] = request.args.get("date_to")
 
         # 分數差距
-        if request.args.get('min_score_diff'):
+        if request.args.get("min_score_diff"):
             try:
-                filters['min_score_diff'] = int(request.args.get('min_score_diff'))
+                filters["min_score_diff"] = int(request.args.get("min_score_diff"))
             except ValueError:
-                return jsonify({
-                    "error": "validation_error",
-                    "message": "最小分數差距必須是數字"
-                }), 400
+                return jsonify(
+                    {"error": "validation_error", "message": "最小分數差距必須是數字"}
+                ), 400
 
-        if request.args.get('max_score_diff'):
+        if request.args.get("max_score_diff"):
             try:
-                filters['max_score_diff'] = int(request.args.get('max_score_diff'))
+                filters["max_score_diff"] = int(request.args.get("max_score_diff"))
             except ValueError:
-                return jsonify({
-                    "error": "validation_error",
-                    "message": "最大分數差距必須是數字"
-                }), 400
+                return jsonify(
+                    {"error": "validation_error", "message": "最大分數差距必須是數字"}
+                ), 400
 
         # 分頁參數
         try:
-            page = int(request.args.get('page', 1))
-            per_page = min(int(request.args.get('per_page', 15)), 100)  # 限制最大每頁數量
+            page = int(request.args.get("page", 1))
+            per_page = min(
+                int(request.args.get("per_page", 15)), 100
+            )  # 限制最大每頁數量
         except ValueError:
-            return jsonify({
-                "error": "validation_error",
-                "message": "分頁參數必須是數字"
-            }), 400
+            return jsonify(
+                {"error": "validation_error", "message": "分頁參數必須是數字"}
+            ), 400
 
         # 執行搜尋
         result = MatchRecordService.search_match_records(filters, page, per_page)
 
         # 序列化結果 - 使用現有的 responses_schema
-        serialized_records = responses_schema.dump(result['records'])
+        serialized_records = responses_schema.dump(result["records"])
 
-        return jsonify({
-            "records": serialized_records,
-            "pagination": {
-                "total": result['total'],
-                "pages": result['pages'],
-                "current_page": result['current_page'],
-                "per_page": result['per_page'],
-                "has_next": result['has_next'],
-                "has_prev": result['has_prev']
-            },
-            "filters_applied": filters
-        }), 200
+        return jsonify(
+            {
+                "records": serialized_records,
+                "pagination": {
+                    "total": result["total"],
+                    "pages": result["pages"],
+                    "current_page": result["current_page"],
+                    "per_page": result["per_page"],
+                    "has_next": result["has_next"],
+                    "has_prev": result["has_prev"],
+                },
+                "filters_applied": filters,
+            }
+        ), 200
 
     except AppException as e:
         return jsonify(e.to_dict()), e.status_code
     except Exception as e:
         current_app.logger.error(f"搜尋比賽記錄時發生錯誤: {e}", exc_info=True)
-        return jsonify({
-            "error": "server_error",
-            "message": "搜尋時發生未預期錯誤。"
-        }), 500
+        return jsonify(
+            {"error": "server_error", "message": "搜尋時發生未預期錯誤。"}
+        ), 500

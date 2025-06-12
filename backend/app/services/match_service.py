@@ -1,6 +1,6 @@
 # your_project/app/services/match_service.py
 from flask import current_app
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
@@ -118,7 +118,7 @@ class MatchRecordService:
             raise AppException("刪除比賽記錄時發生未預期錯誤。")
 
     @staticmethod
-    def search_match_records(filters: dict, page: int = 1, per_page: int = 15):
+    def search_match_records(filters: dict, page: int = 1, per_page: int = 20):
         """
         根據篩選條件搜尋比賽記錄
         """
@@ -182,16 +182,52 @@ class MatchRecordService:
                     Match.match_format == filters["match_format"]
                 )
 
-            # 勝方篩選
-            if filters.get("winner_side"):
-                if filters["winner_side"] == "A":
-                    query = query.filter(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN
+            # 勝負篩選（基於選中的球員）
+            if filters.get("win_loss") and filters.get("player_ids"):
+                win_loss = filters["win_loss"]
+                player_ids = filters["player_ids"]
+
+                if win_loss == "win":
+                    # 查找選中球員獲勝的比賽
+                    win_conditions = []
+                    # A方獲勝且包含選中球員
+                    a_side_win = and_(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN,
+                        or_(
+                            MatchRecord.player1_id.in_(player_ids),
+                            MatchRecord.player2_id.in_(player_ids),
+                        ),
                     )
-                elif filters["winner_side"] == "B":
-                    query = query.filter(
-                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS
+                    # B方獲勝且包含選中球員
+                    b_side_win = and_(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS,
+                        or_(
+                            MatchRecord.player3_id.in_(player_ids),
+                            MatchRecord.player4_id.in_(player_ids),
+                        ),
                     )
+                    query = query.filter(or_(a_side_win, b_side_win))
+
+                elif win_loss == "loss":
+                    # 查找選中球員失敗的比賽
+                    loss_conditions = []
+                    # A方失敗且包含選中球員
+                    a_side_loss = and_(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.LOSS,
+                        or_(
+                            MatchRecord.player1_id.in_(player_ids),
+                            MatchRecord.player2_id.in_(player_ids),
+                        ),
+                    )
+                    # B方失敗且包含選中球員
+                    b_side_loss = and_(
+                        MatchRecord.side_a_outcome == MatchOutcomeEnum.WIN,
+                        or_(
+                            MatchRecord.player3_id.in_(player_ids),
+                            MatchRecord.player4_id.in_(player_ids),
+                        ),
+                    )
+                    query = query.filter(or_(a_side_loss, b_side_loss))
 
             # 日期範圍篩選
             if filters.get("date_from"):

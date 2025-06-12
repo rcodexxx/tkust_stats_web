@@ -267,7 +267,7 @@
   const message = useMessage()
 
   // 基本狀態
-  const loading = ref(true)
+  const loading = ref(false)
   const searching = ref(false)
   const playersLoading = ref(false)
   const searchExecuted = ref(false)
@@ -282,25 +282,55 @@
   const pageSize = ref(15)
   const playerOptions = ref([])
 
+  // UI 狀態
+  const showMatchDetail = ref(false)
+  const selectedMatch = ref(null)
+
   // 搜尋表單
   const searchForm = reactive({
     player_ids: [],
     player_position: null,
     match_type: null,
     match_format: null,
-    winner_side: null,
+    win_loss: null,
     dateRange: null,
     min_score_diff: null,
     max_score_diff: null
   })
 
-  // 分頁設定
+  // 分頁設定 - 簡化並修正
   const pagination = reactive({
     page: 1,
     pageSize: 15,
     showSizePicker: true,
-    pageSizes: [15, 30, 50, 100]
+    pageSizes: [10, 15, 20, 50],
+    showQuickJumper: true,
+    prefix: ({ itemCount }) => `共 ${itemCount} 項`,
+    onChange: page => {
+      currentPage.value = page
+      handlePageChange(page)
+    },
+    onUpdatePageSize: newPageSize => {
+      pageSize.value = newPageSize
+      currentPage.value = 1
+      pagination.page = 1
+      pagination.pageSize = newPageSize
+
+      if (searchExecuted.value) {
+        handleSearch()
+      } else {
+        handleRefreshData()
+      }
+    }
   })
+
+  // 計算分頁配置
+  const paginationConfig = computed(() => ({
+    ...pagination,
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    itemCount: totalResults.value
+  }))
 
   // 選項配置
   const positionOptions = [
@@ -321,8 +351,8 @@
   ]
 
   const winnerOptions = [
-    { label: 'A隊', value: 'A' },
-    { label: 'B隊', value: 'B' }
+    { label: '勝利', value: 'win' },
+    { label: '敗北', value: 'loss' }
   ]
 
   // 輔助函數
@@ -355,9 +385,9 @@
       filters.push({ key: 'match_format', label: `賽制: ${formatLabel}` })
     }
 
-    if (searchForm.winner_side) {
-      const winnerLabel = winnerOptions.find(w => w.value === searchForm.winner_side)?.label
-      filters.push({ key: 'winner_side', label: `勝方: ${winnerLabel}` })
+    if (searchForm.win_loss) {
+      const winLossLabel = winnerOptions.find(w => w.value === searchForm.win_loss)?.label
+      filters.push({ key: 'win_loss', label: `勝負: ${winLossLabel}` })
     }
 
     if (searchForm.dateRange?.length === 2) {
@@ -378,29 +408,47 @@
 
   const activeFiltersCount = computed(() => activeFilters.value.length)
 
-  // 分頁配置
-  const paginationConfig = computed(() => ({
-    page: currentPage.value,
-    pageSize: pageSize.value,
-    itemCount: totalResults.value,
-    showSizePicker: true,
-    pageSizes: [10, 15, 20, 50],
-    showQuickJumper: true,
-    prefix: ({ itemCount }) => `共 ${itemCount} 項`,
-    onUpdatePage: page => {
-      handlePageChange(page)
-    },
-    onUpdatePageSize: newPageSize => {
-      pageSize.value = newPageSize
-      currentPage.value = 1
-      if (searchExecuted.value) {
-        handleSearch()
-      } else {
-        pagination.pageSize = newPageSize
-        pagination.page = 1
-      }
+  // 獲取當前搜尋的球員名稱（用於高亮）
+  const searchedPlayerNames = computed(() => {
+    if (!searchForm.player_ids || searchForm.player_ids.length === 0) {
+      return []
     }
-  }))
+    return searchForm.player_ids
+      .map(id => {
+        const player = playerOptions.value.find(p => p.value === id)
+        return player ? player.label : ''
+      })
+      .filter(name => name)
+  })
+
+  // 高亮顯示球員名稱的輔助函數
+  const renderPlayerNameWithHighlight = playerName => {
+    if (!playerName) return '-'
+
+    // 如果沒有搜尋球員，直接返回名稱
+    if (!searchedPlayerNames.value || searchedPlayerNames.value.length === 0) {
+      return playerName
+    }
+
+    // 檢查是否有搜尋的球員名稱需要高亮
+    const matchedSearchTerm = searchedPlayerNames.value.find(searchName =>
+      playerName.toLowerCase().includes(searchName.toLowerCase())
+    )
+
+    if (matchedSearchTerm) {
+      // 創建高亮的 HTML
+      const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(`(${escapeRegExp(matchedSearchTerm)})`, 'gi')
+      const highlightedHTML = playerName.replace(regex, '<mark class="search-highlight">$1</mark>')
+
+      // 返回包含 HTML 的 span 元素
+      return h('span', {
+        innerHTML: highlightedHTML
+      })
+    }
+
+    return playerName
+  }
 
   // 表格欄位定義
   const tableColumns = computed(() => [
@@ -422,7 +470,8 @@
           ellipsis: { tooltip: true },
           render: row => {
             if (!row.player1) return '-'
-            return row.player1.name
+            const playerName = row.player1.name
+            return renderPlayerNameWithHighlight(playerName)
           }
         },
         {
@@ -432,7 +481,8 @@
           ellipsis: { tooltip: true },
           render: row => {
             if (!row.player2) return '-'
-            return row.player2.name
+            const playerName = row.player2.name
+            return renderPlayerNameWithHighlight(playerName)
           }
         }
       ]
@@ -455,7 +505,8 @@
           ellipsis: { tooltip: true },
           render: row => {
             if (!row.player3) return '-'
-            return row.player3.name
+            const playerName = row.player3.name
+            return renderPlayerNameWithHighlight(playerName)
           }
         },
         {
@@ -465,7 +516,8 @@
           ellipsis: { tooltip: true },
           render: row => {
             if (!row.player4) return '-'
-            return row.player4.name
+            const playerName = row.player4.name
+            return renderPlayerNameWithHighlight(playerName)
           }
         }
       ]
@@ -475,7 +527,7 @@
       key: 'score',
       width: 120,
       align: 'center',
-      render(row) {
+      render: row => {
         let outcomeTag = null
         if (row.side_a_outcome === 'win') {
           outcomeTag = h(NTag, { type: 'success', size: 'tiny', round: true }, { default: () => 'A勝' })
@@ -515,7 +567,7 @@
       width: 100,
       align: 'center',
       fixed: 'right',
-      render(row) {
+      render: row => {
         return h(NSpace, { justify: 'center' }, () => [
           h(NTooltip, null, {
             trigger: () =>
@@ -555,6 +607,7 @@
     newIds => {
       if (!newIds || newIds.length === 0) {
         searchForm.player_position = null
+        searchForm.win_loss = null
       }
     }
   )
@@ -609,8 +662,8 @@
       params.match_format = searchForm.match_format
     }
 
-    if (searchForm.winner_side) {
-      params.winner_side = searchForm.winner_side
+    if (searchForm.win_loss) {
+      params.win_loss = searchForm.win_loss
     }
 
     if (searchForm.dateRange?.length === 2) {
@@ -687,8 +740,8 @@
       case 'match_format':
         searchForm.match_format = null
         break
-      case 'winner_side':
-        searchForm.winner_side = null
+      case 'win_loss':
+        searchForm.win_loss = null
         break
       case 'dateRange':
         searchForm.dateRange = null
@@ -706,11 +759,51 @@
   }
 
   const handlePageChange = page => {
-    currentPage.value = page
+    // 這個函數現在由分頁配置中的 onChange 調用
     if (searchExecuted.value) {
       handleSearch()
     } else {
-      pagination.page = page
+      // 如果沒有搜尋，重新載入數據
+      fetchMatchRecords()
+    }
+  }
+
+  const handleSelectionChange = keys => {
+    // 處理表格選擇變更
+  }
+
+  const handleViewDetail = record => {
+    selectedMatch.value = record
+    showMatchDetail.value = true
+  }
+
+  const handleMatchUpdate = updatedRecord => {
+    const index = displayRecords.value.findIndex(r => r.id === updatedRecord.id)
+    if (index !== -1) {
+      displayRecords.value[index] = updatedRecord
+    }
+    message.success('比賽記錄已更新')
+  }
+
+  const handleMatchDelete = deletedId => {
+    displayRecords.value = displayRecords.value.filter(r => r.id !== deletedId)
+    showMatchDetail.value = false
+    selectedMatch.value = null
+    totalResults.value = Math.max(0, totalResults.value - 1)
+    message.success('比賽記錄已刪除')
+  }
+
+  const handleCreateMatch = () => {
+    // 導航到新增比賽頁面或打開對話框
+    message.info('新增比賽功能開發中...')
+  }
+
+  const handleRefreshData = () => {
+    if (searchExecuted.value) {
+      handleSearch()
+    } else {
+      // 載入初始數據
+      fetchMatchRecords()
     }
   }
 
@@ -720,39 +813,11 @@
     console.log('匯出參數:', params)
   }
 
-  // 原有的方法
-  async function fetchMatchRecords() {
-    loading.value = true
-    fetchError.value = null
-    try {
-      const response = await apiClient.get('/match-records')
-      allMatchRecords.value = response.data || []
-      displayRecords.value = allMatchRecords.value
-      totalResults.value = allMatchRecords.value.length
-    } catch (err) {
-      fetchError.value = err.response?.data?.message || '無法載入比賽記錄。'
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const handleRefreshData = () => {
-    if (searchExecuted.value) {
-      handleSearch()
-    } else {
-      fetchMatchRecords()
-    }
-  }
-
-  function goToRecordMatchPage() {
-    router.push({ name: 'RecordMatch' })
-  }
-
-  function editMatchRecord(recordId) {
+  const editMatchRecord = recordId => {
     message.info(`編輯功能待開發，目標 ID: ${recordId}`)
   }
 
-  function confirmDeleteMatch(record) {
+  const confirmDeleteMatch = record => {
     dialog.error({
       title: '確認刪除比賽記錄',
       content: `您確定要刪除這場比賽記錄嗎？`,
@@ -770,6 +835,24 @@
     })
   }
 
+  // 載入初始數據
+  const fetchMatchRecords = async () => {
+    loading.value = true
+    try {
+      const response = await apiClient.get('/match-records')
+
+      allMatchRecords.value = response.data || []
+      displayRecords.value = allMatchRecords.value
+      totalResults.value = allMatchRecords.value.length
+    } catch (error) {
+      console.error('載入初始數據失敗:', error)
+      message.error('載入數據失敗')
+      fetchError.value = error.response?.data?.message || '載入數據失敗'
+    } finally {
+      loading.value = false
+    }
+  }
+
   // 載入球員選項
   const loadPlayers = async () => {
     try {
@@ -784,7 +867,7 @@
     }
   }
 
-  // 生命週期
+  // 初始化
   onMounted(() => {
     fetchMatchRecords()
     loadPlayers()

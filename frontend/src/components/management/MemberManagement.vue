@@ -22,9 +22,9 @@
     <!-- 成員資料表格 -->
     <n-data-table
       :columns="memberTableColumns"
-      :data="filteredDataForTable"
+      :data="paginatedMembers"
       :loading="loadingMembers"
-      :pagination="memberPagination"
+      :pagination="paginationConfig"
       :bordered="false"
       :bottom-bordered="true"
       :single-line="false"
@@ -35,12 +35,7 @@
     />
 
     <!-- 空狀態提示 -->
-    <div
-      v-if="
-        !loadingMembers && filteredDataForTable.length === 0 && props.searchTermProp && !memberError
-      "
-      class="mt-3"
-    >
+    <div v-if="!loadingMembers && filteredMembers.length === 0 && props.searchTermProp && !memberError" class="mt-3">
       <n-empty :description="`找不到符合 '${props.searchTermProp}' 的成員。`" />
     </div>
     <div v-if="!loadingMembers && allFetchedMembers.length === 0 && !memberError" class="mt-3">
@@ -52,19 +47,8 @@
 <script setup>
   import { computed, h, onMounted, reactive, ref, watch } from 'vue'
   import { RouterLink, useRouter } from 'vue-router'
-  import apiClient from '@/services/apiClient' // 假設您使用 apiClient
-  import {
-    NAlert,
-    NButton,
-    NDataTable,
-    NEmpty,
-    NIcon,
-    NSpace,
-    NTag,
-    NTooltip,
-    useDialog,
-    useMessage
-  } from 'naive-ui'
+  import apiClient from '@/services/apiClient'
+  import { NAlert, NButton, NDataTable, NEmpty, NIcon, NSpace, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
   import {
     PencilOutline as EditIcon,
     PersonAddOutline as PersonAddIcon,
@@ -83,6 +67,8 @@
   const allFetchedMembers = ref([])
   const loadingMembers = ref(true)
   const memberError = ref(null)
+  const currentPage = ref(1)
+  const pageSize = ref(10)
 
   // --- 表格分頁設定 ---
   const memberPagination = reactive({
@@ -91,10 +77,13 @@
     showSizePicker: true,
     pageSizes: [10, 20, 30, 50],
     onChange: page => {
+      currentPage.value = page
       memberPagination.page = page
     },
-    onUpdatePageSize: pageSize => {
-      memberPagination.pageSize = pageSize
+    onUpdatePageSize: newPageSize => {
+      pageSize.value = newPageSize
+      memberPagination.pageSize = newPageSize
+      currentPage.value = 1
       memberPagination.page = 1
     }
   })
@@ -124,14 +113,13 @@
   const memberTableColumns = computed(() => [
     {
       title: '名稱',
-      key: 'display_name', // 主要顯示 User 的 display_name
+      key: 'name',
       sorter: 'default',
       fixed: 'left',
       width: 150,
       resizable: true,
       ellipsis: { tooltip: true },
-      render(row) {
-        // 點擊姓名可以跳轉到編輯頁面
+      render: row => {
         return h(
           RouterLink,
           { to: { name: 'EditMember', params: { id: row.id } }, class: 'table-link' },
@@ -160,7 +148,7 @@
       render: row => getGenderDisplay(row.gender)
     },
     {
-      title: '位置', // 新增的欄位
+      title: '位置',
       key: 'position',
       width: 100,
       align: 'center',
@@ -179,10 +167,10 @@
       width: 180,
       resizable: true,
       ellipsis: { tooltip: true },
-      render: row => row.organization?.short_name || row.organization?.name || '-' // 從巢狀物件獲取
+      render: row => row.organization?.short_name || row.organization?.name || '-'
     },
     {
-      title: 'μ', // Mu 分數
+      title: 'μ',
       key: 'mu',
       sorter: (a, b) => a.mu - b.mu,
       width: 80,
@@ -192,7 +180,7 @@
     },
     {
       title: '角色',
-      key: 'user.role', // 直接根據 user 物件中的 role 排序和篩選
+      key: 'user.role',
       width: 110,
       resizable: true,
       align: 'center',
@@ -203,7 +191,7 @@
         { label: '隊員', value: 'member' }
       ],
       filter: (value, row) => row.user?.role === value,
-      render(row) {
+      render: row => {
         const role = row.user?.role
         return role
           ? h(
@@ -220,7 +208,7 @@
       fixed: 'right',
       width: 100,
       align: 'center',
-      render(row) {
+      render: row => {
         return h(NSpace, { justify: 'center' }, () => [
           h(NTooltip, null, {
             trigger: () =>
@@ -259,22 +247,49 @@
     return memberTableColumns.value.reduce((sum, col) => sum + (col.width || 120), 0)
   })
 
-  const filteredDataForTable = computed(() => {
+  // 過濾後的成員數據
+  const filteredMembers = computed(() => {
     const term = props.searchTermProp.toLowerCase().trim()
     if (!term) {
       return allFetchedMembers.value
     }
-    return allFetchedMembers.value.filter(member =>
-      Object.values(member).some(value => String(value).toLowerCase().includes(term))
-    )
+    return allFetchedMembers.value.filter(member => {
+      // 搜尋多個欄位
+      const searchFields = [
+        member.name,
+        member.display_name,
+        member.user?.display_name,
+        member.student_id,
+        member.organization?.name,
+        member.organization?.short_name,
+        member.user?.username
+      ]
+
+      return searchFields.some(field => field && String(field).toLowerCase().includes(term))
+    })
   })
+
+  // 分頁後的數據
+  const paginatedMembers = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
+    return filteredMembers.value.slice(start, end)
+  })
+
+  // 分頁配置
+  const paginationConfig = computed(() => ({
+    ...memberPagination,
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    itemCount: filteredMembers.value.length,
+    prefix: ({ itemCount }) => `共 ${itemCount} 位成員`
+  }))
 
   // --- API 呼叫與邏輯 ---
   async function fetchMembers() {
     loadingMembers.value = true
     memberError.value = null
     try {
-      // 假設後端 /members API 會回傳包含 user 和 organization 的巢狀數據
       const response = await apiClient.get('/members', { params: { all: true } })
       allFetchedMembers.value = response.data || []
     } catch (err) {
@@ -284,15 +299,19 @@
     }
   }
 
+  // --- 生命週期 ---
   onMounted(fetchMembers)
 
+  // 監聽搜尋條件變化，重置到第一頁
   watch(
     () => props.searchTermProp,
     () => {
+      currentPage.value = 1
       memberPagination.page = 1
     }
   )
 
+  // --- 操作方法 ---
   function editMember(memberId) {
     router.push({ name: 'EditMember', params: { id: memberId } })
   }
@@ -300,17 +319,16 @@
   function confirmDeleteMember(member) {
     dialog.error({
       title: '確認刪除',
-      content: () =>
-        `您確定要刪除成員 "${member.name}" 嗎？此操作將一併刪除其關聯的登入帳號，且無法復原！`,
+      content: () => `您確定要刪除成員 "${member.name}" 嗎？此操作將一併刪除其關聯的登入帳號，且無法復原！`,
       positiveText: '確認刪除',
       negativeText: '取消',
       onPositiveClick: async () => {
         try {
           await apiClient.delete(`/members/${member.id}`)
           message.success(`成員 ${member.name} 已成功刪除。`)
-          await fetchMembers() // 重新獲取列表
+          await fetchMembers()
         } catch (err) {
-          message.error(`刪除成員失敗: ${err.response?.data?.message || err.message}`)
+          message.error(err.response?.data?.message || `刪除失敗。`)
         }
       }
     })
