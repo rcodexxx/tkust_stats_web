@@ -28,10 +28,9 @@ class MatchRecordService:
                 match_date=data["match_date"],
                 match_type=data["match_type"],
                 match_format=data["match_format"],
-                # 新增的欄位
                 court_surface=data.get("court_surface"),
                 court_environment=data.get("court_environment"),
-                time_slot=data.get("time_slot"),
+                match_time_slot=data.get("time_slot"),
                 total_points=data.get("total_points"),
                 duration_minutes=data.get("duration_minutes"),
                 youtube_url=data.get("youtube_url"),
