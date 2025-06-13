@@ -1,0 +1,1229 @@
+/* @/assets/css/MatchPlayerSelector.css */
+
+/* =================================
+   Match Player Selector 組件樣式
+   ================================= */
+
+/* 基礎容器 */
+.match-player-selector {
+  width: 100%;
+}
+
+.arena-container {
+  margin: 2rem 0;
+  position: relative;
+}
+
+.arena-container::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  border-radius: 20px;
+  z-index: -1;
+}
+
+/* =================================
+   網球場視覺化樣式
+   ================================= */
+
+/* 基礎網球場樣式 */
+.match-arena {
+  width: 100%;
+  max-width: 900px;
+  min-width: 320px;
+  min-height: 500px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  aspect-ratio: 78 / 36;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+/* 球場線條基礎樣式 */
+.match-arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  background:
+    linear-gradient(#fff, #fff) no-repeat center center / 4px 100%,
+    linear-gradient(#fff, #fff) no-repeat center center / 53.84% 3px,
+    linear-gradient(#fff, #fff) no-repeat 23.08% center / 3px 75%,
+    linear-gradient(#fff, #fff) no-repeat 76.92% center / 3px 75%,
+    linear-gradient(#fff, #fff) no-repeat center 12.5% / 100% 3px,
+    linear-gradient(#fff, #fff) no-repeat center 87.5% / 100% 3px,
+    linear-gradient(#fff, #fff) no-repeat left center / 3px 100%,
+    linear-gradient(#fff, #fff) no-repeat right center / 3px 100%,
+    linear-gradient(#fff, #fff) no-repeat center top / 100% 3px,
+    linear-gradient(#fff, #fff) no-repeat center bottom / 100% 3px;
+}
+
+/* 不同場地材質樣式 */
+.match-arena.court-hard_court {
+  background: radial-gradient(ellipse at center, #377db8 0%, #1e8fd5 100%);
+  border: 2px solid #1e40af;
+  box-shadow:
+    0 8px 32px rgba(37, 99, 235, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-clay_court {
+  background: radial-gradient(ellipse at center, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  border: 2px solid #7f1d1d;
+  box-shadow:
+    0 8px 32px rgba(220, 38, 38, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-grass_court {
+  background: radial-gradient(ellipse at center, #16a34a 0%, #15803d 50%, #166534 100%);
+  border: 2px solid #14532d;
+  box-shadow:
+    0 8px 32px rgba(22, 163, 74, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-synthetic {
+  background: radial-gradient(ellipse at center, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+  border: 2px solid #4c1d95;
+  box-shadow:
+    0 8px 32px rgba(124, 58, 237, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.court-carpet {
+  background: radial-gradient(ellipse at center, #a3a3a3 0%, #737373 50%, #525252 100%);
+  border: 2px solid #404040;
+  box-shadow:
+    0 8px 32px rgba(163, 163, 163, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 時間段光線效果 */
+.match-arena.time-morning {
+  filter: brightness(1.05) saturate(1.1) hue-rotate(5deg);
+  box-shadow:
+    0 8px 32px rgba(255, 193, 7, 0.2),
+    0 0 50px rgba(255, 193, 7, 0.1);
+}
+
+.match-arena.time-afternoon {
+  filter: brightness(1) saturate(1);
+}
+
+.match-arena.time-evening {
+  filter: brightness(1) saturate(1.1) contrast(1.05);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 60px rgba(255, 255, 255, 0.15);
+}
+
+/* 環境效果 */
+.match-arena.env-indoor {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    inset 0 0 50px rgba(255, 255, 255, 0.1);
+}
+
+.match-arena.env-outdoor {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* =================================
+   隊伍區域樣式
+   ================================= */
+
+.team-vs-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  height: 80%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: center;
+  justify-items: center;
+}
+
+.team-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+}
+
+.team-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 1.2rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  width: 100%;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  position: relative;
+  padding-top: 1rem;
+}
+
+.team-card.has-players {
+  transform: scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.team-card.winner-glow {
+  border-color: #10b981;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+  animation: pulse-winner 2s infinite;
+}
+
+@keyframes pulse-winner {
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.6);
+  }
+}
+
+.team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.team-title {
+  margin: 0;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* =================================
+   位置指示器樣式
+   ================================= */
+
+.position-indicator {
+  position: absolute;
+  top: -8px;
+  left: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.position-indicator.back-row {
+  background: linear-gradient(45deg, #dc2626, #b91c1c);
+  border: 1px solid #991b1b;
+}
+
+.position-indicator.front-row {
+  background: linear-gradient(45deg, #2563eb, #1d4ed8);
+  border: 1px solid #1e40af;
+}
+
+.position-label {
+  font-size: 0.65rem;
+}
+
+.position-number {
+  background: rgba(255, 255, 255, 0.2);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* =================================
+   球員選擇樣式
+   ================================= */
+
+.player-slot {
+  margin-bottom: 1rem;
+  position: relative;
+  min-height: 60px;
+}
+
+.select-player-btn {
+  position: relative;
+}
+
+.btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.position-hint {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.selected-player {
+  display: flex;
+  justify-content: center;
+  animation: slideInUp 0.3s ease-out;
+}
+
+.player-card-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 280px;
+  position: relative;
+}
+
+.player-card-compact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.player-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-name-compact {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.125rem;
+}
+
+.player-org-compact {
+  font-size: 0.7rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remove-btn {
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.remove-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* =================================
+   分數控制樣式
+   ================================= */
+
+.score-controls {
+  margin-top: 1rem;
+  position: relative;
+}
+
+.score-controls .n-input-number {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* =================================
+   VS區域樣式
+   ================================= */
+
+.vs-section {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+
+.vs-circle {
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f8f8 50%, #e0e0e0 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    inset 0 2px 10px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 10px rgba(0, 0, 0, 0.1);
+  animation: tennis-ball-bounce 2s ease-in-out infinite;
+  border: 3px solid #ffffff;
+  position: relative;
+}
+
+.vs-text {
+  color: #ff0000;
+  font-weight: 900;
+  font-size: 1.3rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  position: relative;
+}
+
+@keyframes tennis-ball-bounce {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+    box-shadow:
+      0 8px 25px rgba(0, 0, 0, 0.3),
+      inset 0 2px 10px rgba(255, 255, 255, 0.8),
+      inset 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: translateY(-15px) scale(1.05);
+    box-shadow:
+      0 35px 45px rgba(0, 0, 0, 0.4),
+      inset 0 2px 15px rgba(255, 255, 255, 0.9),
+      inset 0 -2px 15px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* =================================
+   時間控制器樣式
+   ================================= */
+
+.time-controller {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.time-controller:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.15);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+}
+
+.time-icon {
+  font-size: 2rem;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.time-controller.morning .time-icon {
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
+}
+
+.time-controller.afternoon .time-icon {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+}
+
+.time-controller.evening .time-icon {
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+}
+
+/* =================================
+   快速選擇區域樣式
+   ================================= */
+
+.player-selection-area {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.organization-controls {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.player-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.player-card-btn:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.player-card-btn.selected {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.player-org {
+  font-size: 0.75rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.player-score {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.selected-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =================================
+   模態框樣式
+   ================================= */
+
+.player-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
+}
+
+.player-card:hover {
+  border-color: #667eea;
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.25);
+}
+
+.player-card.selected {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  transform: scale(1.05);
+}
+
+.player-card-info {
+  text-align: center;
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+.player-card-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.player-card-org {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+/* =================================
+   動畫效果
+   ================================= */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes court-transition {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.match-arena.changing {
+  animation: court-transition 0.6s ease-out;
+}
+
+/* =================================
+   響應式設計
+   ================================= */
+
+@media (max-width: 768px) {
+  /* 網球場手機版直立模式 */
+  .match-arena {
+    aspect-ratio: 36 / 78; /* 改為直立比例 */
+    min-width: 300px;
+    max-width: 400px;
+    width: 90%;
+    min-height: 600px; /* 增加最小高度 */
+  }
+
+  /* 手機版的直立球場線條 - 重新定義所有線條位置 */
+  .match-arena::before {
+    background:
+      /* 球網 (現在是水平線，原本的垂直線) */
+      linear-gradient(#fff, #fff) no-repeat center center / 100% 4px,
+      /* 中央發球線 (現在是垂直線，原本的水平線) */ linear-gradient(#fff, #fff) no-repeat center center / 3px 53.84%,
+      /* 發球線 (現在是水平線，原本的垂直線) */ linear-gradient(#fff, #fff) no-repeat center 23.08% / 75% 3px,
+      linear-gradient(#fff, #fff) no-repeat center 76.92% / 75% 3px,
+      /* 單打邊線 (現在是垂直線，原本的水平線) */ linear-gradient(#fff, #fff) no-repeat 12.5% center / 3px 100%,
+      linear-gradient(#fff, #fff) no-repeat 87.5% center / 3px 100%,
+      /* 外框 */ linear-gradient(#fff, #fff) no-repeat center top / 100% 3px,
+      linear-gradient(#fff, #fff) no-repeat center bottom / 100% 3px,
+      linear-gradient(#fff, #fff) no-repeat left center / 3px 100%,
+      linear-gradient(#fff, #fff) no-repeat right center / 3px 100%;
+  }
+
+  /* 調整球場內容容器 */
+  .team-vs-container {
+    width: 85%;
+    height: 85%;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 40px; /* 增加隊伍間距 */
+  }
+
+  /* 球員卡片手機版優化 */
+  .player-card {
+    /* 手機版改為橫向佈局，增大點擊區域 */
+    flex-direction: row;
+    text-align: left;
+    padding: 1rem;
+    min-height: 80px;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .player-card .n-avatar {
+    flex-shrink: 0; /* 防止頭像縮小 */
+  }
+
+  .player-card-info {
+    text-align: left;
+    align-items: flex-start;
+    min-height: auto;
+  }
+
+  .player-card-name {
+    white-space: normal; /* 允許換行 */
+    word-break: break-word;
+    margin-bottom: 0.25rem;
+  }
+
+  .player-card-org {
+    margin-bottom: 0.25rem;
+  }
+
+  /* 位置指示器手機版優化 */
+  .position-indicator {
+    top: -6px;
+    left: 6px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .position-number {
+    width: 14px;
+    height: 14px;
+    font-size: 0.65rem;
+  }
+
+  /* 球員卡片緊湊版手機優化 */
+  .player-card-compact {
+    padding: 0.5rem;
+    gap: 0.5rem;
+    max-width: none;
+  }
+
+  /* 快速選擇區域手機版優化 */
+  .players-grid {
+    grid-template-columns: 1fr; /* 手機版單欄 */
+    gap: 0.5rem;
+    max-height: 300px;
+  }
+
+  .player-card-btn {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  /* 時間控制器手機版優化 */
+  .time-controller {
+    width: 60px;
+    height: 60px;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .time-icon {
+    font-size: 1.6rem;
+  }
+
+  /* VS 區域手機版優化 */
+  .vs-circle {
+    width: 60px;
+    height: 60px;
+  }
+
+  .vs-text {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .match-arena {
+    min-width: 280px;
+    padding: 1rem;
+  }
+
+  .team-vs-container {
+    width: 90%;
+    height: 90%;
+    gap: 30px;
+  }
+
+  .player-card {
+    padding: 0.75rem;
+    gap: 0.75rem;
+    min-height: 70px;
+  }
+
+  .player-card-name {
+    font-size: 0.85rem;
+  }
+
+  .players-grid {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 374px) {
+  .match-arena {
+    aspect-ratio: 36 / 78; /* 直立 */
+    min-width: 280px;
+    width: 95%;
+    min-height: 480px;
+    padding: 0.5rem;
+    margin: 1rem auto;
+  }
+
+  /* 網球場線條調整 */
+  .match-arena::before {
+    background:
+      linear-gradient(#fff, #fff) no-repeat center center / 100% 3px,
+      linear-gradient(#fff, #fff) no-repeat center center / 3px 53.84%,
+      linear-gradient(#fff, #fff) no-repeat center 23.08% / 70% 2px,
+      linear-gradient(#fff, #fff) no-repeat center 76.92% / 70% 2px,
+      linear-gradient(#fff, #fff) no-repeat 15% center / 2px 100%,
+      linear-gradient(#fff, #fff) no-repeat 85% center / 2px 100%,
+      linear-gradient(#fff, #fff) no-repeat center top / 100% 2px,
+      linear-gradient(#fff, #fff) no-repeat center bottom / 100% 2px,
+      linear-gradient(#fff, #fff) no-repeat left center / 2px 100%,
+      linear-gradient(#fff, #fff) no-repeat right center / 2px 100%;
+  }
+
+  .team-vs-container {
+    width: 85%;
+    height: 85%;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .team-card {
+    min-height: 90px;
+    padding: 0.4rem;
+    transform: scale(0.85);
+  }
+
+  .team-title {
+    font-size: 0.8rem;
+  }
+
+  /* VS 球縮小 */
+  .vs-circle {
+    width: 45px;
+    height: 45px;
+  }
+
+  .vs-text {
+    font-size: 0.9rem;
+  }
+
+  /* 球員卡片極小螢幕優化 */
+  .player-card {
+    flex-direction: row !important;
+    padding: 0.4rem !important;
+    min-height: 50px !important;
+    gap: 0.4rem !important;
+  }
+
+  .player-card .n-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.7rem !important;
+  }
+
+  .player-card-name {
+    font-size: 0.75rem !important;
+    line-height: 1.2;
+  }
+
+  .player-card-org {
+    font-size: 0.65rem !important;
+  }
+
+  /* 分數控制縮小 */
+  .score-wrapper {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .score-number {
+    font-size: 1.2rem;
+  }
+
+  .score-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* 時間控制器縮小 */
+  .time-controller {
+    width: 50px;
+    height: 50px;
+    top: 0.3rem;
+    right: 0.3rem;
+  }
+
+  .time-icon {
+    font-size: 1.3rem;
+  }
+}
+
+/* 375px - 414px: 標準手機 (iPhone SE 2nd/3rd, iPhone 12 mini, iPhone 12/13/14) */
+@media (min-width: 375px) and (max-width: 414px) {
+  .match-arena {
+    aspect-ratio: 36 / 78;
+    min-width: 320px;
+    width: 90%;
+    min-height: 520px;
+    padding: 0.75rem;
+  }
+
+  .team-vs-container {
+    width: 87%;
+    height: 87%;
+    gap: 25px;
+  }
+
+  .team-card {
+    min-height: 110px;
+    padding: 0.6rem;
+    transform: scale(0.9);
+  }
+
+  .player-card {
+    flex-direction: row !important;
+    padding: 0.6rem !important;
+    min-height: 60px !important;
+    gap: 0.6rem !important;
+  }
+
+  .player-card .n-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .player-card-name {
+    font-size: 0.8rem !important;
+  }
+
+  .vs-circle {
+    width: 55px;
+    height: 55px;
+  }
+
+  .vs-text {
+    font-size: 1rem;
+  }
+}
+
+/* 415px - 767px: 大手機 (iPhone Plus, Pro Max) */
+@media (min-width: 415px) and (max-width: 767px) {
+  .match-arena {
+    aspect-ratio: 36 / 78;
+    min-width: 360px;
+    width: 90%;
+    min-height: 550px;
+    padding: 1rem;
+  }
+
+  .team-vs-container {
+    width: 88%;
+    height: 88%;
+    gap: 30px;
+  }
+
+  .team-card {
+    min-height: 120px;
+    padding: 0.75rem;
+    transform: scale(0.95);
+  }
+
+  .player-card {
+    flex-direction: row !important;
+    padding: 0.75rem !important;
+    min-height: 70px !important;
+    gap: 0.75rem !important;
+  }
+
+  .vs-circle {
+    width: 65px;
+    height: 65px;
+  }
+
+  .vs-text {
+    font-size: 1.1rem;
+  }
+}
+
+/* 768px - 1023px: 平板 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .match-arena {
+    aspect-ratio: 78 / 36; /* 回到橫向 */
+    min-width: 600px;
+    width: 95%;
+    min-height: 400px;
+  }
+
+  .team-vs-container {
+    width: 90%;
+    height: 80%;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+
+  .team-card {
+    min-height: 180px;
+    transform: scale(1);
+  }
+
+  .player-card {
+    flex-direction: column !important;
+    min-height: 100px !important;
+  }
+}
+
+/* 1024px+: 桌面 */
+@media (min-width: 1024px) {
+  .match-arena {
+    aspect-ratio: 78 / 36;
+    min-width: 700px;
+    min-height: 450px;
+  }
+
+  .team-card {
+    min-height: 220px;
+  }
+
+  .player-card {
+    flex-direction: column !important;
+    min-height: 120px !important;
+  }
+}
+
+/* 球員選擇網格的響應式優化 */
+@media (max-width: 374px) {
+  /* 極小手機：強制單欄 + 卡片橫向 */
+  .n-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .n-grid-item {
+    width: 100% !important;
+  }
+
+  .player-card {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    min-height: 50px !important;
+  }
+
+  .player-card-info {
+    text-align: left !important;
+    flex: 1 !important;
+  }
+}
+
+@media (min-width: 375px) and (max-width: 639px) {
+  /* 標準手機：單欄 + 卡片橫向 */
+  .n-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .player-card {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    min-height: 60px !important;
+  }
+
+  .player-card-info {
+    text-align: left !important;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  /* 大手機：2欄 */
+  .n-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .player-card {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+}
+
+/* 通用觸控優化 */
+@media (max-width: 767px) {
+  /* 確保所有可點擊元素至少 44px */
+  .player-card,
+  .select-player-btn,
+  .score-btn,
+  .remove-btn {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* 增強視覺反饋 */
+  .player-card:active {
+    transform: scale(0.98) !important;
+    background-color: #f1f5f9 !important;
+  }
+
+  /* 選中狀態更明顯 */
+  .player-card.selected {
+    border-width: 3px !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+  }
+}
+
+/* 極限情況：280px 以下 */
+@media (max-width: 280px) {
+  .match-arena {
+    min-width: 260px;
+    width: 98%;
+    padding: 0.25rem;
+  }
+
+  .team-card {
+    min-height: 80px;
+    padding: 0.3rem;
+    transform: scale(0.8);
+  }
+
+  .player-card {
+    min-height: 40px !important;
+    padding: 0.3rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .player-card .n-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .player-card-name {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* =================================
+   額外的觸控優化
+   ================================= */
+
+@media (max-width: 640px) {
+  /* 增加觸控區域 */
+  .player-card {
+    min-height: 44px; /* iOS 建議的最小觸控區域 */
+  }
+
+  /* 增強視覺反饋 */
+  .player-card:active {
+    transform: scale(0.98);
+    background-color: #f8fafc;
+  }
+
+  /* 選中狀態更明顯 */
+  .player-card.selected {
+    border-width: 3px;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+
+  /* 已選中覆蓋層優化 */
+  .selected-overlay {
+    font-size: 0.8rem;
+    gap: 0.25rem;
+  }
+}
+
+/* =================================
+   載入動畫優化
+   ================================= */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.player-card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* 球場過渡動畫增強 */
+@keyframes court-responsive-transition {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.match-arena.changing {
+  animation: court-responsive-transition 0.8s ease-out;
+}

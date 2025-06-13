@@ -844,7 +844,7 @@ import { format } from 'date-fns'
   }
 
   function editMatchRecord(recordId) {
-    message.info(`編輯功能待開發，目標 ID: ${recordId}`)
+    router.push({ name: 'EditMatch', params: { id: recordId } })
   }
 
   function confirmDeleteMatch(record) {

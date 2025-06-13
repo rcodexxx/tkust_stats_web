@@ -9,8 +9,9 @@ import EditProfileView from '../views/EditProfileView.vue'
 import ManagementCenterView from '@/views/team/ManagementCenterView.vue'
 import AddMemberView from '../views/team/AddMemberView.vue'
 import EditMemberView from '@/views/team/EditMemberView.vue'
-import MatchRecordView from '../views/match/MatchRecordView.vue'
+import AddMatchRecordView from '../views/match/AddMatchRecordView.vue'
 import MatchManagementView from '@/views/match/MatchManagementView.vue'
+import EditMatchRecordView from '../views/match/EditMatchRecordView.vue' // 🔧 新增編輯比賽頁面
 
 const routes = [
   {
@@ -39,7 +40,14 @@ const routes = [
   {
     path: '/match-records/create',
     name: 'RecordMatch',
-    component: MatchRecordView,
+    component: AddMatchRecordView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/match-records/edit/:id',
+    name: 'EditMatch',
+    component: EditMatchRecordView,
+    props: true,
     meta: { requiresAuth: true }
   },
   {

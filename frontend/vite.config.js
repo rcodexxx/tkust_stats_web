@@ -5,7 +5,20 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          // 確保所有指令都被正確處理
+          isCustomElement: tag => false
+        }
+      },
+      script: {
+        defineModel: true,
+        propsDestructure: true
+      }
+    })
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -30,5 +43,9 @@ export default defineConfig({
         }
       }
     }
+  },
+  // 添加 optimizeDeps 以確保依賴正確處理
+  optimizeDeps: {
+    include: ['vue', 'naive-ui']
   }
 })
