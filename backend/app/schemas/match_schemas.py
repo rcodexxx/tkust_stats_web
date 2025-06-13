@@ -3,7 +3,6 @@ from marshmallow import Schema, ValidationError, fields, validate, validates_sch
 from marshmallow_enum import EnumField
 
 # 假設您的 enums 和 models 在這些路徑
-from ..models import Member
 from ..models.enums.match_enums import (
     CourtEnvironmentEnum,
     CourtSurfaceEnum,
@@ -36,10 +35,16 @@ class MatchRecordCreateSchema(Schema):
 
     # 比賽基本資訊
     match_type = EnumField(
-        MatchTypeEnum, by_value=True, required=True, error="無效的比賽類型。"
+        MatchTypeEnum,
+        by_value=True,
+        required=True,
+        error_messages={"invalid": "無效的比賽類型。"},
     )
     match_format = EnumField(
-        MatchFormatEnum, by_value=True, required=True, error="無效的賽制。"
+        MatchFormatEnum,
+        by_value=True,
+        required=True,
+        error_messages={"invalid": "無效的賽制。"},
     )
 
     # 場地相關欄位
@@ -48,21 +53,21 @@ class MatchRecordCreateSchema(Schema):
         by_value=True,
         required=False,
         allow_none=True,
-        error="無效的場地材質。",
+        error_messages={"invalid": "無效的場地材質。"},
     )
     court_environment = EnumField(
         CourtEnvironmentEnum,
         by_value=True,
         required=False,
         allow_none=True,
-        error="無效的場地環境。",
+        error_messages={"invalid": "無效的場地環境。"},
     )
     time_slot = EnumField(
         MatchTimeSlotEnum,
         by_value=True,
         required=False,
         allow_none=True,
-        error="無效的比賽時間段。",
+        error_messages={"invalid": "無效的比賽時間段。"},
     )
 
     # 比賽詳細資訊
@@ -76,60 +81,72 @@ class MatchRecordCreateSchema(Schema):
         required=False,
         allow_none=True,
         validate=validate.Range(min=20, max=60),
-        metadata={"description": "比賽時長（20-60分鐘）"},
+        metadata={"description": "比賽時長(分鐘)"},
     )
     youtube_url = fields.Url(
-        required=False, allow_none=True, metadata={"description": "YouTube影片連結"}
+        required=False, allow_none=True, metadata={"description": "YouTube 影片連結"}
     )
 
-    # 球員資訊
-    player1_id = fields.Int(required=True)
-    player2_id = fields.Int(required=False, allow_none=True)  # 雙打時的隊友
-    player3_id = fields.Int(required=True)
-    player4_id = fields.Int(required=False, allow_none=True)  # 雙打時的隊友
+    # 球員 ID (4個球員分別對應 A方1號、A方2號、B方1號、B方2號)
+    player1_id = fields.Int(
+        required=True,
+        validate=validate.Range(min=1),
+        error_messages={
+            "required": "請選擇有效的A方1號球員。",
+            "invalid": "球員ID必須是正整數。",
+        },
+    )
+    player2_id = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=1),
+        error_messages={"invalid": "球員ID必須是正整數。"},
+    )
+    player3_id = fields.Int(
+        required=True,
+        validate=validate.Range(min=1),
+        error_messages={
+            "required": "請選擇有效的B方1號球員。",
+            "invalid": "球員ID必須是正整數。",
+        },
+    )
+    player4_id = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=1),
+        error_messages={"invalid": "球員ID必須是正整數。"},
+    )
 
     # 比分資訊
     a_games = fields.Int(
         required=True,
         validate=validate.Range(min=0),
-        metadata={"description": "A方贏得的局數"},
+        error_messages={
+            "required": "請輸入A方局數。",
+            "invalid": "A方局數必須是非負整數。",
+        },
     )
     b_games = fields.Int(
         required=True,
         validate=validate.Range(min=0),
-        metadata={"description": "B方贏得的局數"},
+        error_messages={
+            "required": "請輸入B方局數。",
+            "invalid": "B方局數必須是非負整數。",
+        },
     )
 
-    match_notes = fields.Str(required=False, allow_none=True)
+    # 比賽備註
+    match_notes = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=500)
+    )
 
     @validates_schema
-    def validate_players_and_score(self, data, **kwargs):
-        """對球員和分數進行綜合驗證。"""
-        # 驗證球員不重複
-        player_ids = [
-            data.get("player1_id"),
-            data.get("player2_id"),
-            data.get("player3_id"),
-            data.get("player4_id"),
-        ]
-        valid_ids = {pid for pid in player_ids if pid is not None}
-        if len(valid_ids) < len([pid for pid in player_ids if pid is not None]):
-            raise ValidationError("一場比賽中不能有重複的球員。", field_name="_schema")
-
-        # 驗證所有傳入的球員 ID 都是有效的 Member
-        found_members_count = Member.query.filter(Member.id.in_(valid_ids)).count()
-        if found_members_count != len(valid_ids):
-            raise ValidationError("提供了無效的球員 ID。", field_name="_schema")
-
-        # 驗證分數不能相同（不支援平局）
-        if data.get("a_games") == data.get("b_games"):
-            raise ValidationError(
-                "比賽局數不能相同（不支援平局）。", field_name="a_games"
-            )
+    def validate_players_selection(self, data, **kwargs):
+        """驗證球員選擇的合理性"""
+        match_type = data.get("match_type")
 
         # 驗證雙打模式下必須有4個球員
-        match_type = data.get("match_type")
-        if match_type in [MatchTypeEnum.DOUBLES, MatchTypeEnum.MIXED_DOUBLES]:
+        if match_type == MatchTypeEnum.DOUBLES:
             if not all(
                 [
                     data.get("player1_id"),
@@ -191,7 +208,7 @@ class MatchRecordResponseSchema(Schema):
         attribute="match.court_environment",
         dump_only=True,
     )
-    match_time_slot = EnumField(
+    time_slot = EnumField(
         MatchTimeSlotEnum,
         by_value=True,
         attribute="match.match_time_slot",
@@ -212,61 +229,18 @@ class MatchRecordResponseSchema(Schema):
     # 比分資訊
     a_games = fields.Int(dump_only=True)
     b_games = fields.Int(dump_only=True)
-    total_games = fields.Int(dump_only=True)  # 使用 property
+    total_games = fields.Method("get_total_games", dump_only=True)
     side_a_outcome = fields.Str(attribute="side_a_outcome.value", dump_only=True)
 
+    # 比賽備註
     match_notes = fields.Str(dump_only=True, allow_none=True)
 
-    class Meta:
-        ordered = True
-
-
-# --- 只顯示 Match 基本資訊的 Schema ---
-class MatchBasicSchema(Schema):
-    """用於顯示比賽基本資訊的簡化 Schema"""
-
-    id = fields.Int(dump_only=True)
-    match_date = fields.Date(dump_only=True)
-    match_type = EnumField(MatchTypeEnum, by_value=True, dump_only=True)
-    match_format = EnumField(MatchFormatEnum, by_value=True, dump_only=True)
-
-    court_surface = EnumField(CourtSurfaceEnum, by_value=True, dump_only=True)
-    court_environment = EnumField(CourtEnvironmentEnum, by_value=True, dump_only=True)
-    time_slot = EnumField(MatchTimeSlotEnum, by_value=True, dump_only=True)
-
-    total_points = fields.Int(dump_only=True)
-    duration_minutes = fields.Int(dump_only=True)
-    youtube_url = fields.Str(dump_only=True)
+    def get_total_games(self, obj):
+        """計算總局數"""
+        return (obj.a_games or 0) + (obj.b_games or 0)
 
     class Meta:
         ordered = True
-
-
-# --- 更新 Match 資訊的 Schema ---
-class MatchUpdateSchema(Schema):
-    """用於更新比賽資訊的 Schema"""
-
-    match_date = fields.Date(required=False)
-    match_type = EnumField(MatchTypeEnum, by_value=True, required=False)
-    match_format = EnumField(MatchFormatEnum, by_value=True, required=False)
-
-    court_surface = EnumField(
-        CourtSurfaceEnum, by_value=True, required=False, allow_none=True
-    )
-    court_environment = EnumField(
-        CourtEnvironmentEnum, by_value=True, required=False, allow_none=True
-    )
-    time_slot = EnumField(
-        MatchTimeSlotEnum, by_value=True, required=False, allow_none=True
-    )
-
-    total_points = fields.Int(
-        required=False, allow_none=True, validate=validate.Range(min=0)
-    )
-    duration_minutes = fields.Int(
-        required=False, allow_none=True, validate=validate.Range(min=20, max=60)
-    )
-    youtube_url = fields.Url(required=False, allow_none=True)
 
 
 # --- 比賽統計查詢的 Schema ---
@@ -313,3 +287,123 @@ class MatchQuerySchema(Schema):
 
         if start_date and end_date and start_date > end_date:
             raise ValidationError("開始日期不能晚於結束日期", field_name="start_date")
+
+
+# --- 只顯示 Match 基本資訊的 Schema ---
+class MatchBasicSchema(Schema):
+    """用於顯示比賽基本資訊的簡化 Schema"""
+
+    id = fields.Int(dump_only=True)
+    match_date = fields.Date(dump_only=True)
+    match_type = EnumField(MatchTypeEnum, by_value=True, dump_only=True)
+    match_format = EnumField(MatchFormatEnum, by_value=True, dump_only=True)
+
+    court_surface = EnumField(CourtSurfaceEnum, by_value=True, dump_only=True)
+    court_environment = EnumField(CourtEnvironmentEnum, by_value=True, dump_only=True)
+    time_slot = EnumField(
+        MatchTimeSlotEnum, by_value=True, attribute="match_time_slot", dump_only=True
+    )
+
+    total_points = fields.Int(dump_only=True)
+    duration_minutes = fields.Int(dump_only=True)
+    youtube_url = fields.Str(dump_only=True)
+
+    notes = fields.Str(dump_only=True)
+
+    class Meta:
+        ordered = True
+
+
+# --- 更新比賽記錄的 Schema ---
+class MatchUpdateSchema(Schema):
+    """用於更新比賽資訊的 Schema"""
+
+    # Match 相關欄位
+    match_date = fields.Date(required=False)
+    match_type = EnumField(MatchTypeEnum, by_value=True, required=False)
+    match_format = EnumField(MatchFormatEnum, by_value=True, required=False)
+
+    court_surface = EnumField(
+        CourtSurfaceEnum, by_value=True, required=False, allow_none=True
+    )
+    court_environment = EnumField(
+        CourtEnvironmentEnum, by_value=True, required=False, allow_none=True
+    )
+    time_slot = EnumField(
+        MatchTimeSlotEnum, by_value=True, required=False, allow_none=True
+    )
+
+    total_points = fields.Int(
+        required=False, allow_none=True, validate=validate.Range(min=0)
+    )
+    duration_minutes = fields.Int(
+        required=False, allow_none=True, validate=validate.Range(min=20, max=60)
+    )
+    youtube_url = fields.Url(required=False, allow_none=True)
+
+    # MatchRecord 相關欄位
+    player1_id = fields.Int(required=False, validate=validate.Range(min=1))
+    player2_id = fields.Int(
+        required=False, allow_none=True, validate=validate.Range(min=1)
+    )
+    player3_id = fields.Int(required=False, validate=validate.Range(min=1))
+    player4_id = fields.Int(
+        required=False, allow_none=True, validate=validate.Range(min=1)
+    )
+
+    a_games = fields.Int(required=False, validate=validate.Range(min=0))
+    b_games = fields.Int(required=False, validate=validate.Range(min=0))
+
+    match_notes = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=500)
+    )
+
+    @validates_schema
+    def validate_players_selection(self, data, **kwargs):
+        """驗證球員選擇的合理性"""
+        match_type = data.get("match_type")
+
+        # 只有在提供 match_type 時才進行驗證
+        if match_type:
+            # 驗證雙打模式下必須有4個球員
+            if match_type == MatchTypeEnum.DOUBLES:
+                required_players = [
+                    "player1_id",
+                    "player2_id",
+                    "player3_id",
+                    "player4_id",
+                ]
+                for player_field in required_players:
+                    if player_field in data and not data.get(player_field):
+                        raise ValidationError(
+                            "雙打模式下必須選擇4個球員。", field_name="_schema"
+                        )
+
+            # 驗證單打模式下只能有2個球員
+            elif match_type == MatchTypeEnum.SINGLES:
+                if (data.get("player2_id") is not None) or (
+                    data.get("player4_id") is not None
+                ):
+                    raise ValidationError(
+                        "單打模式下只能選擇2個球員。", field_name="_schema"
+                    )
+
+    @validates_schema
+    def validate_duration_against_games(self, data, **kwargs):
+        """驗證比賽時長與局數的合理性"""
+        duration = data.get("duration_minutes")
+        a_games = data.get("a_games")
+        b_games = data.get("b_games")
+
+        if duration and a_games is not None and b_games is not None:
+            total_games = a_games + b_games
+            # 粗略估算：每局約2-4分鐘
+            min_expected = total_games * 2
+            max_expected = total_games * 4
+
+            if duration < min_expected or duration > max_expected:
+                raise ValidationError(
+                    f"比賽時長 ({duration}分鐘) 與總局數 ({total_games}局) 不太合理。"
+                    f"建議時長範圍：{min_expected}-{max_expected}分鐘",
+                    field_name="duration_minutes",
+                )

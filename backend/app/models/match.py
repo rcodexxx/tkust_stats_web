@@ -1,5 +1,5 @@
 # backend/app/models/match.py
-from sqlalchemy import Date, Integer, Text, Time
+from sqlalchemy import Date, Integer, String, Text, Time
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
@@ -25,10 +25,10 @@ class Match(db.Model):
         SQLAlchemyEnum(
             MatchTimeSlotEnum,
             name="match_time_slot_enum_matches",
-            values_callable=lambda x: [e.value for e in x]
+            values_callable=lambda x: [e.value for e in x],
         ),
         nullable=True,
-        comment="比賽時間段"
+        comment="比賽時間段",
     )
 
     # 場地相關字段
@@ -36,20 +36,25 @@ class Match(db.Model):
         SQLAlchemyEnum(
             CourtSurfaceEnum,
             name="court_surface_enum_matches",
-            values_callable=lambda x: [e.value for e in x]
+            values_callable=lambda x: [e.value for e in x],
         ),
         nullable=True,
-        comment="場地材質"
+        comment="場地材質",
     )
     court_environment = db.Column(
         SQLAlchemyEnum(
             CourtEnvironmentEnum,
             name="court_environment_enum_matches",
-            values_callable=lambda x: [e.value for e in x]
+            values_callable=lambda x: [e.value for e in x],
         ),
         nullable=True,
-        comment="場地環境"
+        comment="場地環境",
     )
+
+    # 比賽詳細資訊
+    total_points = db.Column(Integer, nullable=True, comment="比賽總得分")
+    duration_minutes = db.Column(Integer, nullable=True, comment="比賽時長(分鐘)")
+    youtube_url = db.Column(String(500), nullable=True, comment="YouTube 連結")
 
     # 備註字段
     notes = db.Column(Text, nullable=True, comment="比賽備註")
@@ -68,29 +73,37 @@ class Match(db.Model):
         SQLAlchemyEnum(
             MatchFormatEnum,
             name="match_format_enum_matches",
-            values_callable=lambda x: [e.value for e in x]
+            values_callable=lambda x: [e.value for e in x],
         ),
         nullable=False,
         comment="賽制",
     )
 
-    results = relationship("MatchRecord", back_populates="match", cascade="all, delete-orphan")
+    # 關聯到比賽記錄
+    results = relationship(
+        "MatchRecord", back_populates="match", cascade="all, delete-orphan"
+    )
 
     def to_dict(self) -> dict:
         data = {
             "id": self.id,
             "match_date": self.match_date.isoformat() if self.match_date else None,
             "match_time": self.match_time.isoformat() if self.match_time else None,
-            "match_time_slot": self.match_time_slot.value if self.match_time_slot else None,
+            "match_time_slot": self.match_time_slot.value
+            if self.match_time_slot
+            else None,
             "court_surface": self.court_surface.value if self.court_surface else None,
-            "court_environment": self.court_environment.value if self.court_environment else None,
+            "court_environment": self.court_environment.value
+            if self.court_environment
+            else None,
             "match_type": self.match_type.value if self.match_type else None,
             "match_format": self.match_format.value if self.match_format else None,
             "notes": self.notes,
+            "total_points": self.total_points,
+            "duration_minutes": self.duration_minutes,
+            "youtube_url": self.youtube_url,
         }
         return data
 
     def __repr__(self) -> str:
-        return (
-            f"<Match id={self.id}, date='{self.match_date}', type='{self.match_type.value if self.match_type else ''}'>"
-        )
+        return f"<Match id={self.id}, date='{self.match_date}', type='{self.match_type.value if self.match_type else ''}'>"
