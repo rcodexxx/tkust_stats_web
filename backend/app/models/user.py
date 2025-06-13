@@ -1,17 +1,20 @@
 import datetime  # 確保導入 datetime
 
-from sqlalchemy import Integer, String, Enum as SQLAlchemyEnum
-from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import Integer, String
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from .enums.user_enums import UserRoleEnum
 from ..extensions import db
+from .enums.user_enums import UserRoleEnum
 
 
 class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(Integer, primary_key=True, comment="使用者唯一識別碼")
-    username = db.Column(String(30), unique=True, nullable=False, index=True, comment="帳號 (登入用)")
+    username = db.Column(
+        String(30), unique=True, nullable=False, index=True, comment="帳號 (登入用)"
+    )
     email = db.Column(
         db.String(120),
         unique=True,
@@ -41,9 +44,12 @@ class User(db.Model):
         comment="最後更新時間",
     )
 
-    is_active = db.Column(db.Boolean, default=True, nullable=False, comment="帳號是否啟用")
+    is_active = db.Column(
+        db.Boolean, default=True, nullable=False, comment="帳號是否啟用"
+    )
     member_profile = db.relationship(
         "Member",
+        foreign_keys="Member.user_id",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
@@ -79,4 +85,6 @@ class User(db.Model):
         }
 
     def __repr__(self):
-        return f"<User id={self.id}, username='{self.username}', role='{self.role.value}'>"
+        return (
+            f"<User id={self.id}, username='{self.username}', role='{self.role.value}'>"
+        )
