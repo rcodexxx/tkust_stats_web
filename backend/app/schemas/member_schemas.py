@@ -9,7 +9,7 @@ from marshmallow import (
 )
 from marshmallow_enum import EnumField
 
-from ..models.enums import UserRoleEnum
+from ..models.enums import GuestRoleEnum, UserRoleEnum
 from ..models.enums.bio_enums import BloodTypeEnum, GenderEnum
 from ..models.enums.match_enums import MatchPositionEnum
 
@@ -17,6 +17,7 @@ from ..models.enums.match_enums import MatchPositionEnum
 # --- 巢狀 Schema ---
 class SimpleOrganizationSchema(Schema):
     """僅序列化組織的基礎資訊"""
+
     id = fields.Int(dump_only=True)
     name = fields.Str(dump_only=True)
     short_name = fields.Str(dump_only=True)
@@ -24,6 +25,7 @@ class SimpleOrganizationSchema(Schema):
 
 class SimpleRacketSchema(Schema):
     """僅序列化球拍的基礎資訊"""
+
     id = fields.Int(dump_only=True)
     brand = fields.Str(dump_only=True)
     model_name = fields.Str(dump_only=True)
@@ -31,6 +33,7 @@ class SimpleRacketSchema(Schema):
 
 class SimpleUserSchema(Schema):
     """僅序列化使用者的基礎資訊"""
+
     id = fields.Int(dump_only=True)
     username = fields.Str(dump_only=True)
     display_name = fields.Str(dump_only=True)
@@ -40,6 +43,7 @@ class SimpleUserSchema(Schema):
 
 class CreatorInfoSchema(Schema):
     """訪客創建者資訊"""
+
     username = fields.Str(dump_only=True)
     display_name = fields.Str(dump_only=True)
 
@@ -57,8 +61,12 @@ class MemberSchema(Schema):
 
     # Bio 資訊
     gender = EnumField(GenderEnum, by_value=True, dump_only=True, allow_none=True)
-    blood_type = EnumField(BloodTypeEnum, by_value=True, dump_only=True, allow_none=True)
-    position = EnumField(MatchPositionEnum, by_value=True, dump_only=True, allow_none=True)
+    blood_type = EnumField(
+        BloodTypeEnum, by_value=True, dump_only=True, allow_none=True
+    )
+    position = EnumField(
+        MatchPositionEnum, by_value=True, dump_only=True, allow_none=True
+    )
 
     # 狀態資訊
     is_active = fields.Method("get_is_active", dump_only=True)
@@ -79,8 +87,16 @@ class MemberSchema(Schema):
     last_used_at = fields.DateTime(dump_only=True, allow_none=True)
     created_at = fields.DateTime(dump_only=True, allow_none=True)
 
+    guest_role = EnumField(
+        GuestRoleEnum, by_value=True, dump_only=True, allow_none=True
+    )
+    guest_role_display = fields.Method("get_guest_role_display", dump_only=True)
+    guest_notes = fields.Str(dump_only=True, allow_none=True)
+
     # 關聯資訊
-    organization = fields.Nested(SimpleOrganizationSchema, dump_only=True, allow_none=True)
+    organization = fields.Nested(
+        SimpleOrganizationSchema, dump_only=True, allow_none=True
+    )
     racket = fields.Nested(SimpleRacketSchema, dump_only=True, allow_none=True)
     user = fields.Nested(SimpleUserSchema, dump_only=True, allow_none=True)
     creator_info = fields.Nested(CreatorInfoSchema, dump_only=True, allow_none=True)
@@ -103,6 +119,12 @@ class MemberSchema(Schema):
     def get_player_type(self, obj):
         """獲取球員類型"""
         return obj.player_type
+
+    def get_guest_role_display(self, obj):
+        """獲取訪客身份顯示名稱"""
+        if obj.is_guest and obj.guest_role:
+            return GuestRoleEnum.get_display_name(obj.guest_role)
+        return None
 
 
 # --- 排行榜專用 Schema ---
@@ -163,12 +185,18 @@ class MemberCreateSchema(Schema):
 
     # Member 基本資訊
     name = fields.Str(required=True, validate=validate.Length(min=1, max=80))
-    student_id = fields.Str(required=False, allow_none=True, validate=validate.Length(max=20))
+    student_id = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=20)
+    )
 
     # Bio 資訊
     gender = EnumField(GenderEnum, by_value=True, required=False, allow_none=True)
-    blood_type = EnumField(BloodTypeEnum, by_value=True, required=False, allow_none=True)
-    position = EnumField(MatchPositionEnum, by_value=True, required=False, allow_none=True)
+    blood_type = EnumField(
+        BloodTypeEnum, by_value=True, required=False, allow_none=True
+    )
+    position = EnumField(
+        MatchPositionEnum, by_value=True, required=False, allow_none=True
+    )
 
     # 關聯 ID
     organization_id = fields.Int(required=False, allow_none=True)
@@ -179,7 +207,9 @@ class MemberCreateSchema(Schema):
 
     # TrueSkill（通常使用預設值）
     mu = fields.Float(required=False, allow_none=True, validate=validate.Range(min=0))
-    sigma = fields.Float(required=False, allow_none=True, validate=validate.Range(min=0))
+    sigma = fields.Float(
+        required=False, allow_none=True, validate=validate.Range(min=0)
+    )
 
     # 備註
     notes = fields.Str(required=False, allow_none=True)
@@ -195,8 +225,12 @@ class GuestPlayerCreateSchema(Schema):
     """創建訪客球員的 Schema"""
 
     name = fields.Str(required=True, validate=validate.Length(min=1, max=80))
-    phone = fields.Str(required=False, allow_none=True, validate=validate.Length(max=20))
-    notes = fields.Str(required=False, allow_none=True, validate=validate.Length(max=200))
+    phone = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=20)
+    )
+    notes = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=200)
+    )
 
     class Meta:
         unknown = EXCLUDE
@@ -207,12 +241,18 @@ class MemberUpdateSchema(Schema):
 
     # 可更新的基本資訊
     name = fields.Str(required=False, validate=validate.Length(min=1, max=80))
-    student_id = fields.Str(required=False, allow_none=True, validate=validate.Length(max=20))
+    student_id = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=20)
+    )
 
     # Bio 資訊
     gender = EnumField(GenderEnum, by_value=True, required=False, allow_none=True)
-    blood_type = EnumField(BloodTypeEnum, by_value=True, required=False, allow_none=True)
-    position = EnumField(MatchPositionEnum, by_value=True, required=False, allow_none=True)
+    blood_type = EnumField(
+        BloodTypeEnum, by_value=True, required=False, allow_none=True
+    )
+    position = EnumField(
+        MatchPositionEnum, by_value=True, required=False, allow_none=True
+    )
 
     # 關聯 ID
     organization_id = fields.Int(required=False, allow_none=True)
@@ -226,7 +266,9 @@ class MemberUpdateSchema(Schema):
     notes = fields.Str(required=False, allow_none=True)
 
     # User 相關（如果有對應的 User）
-    user_display_name = fields.Str(required=False, allow_none=True, validate=validate.Length(max=50))
+    user_display_name = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=50)
+    )
     user_email = fields.Email(required=False, allow_none=True)
 
     class Meta:
@@ -235,11 +277,11 @@ class MemberUpdateSchema(Schema):
     @validates_schema
     def validate_dates(self, data, **kwargs):
         """驗證日期邏輯"""
-        joined_date = data.get('joined_date')
-        leaved_date = data.get('leaved_date')
+        joined_date = data.get("joined_date")
+        leaved_date = data.get("leaved_date")
 
         if joined_date and leaved_date and leaved_date <= joined_date:
-            raise ValidationError('離隊日期必須晚於入隊日期')
+            raise ValidationError("離隊日期必須晚於入隊日期")
 
 
 class GuestPromotionSchema(Schema):
@@ -250,15 +292,23 @@ class GuestPromotionSchema(Schema):
         required=True,
         validate=validate.Regexp(r"^09\d{8}$", error="手機號碼格式無效。"),
     )
-    password = fields.Str(required=True, load_only=True, validate=validate.Length(min=6))
+    password = fields.Str(
+        required=True, load_only=True, validate=validate.Length(min=6)
+    )
 
     # 可選的資訊
     email = fields.Email(required=False, allow_none=True)
-    display_name = fields.Str(required=False, allow_none=True, validate=validate.Length(max=50))
-    role = EnumField(UserRoleEnum, by_value=True, required=False, load_default=UserRoleEnum.MEMBER)
+    display_name = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=50)
+    )
+    role = EnumField(
+        UserRoleEnum, by_value=True, required=False, load_default=UserRoleEnum.MEMBER
+    )
 
     # 可選的會員資訊更新
-    student_id = fields.Str(required=False, allow_none=True, validate=validate.Length(max=20))
+    student_id = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=20)
+    )
     organization_id = fields.Int(required=False, allow_none=True)
 
     class Meta:
@@ -270,31 +320,32 @@ class MemberQuerySchema(Schema):
     """會員查詢參數 Schema"""
 
     # 基本篩選
-    all = fields.Str(required=False, validate=validate.OneOf(['true', 'false']))
+    all = fields.Str(required=False, validate=validate.OneOf(["true", "false"]))
     name = fields.Str(required=False)
-    include_guests = fields.Str(required=False, validate=validate.OneOf(['true', 'false']))
-    active_only = fields.Str(required=False, validate=validate.OneOf(['true', 'false']))
+    include_guests = fields.Str(
+        required=False, validate=validate.OneOf(["true", "false"])
+    )
+    active_only = fields.Str(required=False, validate=validate.OneOf(["true", "false"]))
 
     # 分頁
     page = fields.Int(required=False, validate=validate.Range(min=1), load_default=1)
-    per_page = fields.Int(required=False, validate=validate.Range(min=1, max=100), load_default=20)
+    per_page = fields.Int(
+        required=False, validate=validate.Range(min=1, max=100), load_default=20
+    )
 
     # 排序
     sort_by = fields.Str(
         required=False,
-        validate=validate.OneOf(['name', 'score', 'joined_date', 'created_at']),
-        load_default='name'
+        validate=validate.OneOf(["name", "score", "joined_date", "created_at"]),
+        load_default="name",
     )
     sort_order = fields.Str(
-        required=False,
-        validate=validate.OneOf(['asc', 'desc']),
-        load_default='asc'
+        required=False, validate=validate.OneOf(["asc", "desc"]), load_default="asc"
     )
 
     # 類型篩選
     player_type = fields.Str(
-        required=False,
-        validate=validate.OneOf(['member', 'guest', 'all'])
+        required=False, validate=validate.OneOf(["member", "guest", "all"])
     )
 
     # 組織篩選
@@ -323,6 +374,114 @@ class MemberDetailResponseSchema(Schema):
     success = fields.Bool(dump_only=True)
     data = fields.Nested(MemberSchema, dump_only=True)
     message = fields.Str(dump_only=True, allow_none=True)
+
+    class Meta:
+        ordered = True
+
+
+# 創建新的訪客創建 Schema：
+class GuestCreateSchema(Schema):
+    """創建訪客的請求 Schema"""
+
+    # 基本資訊
+    name = fields.Str(
+        required=True,
+        validate=validate.Length(min=2, max=20),
+        metadata={"description": "訪客姓名"},
+    )
+    phone = fields.Str(
+        required=False,
+        allow_none=True,
+        validate=validate.Regexp(r"^[0-9\-+\s()]*$", error="請輸入有效的電話號碼"),
+        metadata={"description": "聯絡電話"},
+    )
+
+    # 身份和歸屬
+    guest_role = EnumField(
+        GuestRoleEnum,
+        by_value=True,
+        required=False,
+        load_default=GuestRoleEnum.NEUTRAL,
+        metadata={"description": "訪客身份類型"},
+    )
+    organization_id = fields.Int(
+        required=False, allow_none=True, metadata={"description": "所屬組織ID"}
+    )
+
+    # 備註
+    notes = fields.Str(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(max=200),
+        metadata={"description": "備註說明"},
+    )
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+# 訪客更新 Schema：
+class GuestUpdateSchema(Schema):
+    """更新訪客資訊的請求 Schema"""
+
+    name = fields.Str(required=False, validate=validate.Length(min=2, max=20))
+    phone = fields.Str(
+        required=False,
+        allow_none=True,
+        validate=validate.Regexp(r"^[0-9\-+\s()]*$", error="請輸入有效的電話號碼"),
+    )
+    guest_role = EnumField(GuestRoleEnum, by_value=True, required=False)
+    organization_id = fields.Int(required=False, allow_none=True)
+    notes = fields.Str(
+        required=False, allow_none=True, validate=validate.Length(max=200)
+    )
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+# 訪客查詢 Schema（用於搜尋我的訪客）：
+class GuestQuerySchema(Schema):
+    """訪客查詢參數 Schema"""
+
+    q = fields.Str(required=False, metadata={"description": "搜尋關鍵字"})
+    guest_role = EnumField(GuestRoleEnum, by_value=True, required=False)
+    organization_id = fields.Int(required=False)
+    limit = fields.Int(
+        required=False, validate=validate.Range(min=1, max=50), load_default=10
+    )
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+# 訪客選項 Schema（用於前端選擇器）：
+class GuestRoleOptionSchema(Schema):
+    """訪客身份選項 Schema"""
+
+    value = fields.Str(dump_only=True)
+    label = fields.Str(dump_only=True)
+    description = fields.Str(dump_only=True)
+
+
+# 響應 Schema：
+class GuestCreateResponseSchema(Schema):
+    """創建訪客響應 Schema"""
+
+    success = fields.Bool(dump_only=True)
+    message = fields.Str(dump_only=True)
+    member = fields.Nested(MemberSchema, dump_only=True)
+
+    class Meta:
+        ordered = True
+
+
+class GuestListResponseSchema(Schema):
+    """訪客列表響應 Schema"""
+
+    success = fields.Bool(dump_only=True)
+    guests = fields.Nested(MemberSchema, many=True, dump_only=True)
+    total = fields.Int(dump_only=True)
 
     class Meta:
         ordered = True

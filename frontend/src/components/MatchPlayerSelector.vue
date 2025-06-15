@@ -362,58 +362,186 @@
       :mask-closable="false"
     >
       <div class="modal-content">
-        <n-input
-          v-model:value="modalSearchTerm"
-          placeholder="搜尋球員姓名或組織..."
-          clearable
-          style="margin-bottom: 1.5rem"
-          size="large"
-        >
-          <template #prefix>
-            <n-icon :component="SearchIcon" />
-          </template>
-        </n-input>
-
-        <n-grid :x-gap="16" :y-gap="16" cols="1 s:2 m:3 l:4" responsive="screen">
-          <n-grid-item
-            v-for="player in filteredPlayersForModal"
-            :key="player.id"
-            @click="selectPlayerFromModal(player.id)"
-          >
-            <div
-              class="player-card"
-              :class="{
-                selected: isPlayerSelected(player.id),
-                disabled: isPlayerSelected(player.id)
-              }"
+        <n-tabs v-model:value="playerSelectorTab" type="segment" style="margin-bottom: 1rem">
+          <!-- 現有球員選擇 -->
+          <n-tab-pane name="existing" tab="選擇現有球員">
+            <n-input
+              v-model:value="modalSearchTerm"
+              placeholder="搜尋球員姓名或組織..."
+              clearable
+              style="margin-bottom: 1.5rem"
+              size="large"
             >
-              <n-avatar
-                round
-                :style="{
-                  backgroundColor: getPlayerColor(player.id),
-                  color: '#fff'
-                }"
-                size="large"
+              <template #prefix>
+                <n-icon :component="SearchIcon" />
+              </template>
+            </n-input>
+
+            <n-grid :x-gap="16" :y-gap="16" cols="1 s:2 m:3 l:4" responsive="screen">
+              <n-grid-item
+                v-for="player in filteredPlayersForModal"
+                :key="player.id"
+                @click="selectPlayerFromModal(player.id)"
               >
-                {{ getPlayerInitial(player.name) }}
-              </n-avatar>
-              <div class="player-card-info">
-                <div class="player-card-name">{{ player.name }}</div>
-                <div v-if="player.organization" class="player-card-org">
-                  {{ player.organization.short_name || player.organization.name }}
+                <div
+                  class="player-card"
+                  :class="{
+                    selected: isPlayerSelected(player.id),
+                    disabled: isPlayerSelected(player.id)
+                  }"
+                >
+                  <n-avatar
+                    round
+                    :style="{
+                      backgroundColor: getPlayerColor(player.id),
+                      color: '#fff'
+                    }"
+                    size="large"
+                  >
+                    {{ getPlayerInitial(player.name) }}
+                  </n-avatar>
+                  <div class="player-card-info">
+                    <div class="player-card-name">{{ player.name }}</div>
+                    <div v-if="player.organization" class="player-card-org">
+                      {{ player.organization.short_name || player.organization.name }}
+                    </div>
+                    <n-tag :type="getScoreTagType(player.score || 1500)" size="small"
+                      >{{ Math.round(player.score || 1500) }}
+                    </n-tag>
+                  </div>
+                  <!-- 已選中提示 -->
+                  <div v-if="isPlayerSelected(player.id)" class="selected-overlay">
+                    <n-icon :component="CheckIcon" size="24" />
+                    <span>已選中</span>
+                  </div>
                 </div>
-                <n-tag :type="getScoreTagType(player.score || 1500)" size="small">{{
-                  Math.round(player.score || 1500)
-                }}</n-tag>
-              </div>
-              <!-- 已選中提示 -->
-              <div v-if="isPlayerSelected(player.id)" class="selected-overlay">
-                <n-icon :component="CheckIcon" size="24" />
-                <span>已選中</span>
-              </div>
+              </n-grid-item>
+            </n-grid>
+          </n-tab-pane>
+          <n-tab-pane name="create-guest" tab="創建新訪客">
+            <n-form ref="guestFormRef" :model="guestForm" :rules="guestRules" label-placement="top">
+              <!-- 基本資訊 -->
+              <n-card title="基本資訊" size="small" style="margin-bottom: 1rem">
+                <n-grid :x-gap="16" :y-gap="16" cols="1 s:2">
+                  <n-form-item-gi label="訪客姓名" path="name">
+                    <n-input v-model:value="guestForm.name" placeholder="請輸入訪客姓名" :maxlength="20" show-count />
+                  </n-form-item-gi>
+
+                  <n-form-item-gi label="聯絡電話" path="phone">
+                    <n-input v-model:value="guestForm.phone" placeholder="選填，方便聯絡" :maxlength="15" />
+                  </n-form-item-gi>
+                </n-grid>
+              </n-card>
+
+              <!-- 身份和歸屬 -->
+              <n-card title="身份和歸屬" size="small" style="margin-bottom: 1rem">
+                <n-grid :x-gap="16" :y-gap="16" cols="1 s:2">
+                  <n-form-item-gi label="訪客身份" path="guest_role">
+                    <n-select
+                      v-model:value="guestForm.guest_role"
+                      :options="guestRoleOptions"
+                      placeholder="選擇訪客在比賽中的身份"
+                    />
+                  </n-form-item-gi>
+
+                  <n-form-item-gi label="所屬組織" path="organization_id">
+                    <n-select
+                      v-model:value="guestForm.organization_id"
+                      :options="organizationOptions"
+                      placeholder="選擇訪客所屬組織（可選）"
+                      clearable
+                      filterable
+                    />
+                  </n-form-item-gi>
+                </n-grid>
+              </n-card>
+
+              <!-- 備註說明 -->
+              <n-card title="備註說明" size="small" style="margin-bottom: 1rem">
+                <n-form-item label="備註" path="notes">
+                  <n-input
+                    v-model:value="guestForm.notes"
+                    type="textarea"
+                    placeholder="例如：來自XX學校、替補球員、首次合作等..."
+                    :rows="3"
+                    :maxlength="200"
+                    show-count
+                  />
+                </n-form-item>
+              </n-card>
+
+              <!-- 操作按鈕 -->
+              <n-space justify="end" style="margin-top: 1rem">
+                <n-button @click="cancelGuestCreation">取消</n-button>
+                <n-button type="primary" @click="createAndSelectGuest" :loading="creatingGuest"> 創建並選擇 </n-button>
+              </n-space>
+            </n-form>
+          </n-tab-pane>
+
+          <!-- 我的訪客記錄 -->
+          <n-tab-pane name="my-guests" tab="我的訪客">
+            <div style="margin-bottom: 1rem">
+              <n-input v-model:value="myGuestsSearch" placeholder="搜尋我創建的訪客..." clearable>
+                <template #prefix>
+                  <n-icon :component="SearchIcon" />
+                </template>
+              </n-input>
             </div>
-          </n-grid-item>
-        </n-grid>
+
+            <n-spin :show="loadingMyGuests">
+              <n-list v-if="filteredMyGuests.length > 0" hoverable>
+                <n-list-item
+                  v-for="guest in filteredMyGuests"
+                  :key="guest.id"
+                  style="cursor: pointer; border-radius: 8px; margin-bottom: 8px"
+                  :class="{ 'selected-guest': isPlayerSelected(guest.id) }"
+                  @click="selectGuestFromHistory(guest.id)"
+                >
+                  <template #prefix>
+                    <n-avatar round :style="{ backgroundColor: getPlayerColor(guest.id), color: '#fff' }">
+                      {{ getPlayerInitial(guest.name) }}
+                    </n-avatar>
+                  </template>
+
+                  <n-thing>
+                    <template #header>
+                      <n-space align="center">
+                        {{ guest.name }}
+                        <n-tag size="small" :type="getGuestRoleTagType(guest.guest_role)">
+                          {{ guest.guest_role_display || '中性' }}
+                        </n-tag>
+                      </n-space>
+                    </template>
+
+                    <template #description>
+                      <n-space>
+                        <span v-if="guest.organization">
+                          {{ guest.organization.short_name || guest.organization.name }}
+                        </span>
+                        <span style="color: #999"> 使用 {{ guest.usage_count || 0 }} 次 </span>
+                        <span v-if="guest.last_used_at" style="color: #999">
+                          最近：{{ formatDate(guest.last_used_at) }}
+                        </span>
+                      </n-space>
+                    </template>
+
+                    <div v-if="guest.guest_notes" style="margin-top: 4px; color: #666; font-size: 0.85rem">
+                      {{ guest.guest_notes }}
+                    </div>
+                  </n-thing>
+
+                  <template #suffix>
+                    <div v-if="isPlayerSelected(guest.id)" style="color: #18a058">
+                      <n-icon :component="CheckIcon" size="24" />
+                    </div>
+                  </template>
+                </n-list-item>
+              </n-list>
+
+              <n-empty v-else description="尚未創建任何訪客" />
+            </n-spin>
+          </n-tab-pane>
+        </n-tabs>
       </div>
 
       <template #footer>
@@ -461,6 +589,20 @@
   const allActiveMembers = ref([])
   const organizationOptions = ref([])
   const isChangingCourt = ref(false)
+  const myGuestsList = ref([])
+  const playerSelectorTab = ref('existing')
+  const myGuestsSearch = ref('')
+  const loadingMyGuests = ref(false)
+  const creatingGuest = ref(false)
+  const guestRoleOptions = ref([])
+  const guestForm = ref({
+    name: '',
+    phone: '',
+    guest_role: 'neutral',
+    organization_id: null,
+    notes: ''
+  })
+  const guestFormRef = ref(null)
 
   // Time slot config
   const timeSlotConfig = {
@@ -484,9 +626,9 @@
   // Computed properties
   const scoreInputMax = computed(() => {
     const formatMap = {
-      best_of_3: 2,
-      best_of_5: 3,
-      single_set: 1
+      games_5: 3,
+      games_7: 4,
+      games_9: 5
     }
     return formatMap[props.modelValue.match_format] || 2
   })
@@ -752,6 +894,148 @@
     }
   }
 
+  const guestRules = {
+    name: [
+      { required: true, message: '請輸入訪客姓名', trigger: 'blur' },
+      { min: 2, max: 20, message: '姓名長度應為2-20個字符', trigger: 'blur' }
+    ],
+    phone: [{ pattern: /^[0-9\-+\s()]*$/, message: '請輸入有效的電話號碼', trigger: 'blur' }],
+    guest_role: [{ required: true, message: '請選擇訪客身份', trigger: 'change' }]
+  }
+
+  // 計算屬性
+  const filteredMyGuests = computed(() => {
+    if (!myGuestsSearch.value.trim()) {
+      return myGuestsList.value
+    }
+
+    const searchTerm = myGuestsSearch.value.toLowerCase()
+    return myGuestsList.value.filter(
+      guest =>
+        guest.name.toLowerCase().includes(searchTerm) ||
+        (guest.organization?.name || '').toLowerCase().includes(searchTerm) ||
+        (guest.guest_phone || '').includes(searchTerm) ||
+        (guest.guest_notes || '').toLowerCase().includes(searchTerm)
+    )
+  })
+
+  // 方法
+  const loadGuestRoleOptions = async () => {
+    try {
+      const response = await apiClient.get('/members/guests/role-options')
+      guestRoleOptions.value = response.data.options.map(option => ({
+        value: option.value,
+        label: `${option.label} - ${option.description}`
+      }))
+    } catch (error) {
+      console.error('載入訪客身份選項失敗:', error)
+      // 提供備用選項
+      guestRoleOptions.value = [
+        { value: 'teammate', label: '隊友 - 外出比賽的合作夥伴' },
+        { value: 'opponent', label: '對手 - 記錄比賽的對戰對手' },
+        { value: 'substitute', label: '替補 - 臨時替補球員' },
+        { value: 'neutral', label: '中性 - 身份未明確' }
+      ]
+    }
+  }
+
+  const loadMyGuests = async () => {
+    loadingMyGuests.value = true
+    try {
+      const response = await apiClient.get('/members/guests/search', {
+        params: { limit: 50 }
+      })
+      myGuestsList.value = response.data.guests || []
+    } catch (error) {
+      console.error('載入我的訪客失敗:', error)
+      message.error('載入訪客記錄失敗')
+    } finally {
+      loadingMyGuests.value = false
+    }
+  }
+
+  const createAndSelectGuest = async () => {
+    try {
+      await guestFormRef.value?.validate()
+
+      creatingGuest.value = true
+
+      const response = await apiClient.post('/members/guests', guestForm.value)
+      const newGuest = response.data.member
+
+      // 添加到本地列表
+      allActiveMembers.value.push(newGuest)
+      myGuestsList.value.unshift(newGuest)
+
+      // 自動選擇新創建的訪客
+      if (currentSelectingField.value) {
+        updateData(currentSelectingField.value, newGuest.id)
+      }
+
+      // 重置表單並關閉模態框
+      resetGuestForm()
+      showPlayerSelector.value = false
+      currentSelectingField.value = null
+
+      message.success(`訪客 "${newGuest.name}" 創建成功！`)
+    } catch (error) {
+      console.error('創建訪客失敗:', error)
+      message.error(error.response?.data?.message || '創建訪客失敗')
+    } finally {
+      creatingGuest.value = false
+    }
+  }
+
+  const selectGuestFromHistory = guestId => {
+    if (isPlayerSelected(guestId)) {
+      message.warning('此球員已被選中，請選擇其他球員')
+      return
+    }
+
+    if (currentSelectingField.value) {
+      updateData(currentSelectingField.value, guestId)
+
+      // 更新使用記錄
+      const guest = myGuestsList.value.find(g => g.id === guestId)
+      if (guest) {
+        guest.usage_count = (guest.usage_count || 0) + 1
+        guest.last_used_at = new Date().toISOString()
+      }
+    }
+
+    showPlayerSelector.value = false
+    currentSelectingField.value = null
+  }
+
+  const cancelGuestCreation = () => {
+    resetGuestForm()
+    playerSelectorTab.value = 'existing'
+  }
+
+  const resetGuestForm = () => {
+    guestForm.value = {
+      name: '',
+      phone: '',
+      guest_role: 'neutral',
+      organization_id: null,
+      notes: ''
+    }
+  }
+
+  const getGuestRoleTagType = role => {
+    const typeMap = {
+      teammate: 'success',
+      opponent: 'warning',
+      substitute: 'info',
+      neutral: 'default'
+    }
+    return typeMap[role] || 'default'
+  }
+
+  const formatDate = dateString => {
+    return new Date(dateString).toLocaleDateString('zh-TW')
+  }
+
   // Watchers
   watch(
     [() => props.modelValue.court_surface, () => props.modelValue.court_environment, () => props.modelValue.time_slot],
@@ -759,6 +1043,20 @@
       triggerCourtAnimation()
     }
   )
+
+  watch(showPlayerSelector, show => {
+    if (show) {
+      loadMyGuests()
+      loadGuestRoleOptions()
+    }
+  })
+
+  // 重置頁籤當模態框關閉時
+  watch(showPlayerSelector, show => {
+    if (!show) {
+      playerSelectorTab.value = 'existing'
+    }
+  })
 
   // Lifecycle
   onMounted(() => {
@@ -960,5 +1258,33 @@
       width: 32px;
       height: 32px;
     }
+  }
+
+  .selected-guest {
+    background-color: #f0fdf4;
+    border: 1px solid #10b981;
+  }
+
+  .player-card.selected {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  }
+
+  .selected-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    gap: 0.25rem;
   }
 </style>

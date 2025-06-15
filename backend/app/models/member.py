@@ -1,13 +1,12 @@
-from datetime import datetime
-from typing import Dict
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
 from ..extensions import db
-from .enums.bio_enums import BloodTypeEnum, GenderEnum
-from .enums.match_enums import MatchPositionEnum
+from .enums import BloodTypeEnum, GenderEnum, GuestRoleEnum, MatchPositionEnum
 
 
 class Member(db.Model):
@@ -34,6 +33,7 @@ class Member(db.Model):
         # 統一查詢
         active_players = Member.get_active_players(include_guests=True)
     """
+
     __tablename__ = "members"
 
     id = db.Column(Integer, primary_key=True, comment="隊員唯一識別碼")
@@ -76,12 +76,24 @@ class Member(db.Model):
 
     # --- 訪客相關欄位 ---
     # 這些欄位用於區分和管理訪客球員
-    is_guest = db.Column(Boolean, default=False, nullable=False, comment="是否為訪客球員")
-    guest_phone = db.Column(String(20), nullable=True, comment="訪客電話（用於聯絡和識別）")
-    guest_identifier = db.Column(String(50), nullable=True, unique=True, comment="訪客唯一識別碼（系統生成）")
-    created_by_user_id = db.Column(Integer, ForeignKey("users.id"), nullable=True, comment="創建訪客的用戶ID")
-    created_at = db.Column(DateTime, default=datetime.utcnow, comment="創建時間")
-    last_used_at = db.Column(DateTime, nullable=True, comment="最後使用時間（訪客專用）")
+    is_guest = db.Column(
+        Boolean, default=False, nullable=False, comment="是否為訪客球員"
+    )
+    guest_phone = db.Column(
+        String(20), nullable=True, comment="訪客電話（用於聯絡和識別）"
+    )
+    guest_identifier = db.Column(
+        String(50), nullable=True, unique=True, comment="訪客唯一識別碼（系統生成）"
+    )
+    created_by_user_id = db.Column(
+        Integer, ForeignKey("users.id"), nullable=True, comment="創建訪客的用戶ID"
+    )
+    created_at = db.Column(
+        DateTime, default=datetime.now(timezone.utc), comment="創建時間"
+    )
+    last_used_at = db.Column(
+        DateTime, nullable=True, comment="最後使用時間（訪客專用）"
+    )
     usage_count = db.Column(Integer, default=0, comment="使用次數（訪客專用）")
 
     # --- 隊籍狀態與日期 ---
@@ -92,13 +104,31 @@ class Member(db.Model):
     # --- TrueSkill 評分系統 ---
     # 所有球員都有評分，用於技能評估和配對
     mu = db.Column(
-        Float, nullable=False, default=25.0, comment="TrueSkill μ 值（平均實力，預設25.0）"
+        Float,
+        nullable=False,
+        default=25.0,
+        comment="TrueSkill μ 值（平均實力，預設25.0）",
     )
     sigma = db.Column(
         Float,
         nullable=False,
         default=(25.0 / 3.0),
         comment="TrueSkill σ 值（實力不確定性，預設8.33）",
+    )
+
+    # --- 訪客相關欄位（新增） ---
+    guest_role = db.Column(
+        SQLAlchemyEnum(
+            GuestRoleEnum,
+            name="guest_role_enum",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=True,
+        comment="訪客在比賽中的身份類型",
+    )
+
+    guest_notes = db.Column(
+        Text, nullable=True, comment="訪客備註（如：來自哪個學校、特殊說明等）"
     )
 
     # 備註欄位，可用於記錄特殊資訊
@@ -158,7 +188,7 @@ class Member(db.Model):
         """
         基於 TrueSkill 的保守評分計算
 
-        使用公式：(μ - 3σ) × 100
+        使用公式：(μ - 2σ)
         這個公式提供了一個保守的技能評估，確保：
         1. 新球員（高 σ）不會被高估
         2. 有經驗球員（低 σ）得到公平評分
@@ -167,20 +197,15 @@ class Member(db.Model):
         Returns:
             int: 保守評分（通常在 0-5000 之間）
         """
-        return int((self.mu - 3 * self.sigma) * 100)
+        return int(self.mu - 2 * self.sigma)
 
     @property
     def display_name(self):
         """
-        統一的顯示名稱邏輯
-
-        重要：這個 property 不會與 user.display_name 衝突，
-        因為它們在不同的命名空間中：
-        - Member.display_name（這個 property）
-        - Member.user.display_name（透過 relationship 存取的 User 屬性）
+        統一的顯示名稱邏輯（增強版本）
 
         顯示邏輯優先順序：
-        1. 訪客："{name} (訪客)" 或 "{name} (訪客-{手機尾號})"
+        1. 訪客："{name} (身份)" 或 "{name} (身份-{手機尾號})"
         2. 正式會員有 user.display_name：使用 user.display_name
         3. 其他情況：使用 member.name
 
@@ -189,9 +214,10 @@ class Member(db.Model):
         """
         if self.is_guest:
             # 訪客顯示格式
+            role_display = self.get_guest_role_display() or "訪客"
             if self.guest_phone:
-                return f"{self.name} (訪客-{self.guest_phone[-4:]})"
-            return f"{self.name} (訪客)"
+                return f"{self.name} ({role_display}-{self.guest_phone[-4:]})"
+            return f"{self.name} ({role_display})"
         elif self.user and self.user.display_name:
             # 正式會員優先使用 User 的 display_name
             return self.user.display_name
@@ -290,7 +316,7 @@ class Member(db.Model):
         """
         if self.is_guest:
             self.usage_count += 1
-            self.last_used_at = datetime.utcnow()
+            self.last_used_at = datetime.now(timezone.utc)
 
     def can_be_deleted(self):
         """
@@ -349,14 +375,14 @@ class Member(db.Model):
 
         # 創建對應的 User 帳號
         new_user = User(
-            username=user_data.get('username'),
-            email=user_data.get('email'),
-            display_name=user_data.get('display_name') or self.name,
-            role=user_data.get('role', 'member'),
-            is_active=True
+            username=user_data.get("username"),
+            email=user_data.get("email"),
+            display_name=user_data.get("display_name") or self.name,
+            role=user_data.get("role", "member"),
+            is_active=True,
         )
-        if user_data.get('password'):
-            new_user.set_password(user_data['password'])
+        if user_data.get("password"):
+            new_user.set_password(user_data["password"])
 
         # 更新 Member 記錄
         self.is_guest = False
@@ -365,34 +391,24 @@ class Member(db.Model):
         self.guest_identifier = None
         # 保留 created_by_user_id 作為歷史記錄
 
-    def to_dict(self, org_detail=True, racket_detail=True, user_detail=True) -> Dict:
+    def to_dict(
+        self,
+        org_detail: bool = True,
+        racket_detail: bool = True,
+        user_detail: bool = True,
+    ) -> Dict[str, Any]:
         """
-        將 Member 物件轉換為字典格式
-
-        這個方法用於 API 響應序列化，提供靈活的細節控制選項。
-        根據不同的使用場景，可以選擇包含或排除某些關聯資訊。
+        將 Member 物件轉換為字典格式。
 
         Args:
-            org_detail (bool): 是否包含組織詳細資訊
-            racket_detail (bool): 是否包含球拍詳細資訊
-            user_detail (bool): 是否包含使用者帳號詳細資訊
+            org_detail (bool): 是否包含組織詳細資訊。
+            racket_detail (bool): 是否包含球拍詳細資訊。
+            user_detail (bool): 是否包含使用者帳號詳細資訊。
 
         Returns:
-            Dict: 包含 Member 資訊的字典，結構如下：
-                {
-                    "id": int,
-                    "name": str,
-                    "display_name": str,
-                    "is_guest": bool,
-                    "player_type": str,
-                    "is_active": bool,
-                    ... (其他基本欄位)
-                    "organization_name": str (如果 org_detail=True),
-                    "racket_info": dict (如果 racket_detail=True),
-                    "user_info": dict (如果 user_detail=True),
-                    "creator_info": dict (如果是訪客且 user_detail=True)
-                }
+            Dict[str, Any]: 包含 Member 資訊的字典。
         """
+        # 1. 初始化核心資料
         data = {
             "id": self.id,
             "name": self.name,
@@ -411,53 +427,54 @@ class Member(db.Model):
             "score": self.score,
             "notes": self.notes,
             "user_id": self.user_id,
-
-            # 訪客相關資訊（只有訪客才包含這些欄位）
             "is_guest": self.is_guest,
-            "guest_phone": self.guest_phone if self.is_guest else None,
-            "guest_identifier": self.guest_identifier if self.is_guest else None,
-            "usage_count": self.usage_count if self.is_guest else None,
-            "last_used_at": self.last_used_at.isoformat() if self.is_guest and self.last_used_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
-        # 組織資訊（根據參數決定是否包含）
-        if org_detail:
-            data["organization_id"] = self.organization_id
-            data["organization_name"] = (
-                self.organization.name
-                if self.organization and hasattr(self.organization, "name")
-                else None
-            )
+        # 2. 根據訪客身份，添加特定欄位
+        if self.is_guest:
+            guest_data = {
+                "guest_phone": self.guest_phone,
+                "guest_identifier": self.guest_identifier,
+                "usage_count": self.usage_count,
+                "last_used_at": self.last_used_at.isoformat()
+                if self.last_used_at
+                else None,
+                "guest_role": self.guest_role.value if self.guest_role else None,
+                "guest_role_display": self.get_guest_role_display(),
+                "guest_role_description": self.get_guest_role_description(),
+                "guest_notes": self.guest_notes,
+            }
+            data.update(guest_data)
 
-        # 球拍資訊（根據參數決定是否包含）
-        if racket_detail:
-            data["racket_id"] = self.racket_id
-            data["racket_info"] = (
-                self.racket.to_dict()
-                if self.racket and hasattr(self.racket, "to_dict")
-                else (
-                    self.racket.name
-                    if self.racket and hasattr(self.racket, "name")
-                    else None
-                )
-            )
+            # 訪客的創建者資訊
+            if user_detail and self.creator:
+                data["creator_info"] = {
+                    "username": self.creator.username,
+                    "display_name": self.creator.display_name,
+                }
 
-        # 使用者帳號資訊（根據參數和球員類型決定是否包含）
-        if user_detail and self.user:
-            # 正式會員的 User 資訊
+        # 3. 處理正式會員的 user_info (如果不是訪客)
+        elif user_detail and self.user:
             data["user_info"] = {
                 "username": self.user.username,
                 "user_display_name": self.user.display_name,
                 "role": self.user.role.value if self.user.role else None,
                 "is_active": self.user.is_active,
             }
-        elif user_detail and self.is_guest and self.creator:
-            # 訪客顯示創建者資訊
-            data["creator_info"] = {
-                "username": self.creator.username,
-                "display_name": self.creator.display_name,
-            }
+
+        # 4. 根據參數添加關聯資訊
+        if org_detail and self.organization:
+            data["organization_id"] = self.organization_id
+            data["organization_name"] = self.organization.name
+
+        if racket_detail and self.racket:
+            data["racket_id"] = self.racket_id
+            # 優先使用 to_dict()，若無則回退到 name
+            if hasattr(self.racket, "to_dict"):
+                data["racket_info"] = self.racket.to_dict()
+            else:
+                data["racket_info"] = self.racket.name
 
         return data
 
@@ -481,13 +498,19 @@ class Member(db.Model):
         )
         org_info = f" (Org: {org_name})" if org_name else ""
         player_type = " [訪客]" if self.is_guest else ""
-        return (
-            f"<Member id={self.id}, name='{self.get_current_display_name()}'{player_type}{org_info}>"
-        )
+        return f"<Member id={self.id}, name='{self.get_current_display_name()}'{player_type}{org_info}>"
 
     # --- 類方法（Class Methods）---
     @classmethod
-    def create_guest(cls, name: str, phone: str = None, created_by_user_id: int = None):
+    def create_guest(
+        cls,
+        name: str,
+        phone: str = None,
+        created_by_user_id: int = None,
+        guest_role: GuestRoleEnum = GuestRoleEnum.NEUTRAL,
+        organization_id: int = None,
+        notes: str = None,
+    ):
         """
         類方法：快速創建訪客球員
 
@@ -497,16 +520,14 @@ class Member(db.Model):
             name (str): 訪客姓名（必須）
             phone (str, optional): 訪客電話
             created_by_user_id (int, optional): 創建者的用戶ID
+            guest_role (GuestRoleEnum, optional): 訪客身份類型，預設為 NEUTRAL
+            organization_id (int, optional): 所屬組織ID
+            notes (str, optional): 備註說明
 
         Returns:
-            Member: 新創建的訪客 Member 實例（尚未存儲到資料庫）
-
-        Example:
-            guest = Member.create_guest("臨時球員", "0912345678", created_by_user_id=1)
-            db.session.add(guest)
-            db.session.commit()
+            Member: 新創建的訪客 Member 實例
         """
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now(timezone.utc).timestamp())
         guest_identifier = f"GUEST_{timestamp}_{name[:3].upper()}"
 
         guest = cls(
@@ -514,13 +535,68 @@ class Member(db.Model):
             is_guest=True,
             guest_phone=phone,
             guest_identifier=guest_identifier,
+            guest_role=guest_role,
+            guest_notes=notes,
             created_by_user_id=created_by_user_id,
-            user_id=None,  # 訪客沒有對應的 User
+            organization_id=organization_id,
+            user_id=None,
             usage_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
         )
 
         return guest
+
+    def get_guest_role_display(self):
+        """
+        獲取訪客身份的顯示名稱
+
+        Returns:
+            str: 訪客身份的中文顯示名稱，如果不是訪客則返回 None
+        """
+        if self.is_guest and self.guest_role:
+            return GuestRoleEnum.get_display_name(self.guest_role)
+        return None
+
+    def get_guest_role_description(self):
+        """
+        獲取訪客身份的描述
+
+        Returns:
+            str: 訪客身份的詳細描述，如果不是訪客則返回 None
+        """
+        if self.is_guest and self.guest_role:
+            return GuestRoleEnum.get_description(self.guest_role)
+        return None
+
+    def update_guest_info(
+        self, name=None, phone=None, guest_role=None, organization_id=None, notes=None
+    ):
+        """
+        更新訪客資訊
+
+        Args:
+            name (str, optional): 新的姓名
+            phone (str, optional): 新的電話
+            guest_role (GuestRoleEnum, optional): 新的身份類型
+            organization_id (int, optional): 新的組織ID
+            notes (str, optional): 新的備註
+
+        Raises:
+            ValueError: 如果不是訪客球員
+        """
+        if not self.is_guest:
+            raise ValueError("只有訪客可以使用此方法更新資訊")
+
+        if name is not None:
+            self.name = name
+        if phone is not None:
+            self.guest_phone = phone
+        if guest_role is not None:
+            self.guest_role = guest_role
+        if organization_id is not None:
+            self.organization_id = organization_id
+        if notes is not None:
+            self.guest_notes = notes
 
     @classmethod
     def get_active_players(cls, include_guests=True):
@@ -555,20 +631,20 @@ class Member(db.Model):
                     db.and_(
                         cls.is_guest == False,
                         User.is_active == True,
-                        cls.leaved_date.is_(None)
-                    )
+                        cls.leaved_date.is_(None),
+                    ),
                 )
             )
         else:
             # 只包含正式會員
             return cls.query.join(User).filter(
-                cls.is_guest == False,
-                User.is_active == True,
-                cls.leaved_date.is_(None)
+                cls.is_guest == False, User.is_active == True, cls.leaved_date.is_(None)
             )
 
     @classmethod
-    def search_players(cls, query_text: str, include_guests=True, created_by_user_id=None):
+    def search_players(
+        cls, query_text: str, include_guests=True, created_by_user_id=None
+    ):
         """
         類方法：搜尋球員
 
@@ -602,8 +678,8 @@ class Member(db.Model):
                 cls.name.ilike(search_like),
                 User.display_name.ilike(search_like),
                 User.username.ilike(search_like),
-                cls.student_id.ilike(search_like)
-            )
+                cls.student_id.ilike(search_like),
+            ),
         )
         results.extend(members_query.all())
 
@@ -612,13 +688,15 @@ class Member(db.Model):
             guests_query = cls.query.filter(cls.is_guest == True)
 
             if created_by_user_id:
-                guests_query = guests_query.filter(cls.created_by_user_id == created_by_user_id)
+                guests_query = guests_query.filter(
+                    cls.created_by_user_id == created_by_user_id
+                )
 
             guests_query = guests_query.filter(
                 db.or_(
                     cls.name.ilike(search_like),
                     cls.guest_identifier.ilike(search_like),
-                    cls.guest_phone.ilike(search_like)
+                    cls.guest_phone.ilike(search_like),
                 )
             )
             results.extend(guests_query.all())
