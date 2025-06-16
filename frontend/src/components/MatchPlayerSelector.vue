@@ -1,7 +1,7 @@
-<!-- MatchPlayerSelector.vue -->
+<!-- MatchPlayerSelector.vue - 強健的錯誤處理版本 -->
 <template>
   <div class="match-player-selector">
-    <!-- 動態網球場視覺化 -->
+    <!-- 動態網球場視覺化 - 核心保留 -->
     <div class="arena-container">
       <div :class="courtClasses" :data-changing="isChangingCourt">
         <!-- 時間控制器 -->
@@ -16,22 +16,16 @@
             <div class="team-card" :class="{ 'has-players': hasTeamAPlayers, 'winner-glow': isTeamAWinner }">
               <div class="team-header">
                 <h3 class="team-title">隊伍 A</h3>
-                <n-tag v-if="isTeamAWinner" type="success" round size="small">
-                  <template #icon>
-                    <n-icon :component="WinIcon" />
-                  </template>
-                  勝方
-                </n-tag>
               </div>
 
               <!-- 球員1 (後排) -->
               <div class="player-slot">
+                <div class="position-label-fixed team-a-position">後排</div>
                 <n-button
                   v-if="!modelValue.player1_id"
                   dashed
                   block
                   @click="openPlayerSelector('player1_id')"
-                  style="height: 3.5rem"
                   class="select-player-btn"
                 >
                   <template #icon>
@@ -39,11 +33,9 @@
                   </template>
                   <div class="btn-content">
                     <div>選擇球員</div>
-                    <div class="position-hint">後排</div>
                   </div>
                 </n-button>
-                <div v-else class="selected-player">
-                  <div class="position-indicator-simple back-row">後排</div>
+                <div v-else class="selected-player" @click="openPlayerSelector('player1_id')">
                   <div class="player-card-compact">
                     <n-avatar
                       :size="32"
@@ -60,33 +52,31 @@
                         {{ getPlayerOrganization(modelValue.player1_id) }}
                       </div>
                     </div>
-                    <n-button size="small" quaternary circle @click="clearPlayer('player1_id')" class="remove-btn">
+                    <n-button size="small" quaternary circle @click.stop="clearPlayer('player1_id')" class="remove-btn">
                       <n-icon :component="CloseIcon" />
                     </n-button>
                   </div>
                 </div>
               </div>
 
-              <!-- 球員2 (前排) - 只在雙打時顯示 -->
+              <!-- 球員2 (前排) - 僅雙打顯示 -->
               <div v-if="modelValue.match_type === 'doubles'" class="player-slot">
+                <div class="position-label-fixed team-a-position">前排</div>
                 <n-button
                   v-if="!modelValue.player2_id"
                   dashed
                   block
                   @click="openPlayerSelector('player2_id')"
-                  style="height: 3.5rem"
                   class="select-player-btn"
                 >
                   <template #icon>
                     <n-icon :component="AddIcon" />
                   </template>
                   <div class="btn-content">
-                    <div>選擇搭檔</div>
-                    <div class="position-hint">前排</div>
+                    <div>選擇球員</div>
                   </div>
                 </n-button>
-                <div v-else class="selected-player">
-                  <div class="position-indicator-simple front-row">前排</div>
+                <div v-else class="selected-player" @click="openPlayerSelector('player2_id')">
                   <div class="player-card-compact">
                     <n-avatar
                       :size="32"
@@ -103,47 +93,19 @@
                         {{ getPlayerOrganization(modelValue.player2_id) }}
                       </div>
                     </div>
-                    <n-button size="small" quaternary circle @click="clearPlayer('player2_id')" class="remove-btn">
+                    <n-button size="small" quaternary circle @click.stop="clearPlayer('player2_id')" class="remove-btn">
                       <n-icon :component="CloseIcon" />
                     </n-button>
                   </div>
                 </div>
               </div>
-
-              <!-- 隊伍A分數控制 -->
-              <div class="score-controls">
-                <div class="score-wrapper" :class="{ winning: isTeamAWinner }">
-                  <n-button
-                    @click="adjustScore('a_games', -1)"
-                    :disabled="modelValue.a_games <= 0"
-                    circle
-                    size="medium"
-                    class="score-btn minus"
-                  >
-                    <n-icon :component="MinusIcon" />
-                  </n-button>
-                  <div class="score-display">
-                    <span class="score-number">{{ modelValue.a_games }}</span>
-                    <span class="score-label">局</span>
-                  </div>
-                  <n-button
-                    @click="adjustScore('a_games', 1)"
-                    :disabled="modelValue.a_games >= scoreInputMax"
-                    circle
-                    size="medium"
-                    class="score-btn plus"
-                  >
-                    <n-icon :component="AddIcon" />
-                  </n-button>
-                </div>
-              </div>
             </div>
           </div>
 
-          <!-- VS 區域 -->
+          <!-- 白色橡皮球 VS 區域 -->
           <div class="vs-section">
-            <div class="vs-circle">
-              <span class="vs-text">VS</span>
+            <div class="tennis-ball">
+              <div class="ball-core"></div>
             </div>
           </div>
 
@@ -152,22 +114,16 @@
             <div class="team-card" :class="{ 'has-players': hasTeamBPlayers, 'winner-glow': isTeamBWinner }">
               <div class="team-header">
                 <h3 class="team-title">隊伍 B</h3>
-                <n-tag v-if="isTeamBWinner" type="success" round size="small">
-                  <template #icon>
-                    <n-icon :component="WinIcon" />
-                  </template>
-                  勝方
-                </n-tag>
               </div>
 
               <!-- 球員3 (後排) -->
               <div class="player-slot">
+                <div class="position-label-fixed team-b-position">後排</div>
                 <n-button
                   v-if="!modelValue.player3_id"
                   dashed
                   block
                   @click="openPlayerSelector('player3_id')"
-                  style="height: 3.5rem"
                   class="select-player-btn"
                 >
                   <template #icon>
@@ -175,11 +131,9 @@
                   </template>
                   <div class="btn-content">
                     <div>選擇球員</div>
-                    <div class="position-hint">後排</div>
                   </div>
                 </n-button>
-                <div v-else class="selected-player">
-                  <div class="position-indicator-simple back-row">後排</div>
+                <div v-else class="selected-player" @click="openPlayerSelector('player3_id')">
                   <div class="player-card-compact">
                     <n-avatar
                       :size="32"
@@ -196,33 +150,31 @@
                         {{ getPlayerOrganization(modelValue.player3_id) }}
                       </div>
                     </div>
-                    <n-button size="small" quaternary circle @click="clearPlayer('player3_id')" class="remove-btn">
+                    <n-button size="small" quaternary circle @click.stop="clearPlayer('player3_id')" class="remove-btn">
                       <n-icon :component="CloseIcon" />
                     </n-button>
                   </div>
                 </div>
               </div>
 
-              <!-- 球員4 (前排) - 只在雙打時顯示 -->
+              <!-- 球員4 (前排) - 僅雙打顯示 -->
               <div v-if="modelValue.match_type === 'doubles'" class="player-slot">
+                <div class="position-label-fixed team-b-position">前排</div>
                 <n-button
                   v-if="!modelValue.player4_id"
                   dashed
                   block
                   @click="openPlayerSelector('player4_id')"
-                  style="height: 3.5rem"
                   class="select-player-btn"
                 >
                   <template #icon>
                     <n-icon :component="AddIcon" />
                   </template>
                   <div class="btn-content">
-                    <div>選擇搭檔</div>
-                    <div class="position-hint">前排</div>
+                    <div>選擇球員</div>
                   </div>
                 </n-button>
-                <div v-else class="selected-player">
-                  <div class="position-indicator-simple front-row">前排</div>
+                <div v-else class="selected-player" @click="openPlayerSelector('player4_id')">
                   <div class="player-card-compact">
                     <n-avatar
                       :size="32"
@@ -239,38 +191,10 @@
                         {{ getPlayerOrganization(modelValue.player4_id) }}
                       </div>
                     </div>
-                    <n-button size="small" quaternary circle @click="clearPlayer('player4_id')" class="remove-btn">
+                    <n-button size="small" quaternary circle @click.stop="clearPlayer('player4_id')" class="remove-btn">
                       <n-icon :component="CloseIcon" />
                     </n-button>
                   </div>
-                </div>
-              </div>
-
-              <!-- 隊伍B分數控制 -->
-              <div class="score-controls">
-                <div class="score-wrapper" :class="{ winning: isTeamBWinner }">
-                  <n-button
-                    @click="adjustScore('b_games', -1)"
-                    :disabled="modelValue.b_games <= 0"
-                    circle
-                    size="medium"
-                    class="score-btn minus"
-                  >
-                    <n-icon :component="MinusIcon" />
-                  </n-button>
-                  <div class="score-display">
-                    <span class="score-number">{{ modelValue.b_games }}</span>
-                    <span class="score-label">局</span>
-                  </div>
-                  <n-button
-                    @click="adjustScore('b_games', 1)"
-                    :disabled="modelValue.b_games >= scoreInputMax"
-                    circle
-                    size="medium"
-                    class="score-btn plus"
-                  >
-                    <n-icon :component="AddIcon" />
-                  </n-button>
                 </div>
               </div>
             </div>
@@ -279,86 +203,90 @@
       </div>
     </div>
 
-    <!-- 可折疊的快速球員選擇 -->
-    <n-divider style="margin-top: 2rem; margin-bottom: 1rem">
-      <n-button text @click="showQuickSelection = !showQuickSelection" style="color: #666; font-size: 14px">
-        <template #icon>
-          <n-icon :component="showQuickSelection ? ChevronUpIcon : ChevronDownIcon" />
-        </template>
-        快速選擇球員
-      </n-button>
-    </n-divider>
-
-    <n-collapse-transition :show="showQuickSelection">
-      <div class="player-selection-area">
-        <!-- 組織篩選控制 -->
-        <div class="organization-controls mb-4">
-          <div class="flex items-center gap-3">
-            <n-select
-              v-model:value="selectedOrganization"
-              :options="organizationOptions"
-              placeholder="選擇組織 (顯示全部)"
-              clearable
-              size="medium"
-              style="min-width: 250px; flex: 1"
-            />
-            <n-button v-if="selectedOrganization" @click="selectedOrganization = null" quaternary size="medium">
-              顯示全部
-            </n-button>
-          </div>
-        </div>
-
-        <!-- 球員網格 -->
-        <div class="players-grid">
-          <n-empty v-if="filteredPlayersByOrg.length === 0" description="沒有找到符合條件的球員" size="small" />
-
-          <div
-            v-for="player in filteredPlayersByOrg"
-            :key="player.id"
-            class="player-card-btn"
-            :class="{
-              selected: isPlayerSelected(player.id),
-              disabled: isPlayerSelected(player.id)
-            }"
-            @click="quickSelectPlayer(player.id)"
-          >
-            <!-- 球員頭像 -->
-            <n-avatar
-              :size="40"
-              :style="{
-                backgroundColor: getPlayerColor(player.id),
-                color: '#fff'
-              }"
-            >
-              {{ getPlayerInitial(player.name) }}
-            </n-avatar>
-
-            <!-- 球員信息 -->
-            <div class="player-info">
-              <div class="player-name">
-                {{ player.name }}
-              </div>
-              <div v-if="player.organization" class="player-org">
-                {{ player.organization.short_name || player.organization.name }}
-              </div>
-              <div class="player-score">{{ Math.round(player.score || 1500) }} 分</div>
+    <!-- 比賽分數控制區域 - 簡化為 A:B 格式 -->
+    <div class="external-score-control">
+      <n-card title="比賽分數" size="small" :bordered="false">
+        <div class="simplified-score-container">
+          <!-- 隊伍A控制 -->
+          <div class="team-score-control">
+            <div class="team-label-simple">隊伍 A</div>
+            <div class="score-buttons">
+              <n-button
+                @click="adjustScore('a_games', -1)"
+                :disabled="modelValue.a_games <= 0"
+                circle
+                size="small"
+                type="error"
+                ghost
+              >
+                <n-icon :component="MinusIcon" />
+              </n-button>
+              <n-button
+                @click="adjustScore('a_games', 1)"
+                :disabled="modelValue.a_games >= scoreInputMax"
+                circle
+                size="small"
+                type="primary"
+                ghost
+              >
+                <n-icon :component="AddIcon" />
+              </n-button>
             </div>
+          </div>
 
-            <!-- 選中指示器 -->
-            <div v-if="isPlayerSelected(player.id)" class="selected-indicator">
-              <n-icon :component="CheckIcon" size="16" />
+          <!-- 分數顯示 -->
+          <div class="score-display-simple">
+            <span class="score-team-a" :class="{ winner: isTeamAWinner }">{{ modelValue.a_games || 0 }}</span>
+            <span class="score-separator">:</span>
+            <span class="score-team-b" :class="{ winner: isTeamBWinner }">{{ modelValue.b_games || 0 }}</span>
+          </div>
+
+          <!-- 隊伍B控制 -->
+          <div class="team-score-control">
+            <div class="team-label-simple">隊伍 B</div>
+            <div class="score-buttons">
+              <n-button
+                @click="adjustScore('b_games', -1)"
+                :disabled="modelValue.b_games <= 0"
+                circle
+                size="small"
+                type="error"
+                ghost
+              >
+                <n-icon :component="MinusIcon" />
+              </n-button>
+              <n-button
+                @click="adjustScore('b_games', 1)"
+                :disabled="modelValue.b_games >= scoreInputMax"
+                circle
+                size="small"
+                type="primary"
+                ghost
+              >
+                <n-icon :component="AddIcon" />
+              </n-button>
             </div>
           </div>
         </div>
-      </div>
-    </n-collapse-transition>
 
-    <!-- 球員選擇模態框 -->
+        <!-- 獲勝提示 -->
+        <div v-if="isTeamAWinner || isTeamBWinner" class="winner-alert">
+          <n-alert type="success" :show-icon="false">
+            <template #header>
+              <n-icon :component="WinIcon" style="margin-right: 0.5rem" />
+              {{ isTeamAWinner ? '隊伍 A 獲勝！' : '隊伍 B 獲勝！' }}
+            </template>
+          </n-alert>
+        </div>
+      </n-card>
+    </div>
+
+    <!-- 球員選擇模態框 - 完整訪客功能 -->
     <n-modal
       v-model:show="showPlayerSelector"
       preset="card"
       title="選擇球員"
-      style="width: 90%; max-width: 700px"
+      style="width: 90%; max-width: 800px"
       :mask-closable="false"
     >
       <div class="modal-content">
@@ -387,159 +315,227 @@
                   class="player-card"
                   :class="{
                     selected: isPlayerSelected(player.id),
-                    disabled: isPlayerSelected(player.id)
+                    disabled: isPlayerSelected(player.id),
+                    guest: player.is_guest
                   }"
                 >
-                  <n-avatar
-                    round
-                    :style="{
-                      backgroundColor: getPlayerColor(player.id),
-                      color: '#fff'
-                    }"
-                    size="large"
-                  >
-                    {{ getPlayerInitial(player.name) }}
-                  </n-avatar>
-                  <div class="player-card-info">
-                    <div class="player-card-name">{{ player.name }}</div>
-                    <div v-if="player.organization" class="player-card-org">
-                      {{ player.organization.short_name || player.organization.name }}
+                  <div class="player-card-inner">
+                    <n-avatar
+                      round
+                      :style="{
+                        backgroundColor: getPlayerColor(player.id),
+                        color: '#fff'
+                      }"
+                      size="large"
+                    >
+                      {{ getPlayerInitial(player.name) }}
+                    </n-avatar>
+                    <div class="player-card-info">
+                      <div class="player-card-name">
+                        {{ player.name }}
+                        <n-tag v-if="player.is_guest" size="tiny" type="warning" style="margin-left: 0.5rem">
+                          訪客
+                        </n-tag>
+                      </div>
+                      <div v-if="player.organization" class="player-card-org">
+                        {{ player.organization.short_name || player.organization.name }}
+                      </div>
+                      <div v-else-if="player.is_guest && player.guest_phone" class="player-card-org">
+                        {{ player.guest_phone }}
+                      </div>
                     </div>
-                    <n-tag :type="getScoreTagType(player.score || 1500)" size="small"
-                      >{{ Math.round(player.score || 1500) }}
-                    </n-tag>
-                  </div>
-                  <!-- 已選中提示 -->
-                  <div v-if="isPlayerSelected(player.id)" class="selected-overlay">
-                    <n-icon :component="CheckIcon" size="24" />
-                    <span>已選中</span>
+                    <!-- 已選中提示 -->
+                    <div v-if="isPlayerSelected(player.id)" class="selected-overlay">
+                      <n-icon :component="CheckIcon" size="24" />
+                      <span>已選中</span>
+                    </div>
                   </div>
                 </div>
               </n-grid-item>
             </n-grid>
           </n-tab-pane>
+
+          <!-- 創建新訪客 -->
           <n-tab-pane name="create-guest" tab="創建新訪客">
-            <n-form ref="guestFormRef" :model="guestForm" :rules="guestRules" label-placement="top">
-              <!-- 基本資訊 -->
-              <n-card title="基本資訊" size="small" style="margin-bottom: 1rem">
-                <n-grid :x-gap="16" :y-gap="16" cols="1 s:2">
-                  <n-form-item-gi label="訪客姓名" path="name">
-                    <n-input v-model:value="guestForm.name" placeholder="請輸入訪客姓名" :maxlength="20" show-count />
-                  </n-form-item-gi>
+            <div class="modern-guest-form">
+              <n-form ref="guestFormRef" :model="guestForm" :rules="guestRules" label-placement="top">
+                <!-- 基本資訊 -->
+                <div class="form-section">
+                  <div class="section-header">
+                    <h4 class="section-title">基本資訊</h4>
+                    <p class="section-subtitle">填寫訪客的基本聯絡資訊</p>
+                  </div>
+                  <div class="form-grid">
+                    <n-form-item label="訪客姓名" path="name" class="form-item-modern">
+                      <n-input
+                        v-model:value="guestForm.name"
+                        placeholder="請輸入訪客姓名"
+                        :maxlength="20"
+                        show-count
+                        size="large"
+                        class="modern-input"
+                      />
+                    </n-form-item>
 
-                  <n-form-item-gi label="聯絡電話" path="phone">
-                    <n-input v-model:value="guestForm.phone" placeholder="選填，方便聯絡" :maxlength="15" />
-                  </n-form-item-gi>
-                </n-grid>
-              </n-card>
+                    <n-form-item label="聯絡電話" path="phone" class="form-item-modern">
+                      <n-input
+                        v-model:value="guestForm.phone"
+                        placeholder="選填"
+                        :maxlength="15"
+                        size="large"
+                        class="modern-input"
+                      />
+                    </n-form-item>
+                  </div>
+                </div>
 
-              <!-- 身份和歸屬 -->
-              <n-card title="身份和歸屬" size="small" style="margin-bottom: 1rem">
-                <n-grid :x-gap="16" :y-gap="16" cols="1 s:2">
-                  <n-form-item-gi label="訪客身份" path="guest_role">
-                    <n-select
-                      v-model:value="guestForm.guest_role"
-                      :options="guestRoleOptions"
-                      placeholder="選擇訪客在比賽中的身份"
+                <!-- 身份和歸屬 -->
+                <div class="form-section">
+                  <div class="section-header">
+                    <h4 class="section-title">身份設定</h4>
+                    <p class="section-subtitle">設定訪客在比賽中的身份與歸屬</p>
+                  </div>
+                  <div class="form-grid">
+                    <n-form-item label="訪客身份" path="guest_role" class="form-item-modern">
+                      <n-select
+                        v-model:value="guestForm.guest_role"
+                        :options="guestRoleOptions"
+                        placeholder="選擇訪客在比賽中的身份"
+                        size="large"
+                        class="modern-select"
+                      />
+                    </n-form-item>
+
+                    <n-form-item label="所屬組織" path="organization_id" class="form-item-modern">
+                      <n-select
+                        v-model:value="guestForm.organization_id"
+                        :options="organizationOptions"
+                        placeholder="選擇訪客所屬組織（可選）"
+                        clearable
+                        filterable
+                        size="large"
+                        class="modern-select"
+                      />
+                    </n-form-item>
+                  </div>
+                </div>
+
+                <!-- 備註說明 -->
+                <div class="form-section">
+                  <div class="section-header">
+                    <h4 class="section-title">備註說明</h4>
+                    <p class="section-subtitle">添加額外的說明或記錄</p>
+                  </div>
+                  <n-form-item label="備註" path="notes" class="form-item-modern">
+                    <n-input
+                      v-model:value="guestForm.notes"
+                      type="textarea"
+                      placeholder="例如：來自XX學校、替補球員、首次合作等..."
+                      :rows="4"
+                      :maxlength="200"
+                      show-count
+                      size="large"
+                      class="modern-textarea"
                     />
-                  </n-form-item-gi>
+                  </n-form-item>
+                </div>
 
-                  <n-form-item-gi label="所屬組織" path="organization_id">
-                    <n-select
-                      v-model:value="guestForm.organization_id"
-                      :options="organizationOptions"
-                      placeholder="選擇訪客所屬組織（可選）"
-                      clearable
-                      filterable
-                    />
-                  </n-form-item-gi>
-                </n-grid>
-              </n-card>
-
-              <!-- 備註說明 -->
-              <n-card title="備註說明" size="small" style="margin-bottom: 1rem">
-                <n-form-item label="備註" path="notes">
-                  <n-input
-                    v-model:value="guestForm.notes"
-                    type="textarea"
-                    placeholder="例如：來自XX學校、替補球員、首次合作等..."
-                    :rows="3"
-                    :maxlength="200"
-                    show-count
-                  />
-                </n-form-item>
-              </n-card>
-
-              <!-- 操作按鈕 -->
-              <n-space justify="end" style="margin-top: 1rem">
-                <n-button @click="cancelGuestCreation">取消</n-button>
-                <n-button type="primary" @click="createAndSelectGuest" :loading="creatingGuest"> 創建並選擇 </n-button>
-              </n-space>
-            </n-form>
+                <!-- 操作按鈕 -->
+                <div class="form-actions">
+                  <n-button @click="cancelGuestCreation" size="large" class="cancel-btn"> 取消 </n-button>
+                  <n-button
+                    type="primary"
+                    @click="createAndSelectGuest"
+                    :loading="creatingGuest"
+                    size="large"
+                    class="create-btn"
+                  >
+                    <template #icon>
+                      <n-icon :component="AddIcon" />
+                    </template>
+                    創建並選擇
+                  </n-button>
+                </div>
+              </n-form>
+            </div>
           </n-tab-pane>
 
           <!-- 我的訪客記錄 -->
           <n-tab-pane name="my-guests" tab="我的訪客">
-            <div style="margin-bottom: 1rem">
-              <n-input v-model:value="myGuestsSearch" placeholder="搜尋我創建的訪客..." clearable>
-                <template #prefix>
-                  <n-icon :component="SearchIcon" />
-                </template>
-              </n-input>
-            </div>
-
-            <n-spin :show="loadingMyGuests">
-              <n-list v-if="filteredMyGuests.length > 0" hoverable>
-                <n-list-item
-                  v-for="guest in filteredMyGuests"
-                  :key="guest.id"
-                  style="cursor: pointer; border-radius: 8px; margin-bottom: 8px"
-                  :class="{ 'selected-guest': isPlayerSelected(guest.id) }"
-                  @click="selectGuestFromHistory(guest.id)"
+            <div class="modern-guest-list">
+              <div class="search-container">
+                <n-input
+                  v-model:value="myGuestsSearch"
+                  placeholder="搜尋我創建的訪客..."
+                  clearable
+                  size="large"
+                  class="modern-search"
                 >
                   <template #prefix>
-                    <n-avatar round :style="{ backgroundColor: getPlayerColor(guest.id), color: '#fff' }">
-                      {{ getPlayerInitial(guest.name) }}
-                    </n-avatar>
+                    <n-icon :component="SearchIcon" />
                   </template>
+                </n-input>
+              </div>
 
-                  <n-thing>
-                    <template #header>
-                      <n-space align="center">
-                        {{ guest.name }}
-                        <n-tag size="small" :type="getGuestRoleTagType(guest.guest_role)">
+              <n-spin :show="loadingMyGuests">
+                <div v-if="filteredMyGuests.length > 0" class="guest-cards-container">
+                  <div
+                    v-for="guest in filteredMyGuests"
+                    :key="guest.id"
+                    class="modern-guest-card"
+                    :class="{ selected: isPlayerSelected(guest.id) }"
+                    @click="selectGuestFromHistory(guest.id)"
+                  >
+                    <div class="guest-avatar-section">
+                      <n-avatar
+                        round
+                        :style="{ backgroundColor: getPlayerColor(guest.id), color: '#fff' }"
+                        size="large"
+                      >
+                        {{ getPlayerInitial(guest.name) }}
+                      </n-avatar>
+                      <div v-if="isPlayerSelected(guest.id)" class="selected-badge">
+                        <n-icon :component="CheckIcon" size="16" />
+                      </div>
+                    </div>
+
+                    <div class="guest-info-section">
+                      <div class="guest-header">
+                        <h4 class="guest-name">{{ guest.name }}</h4>
+                        <n-tag size="small" :type="getGuestRoleTagType(guest.guest_role)" class="role-tag">
                           {{ guest.guest_role_display || '中性' }}
                         </n-tag>
-                      </n-space>
-                    </template>
+                      </div>
 
-                    <template #description>
-                      <n-space>
-                        <span v-if="guest.organization">
+                      <div class="guest-details">
+                        <div v-if="guest.organization" class="organization-info">
+                          <span class="detail-icon">🏢</span>
                           {{ guest.organization.short_name || guest.organization.name }}
-                        </span>
-                        <span style="color: #999"> 使用 {{ guest.usage_count || 0 }} 次 </span>
-                        <span v-if="guest.last_used_at" style="color: #999">
+                        </div>
+                        <div class="usage-info">
+                          <span class="detail-icon">📊</span>
+                          使用 {{ guest.usage_count || 0 }} 次
+                        </div>
+                        <div v-if="guest.last_used_at" class="last-used-info">
+                          <span class="detail-icon">🕒</span>
                           最近：{{ formatDate(guest.last_used_at) }}
-                        </span>
-                      </n-space>
-                    </template>
+                        </div>
+                      </div>
 
-                    <div v-if="guest.guest_notes" style="margin-top: 4px; color: #666; font-size: 0.85rem">
-                      {{ guest.guest_notes }}
+                      <div v-if="guest.guest_notes" class="guest-notes">
+                        {{ guest.guest_notes }}
+                      </div>
                     </div>
-                  </n-thing>
+                  </div>
+                </div>
 
-                  <template #suffix>
-                    <div v-if="isPlayerSelected(guest.id)" style="color: #18a058">
-                      <n-icon :component="CheckIcon" size="24" />
-                    </div>
-                  </template>
-                </n-list-item>
-              </n-list>
-
-              <n-empty v-else description="尚未創建任何訪客" />
-            </n-spin>
+                <div v-else class="empty-state">
+                  <div class="empty-icon">👥</div>
+                  <h3>尚未創建任何訪客</h3>
+                  <p>點擊「創建新訪客」分頁來添加第一個訪客</p>
+                </div>
+              </n-spin>
+            </div>
           </n-tab-pane>
         </n-tabs>
       </div>
@@ -554,19 +550,19 @@
 </template>
 
 <script setup>
-  import { computed, onMounted, ref, watch } from 'vue'
+  import { computed, onMounted, ref, watch, nextTick } from 'vue'
   import { useMessage } from 'naive-ui'
-  import apiClient from '@/services/apiClient' // Icons
+  import apiClient from '@/services/apiClient'
+
+  // Icons
   import {
     AddOutline as AddIcon,
     CheckmarkCircleOutline as WinIcon,
     CheckmarkOutline as CheckIcon,
-    ChevronDownOutline as ChevronDownIcon,
-    ChevronUpOutline as ChevronUpIcon,
     CloseOutline as CloseIcon,
     RemoveOutline as MinusIcon,
     SearchOutline as SearchIcon
-  } from '@vicons/ionicons5' // Props
+  } from '@vicons/ionicons5'
 
   // Props
   const props = defineProps({
@@ -581,7 +577,6 @@
 
   // State
   const message = useMessage()
-  const showQuickSelection = ref(false)
   const showPlayerSelector = ref(false)
   const currentSelectingField = ref(null)
   const modalSearchTerm = ref('')
@@ -589,6 +584,8 @@
   const allActiveMembers = ref([])
   const organizationOptions = ref([])
   const isChangingCourt = ref(false)
+
+  // 訪客功能相關狀態
   const myGuestsList = ref([])
   const playerSelectorTab = ref('existing')
   const myGuestsSearch = ref('')
@@ -603,6 +600,16 @@
     notes: ''
   })
   const guestFormRef = ref(null)
+
+  // 訪客表單驗證規則
+  const guestRules = {
+    name: [
+      { required: true, message: '請輸入訪客姓名', trigger: 'blur' },
+      { min: 2, max: 20, message: '姓名長度應為2-20個字符', trigger: 'blur' }
+    ],
+    phone: [{ pattern: /^[0-9\-+\s()]*$/, message: '請輸入有效的電話號碼', trigger: 'blur' }],
+    guest_role: [{ required: true, message: '請選擇訪客身份', trigger: 'change' }]
+  }
 
   // Time slot config
   const timeSlotConfig = {
@@ -630,7 +637,7 @@
       games_7: 4,
       games_9: 5
     }
-    return formatMap[props.modelValue.match_format] || 2
+    return formatMap[props.modelValue.match_format] || 3
   })
 
   const hasTeamAPlayers = computed(() => {
@@ -685,20 +692,6 @@
     return classes
   })
 
-  const filteredPlayersByOrg = computed(() => {
-    let players = allActiveMembers.value
-
-    if (selectedOrganization.value) {
-      players = players.filter(player => player.organization && player.organization.id === selectedOrganization.value)
-    }
-
-    return players.sort((a, b) => {
-      const nameA = a.name || ''
-      const nameB = b.name || ''
-      return nameA.localeCompare(nameB)
-    })
-  })
-
   const filteredPlayersForModal = computed(() => {
     if (!modalSearchTerm.value) return allActiveMembers.value
 
@@ -714,196 +707,6 @@
     })
   })
 
-  // Methods
-  const updateData = (field, value) => {
-    emit('update:modelValue', {
-      ...props.modelValue,
-      [field]: value
-    })
-  }
-
-  const updateScore = (field, value) => {
-    updateData(field, value || 0)
-  }
-
-  const adjustScore = (field, delta) => {
-    const currentValue = props.modelValue[field] || 0
-    const newValue = currentValue + delta
-    if (newValue >= 0 && newValue <= scoreInputMax.value) {
-      updateData(field, newValue)
-    }
-  }
-
-  const getPlayerName = playerId => {
-    const player = allActiveMembers.value.find(p => p.id === playerId)
-    return player ? player.name : '未知球員'
-  }
-
-  const getPlayerOrganization = playerId => {
-    const player = allActiveMembers.value.find(p => p.id === playerId)
-    return player?.organization ? player.organization.short_name || player.organization.name : ''
-  }
-
-  const getPlayerInitial = name => {
-    if (!name) return '?'
-    return name.charAt(0).toUpperCase()
-  }
-
-  const getPlayerColor = playerId => {
-    if (!playerId) return '#f0f0f0'
-    const colors = ['#18a058', '#2080f0', '#f0a020', '#d03050', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b']
-    return colors[playerId % colors.length]
-  }
-
-  const getScoreTagType = score => {
-    if (score >= 2000) return 'error'
-    if (score >= 1500) return 'warning'
-    if (score >= 1000) return 'info'
-    return 'default'
-  }
-
-  const isPlayerSelected = playerId => {
-    return (
-      props.modelValue.player1_id === playerId ||
-      props.modelValue.player2_id === playerId ||
-      props.modelValue.player3_id === playerId ||
-      props.modelValue.player4_id === playerId
-    )
-  }
-
-  const clearPlayer = field => {
-    updateData(field, null)
-  }
-
-  const clearPlayerFromAll = playerId => {
-    const updates = {}
-    if (props.modelValue.player1_id === playerId) updates.player1_id = null
-    if (props.modelValue.player2_id === playerId) updates.player2_id = null
-    if (props.modelValue.player3_id === playerId) updates.player3_id = null
-    if (props.modelValue.player4_id === playerId) updates.player4_id = null
-
-    emit('update:modelValue', {
-      ...props.modelValue,
-      ...updates
-    })
-  }
-
-  const quickSelectPlayer = playerId => {
-    // 如果已經選中這個球員，提示用戶
-    if (isPlayerSelected(playerId)) {
-      message.warning('此球員已被選中，請選擇其他球員')
-      return
-    }
-
-    // 找到第一個空位置
-    if (!props.modelValue.player1_id) {
-      updateData('player1_id', playerId)
-    } else if (!props.modelValue.player3_id) {
-      updateData('player3_id', playerId)
-    } else if (props.modelValue.match_type === 'doubles' && !props.modelValue.player2_id) {
-      updateData('player2_id', playerId)
-    } else if (props.modelValue.match_type === 'doubles' && !props.modelValue.player4_id) {
-      updateData('player4_id', playerId)
-    } else {
-      message.warning('所有位置都已選擇球員')
-    }
-  }
-
-  const openPlayerSelector = field => {
-    currentSelectingField.value = field
-    modalSearchTerm.value = ''
-    showPlayerSelector.value = true
-  }
-
-  const selectPlayerFromModal = playerId => {
-    if (isPlayerSelected(playerId)) {
-      message.warning('此球員已被選中，請選擇其他球員')
-      return
-    }
-
-    if (currentSelectingField.value) {
-      updateData(currentSelectingField.value, playerId)
-    }
-    showPlayerSelector.value = false
-    currentSelectingField.value = null
-  }
-
-  const toggleTimeSlot = () => {
-    const current = props.modelValue.time_slot || 'morning'
-    updateData('time_slot', timeSlotConfig[current].next)
-  }
-
-  const triggerCourtAnimation = () => {
-    isChangingCourt.value = true
-    setTimeout(() => {
-      isChangingCourt.value = false
-    }, 600)
-  }
-
-  // API Methods
-  const fetchActiveMembers = async () => {
-    try {
-      const response = await apiClient.get('/members', {
-        params: {
-          all: 'false',
-          sort_by: 'name',
-          sort_order: 'asc'
-        }
-      })
-
-      let membersData = response.data
-      if (response.data.members) {
-        membersData = response.data.members
-      } else if (response.data.data) {
-        membersData = response.data.data
-      }
-
-      if (!Array.isArray(membersData)) {
-        console.warn('球員數據不是數組:', membersData)
-        membersData = []
-      }
-
-      allActiveMembers.value = membersData
-
-      // 提取組織選項
-      const orgMap = new Map()
-      membersData.forEach(member => {
-        if (member.organization) {
-          const orgId = member.organization.id
-          const orgLabel = member.organization.short_name || member.organization.name
-          if (!orgMap.has(orgId)) {
-            orgMap.set(orgId, {
-              value: orgId,
-              label: orgLabel,
-              memberCount: 0
-            })
-          }
-          orgMap.get(orgId).memberCount++
-        }
-      })
-
-      organizationOptions.value = Array.from(orgMap.values())
-        .map(org => ({
-          value: org.value,
-          label: `${org.label} (${org.memberCount}人)`
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-    } catch (error) {
-      console.error('獲取球員列表失敗:', error)
-      message.error('獲取球員列表失敗。')
-    }
-  }
-
-  const guestRules = {
-    name: [
-      { required: true, message: '請輸入訪客姓名', trigger: 'blur' },
-      { min: 2, max: 20, message: '姓名長度應為2-20個字符', trigger: 'blur' }
-    ],
-    phone: [{ pattern: /^[0-9\-+\s()]*$/, message: '請輸入有效的電話號碼', trigger: 'blur' }],
-    guest_role: [{ required: true, message: '請選擇訪客身份', trigger: 'change' }]
-  }
-
-  // 計算屬性
   const filteredMyGuests = computed(() => {
     if (!myGuestsSearch.value.trim()) {
       return myGuestsList.value
@@ -919,7 +722,123 @@
     )
   })
 
-  // 方法
+  // Methods
+  const updateData = (field, value) => {
+    emit('update:modelValue', {
+      ...props.modelValue,
+      [field]: value
+    })
+  }
+
+  const adjustScore = (field, delta) => {
+    const currentValue = props.modelValue[field] || 0
+    const newValue = currentValue + delta
+    if (newValue >= 0 && newValue <= scoreInputMax.value) {
+      updateData(field, newValue)
+    }
+  }
+
+  // 最強健的球員查找方法 - 直接遍歷而非預建映射表
+  const findPlayerById = playerId => {
+    if (!playerId) return null
+
+    const playerIdStr = String(playerId)
+    let foundPlayer = null
+
+    // 直接遍歷當前的球員列表
+    for (const player of allActiveMembers.value) {
+      if (String(player.id) === playerIdStr) {
+        foundPlayer = player
+        break
+      }
+    }
+
+    // 如果沒找到，僅輸出簡要錯誤信息
+    if (!foundPlayer && playerId) {
+      console.warn(`找不到球員 ID: ${playerId}`)
+    }
+
+    return foundPlayer
+  }
+
+  const getPlayerName = playerId => {
+    const player = findPlayerById(playerId)
+    return player?.name || '未知球員'
+  }
+
+  const getPlayerOrganization = playerId => {
+    const player = findPlayerById(playerId)
+    return player?.organization ? player.organization.short_name || player.organization.name : ''
+  }
+
+  const getPlayerInitial = name => {
+    if (!name || name === '未知球員') return '?'
+    return name.charAt(0).toUpperCase()
+  }
+
+  const getPlayerColor = playerId => {
+    if (!playerId) return '#f0f0f0'
+    const colors = ['#18a058', '#2080f0', '#f0a020', '#d03050', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b']
+    return colors[playerId % colors.length]
+  }
+
+  const getGuestRoleTagType = role => {
+    const typeMap = {
+      teammate: 'success',
+      opponent: 'warning',
+      substitute: 'info',
+      neutral: 'default'
+    }
+    return typeMap[role] || 'default'
+  }
+
+  const isPlayerSelected = playerId => {
+    if (!playerId) return false
+
+    const playerIdStr = String(playerId)
+    return (
+      String(props.modelValue.player1_id) === playerIdStr ||
+      String(props.modelValue.player2_id) === playerIdStr ||
+      String(props.modelValue.player3_id) === playerIdStr ||
+      String(props.modelValue.player4_id) === playerIdStr
+    )
+  }
+
+  const clearPlayer = field => {
+    updateData(field, null)
+  }
+
+  const openPlayerSelector = field => {
+    currentSelectingField.value = field
+    modalSearchTerm.value = ''
+    showPlayerSelector.value = true
+  }
+
+  const selectPlayerFromModal = playerId => {
+    if (isPlayerSelected(playerId)) {
+      message.warning('此球員已被選中，請選擇其他球員')
+      return
+    }
+
+    updateData(currentSelectingField.value, playerId)
+    showPlayerSelector.value = false
+    currentSelectingField.value = null
+  }
+
+  const toggleTimeSlot = () => {
+    const current = props.modelValue.time_slot
+    const next = timeSlotConfig[current]?.next || 'morning'
+    updateData('time_slot', next)
+  }
+
+  const triggerCourtAnimation = () => {
+    isChangingCourt.value = true
+    setTimeout(() => {
+      isChangingCourt.value = false
+    }, 600)
+  }
+
+  // 訪客相關方法
   const loadGuestRoleOptions = async () => {
     try {
       const response = await apiClient.get('/members/guests/role-options')
@@ -946,6 +865,9 @@
         params: { limit: 50 }
       })
       myGuestsList.value = response.data.guests || []
+
+      // 每次載入訪客後，確保同步到主球員列表
+      syncGuestsToMainList()
     } catch (error) {
       console.error('載入我的訪客失敗:', error)
       message.error('載入訪客記錄失敗')
@@ -954,33 +876,103 @@
     }
   }
 
+  // 確保所有訪客都同步到主球員列表的方法
+  const syncGuestsToMainList = () => {
+    let addedCount = 0
+    myGuestsList.value.forEach(guest => {
+      const existsInMainList = allActiveMembers.value.some(p => String(p.id) === String(guest.id))
+      if (!existsInMainList) {
+        allActiveMembers.value.unshift(guest)
+        addedCount++
+      }
+    })
+
+    if (addedCount > 0) {
+      console.log(`同步了 ${addedCount} 位訪客到主列表`)
+    }
+  }
+
+  // 🔧 最強健的創建訪客方法 - 添加重試機制和詳細錯誤處理
   const createAndSelectGuest = async () => {
     try {
       await guestFormRef.value?.validate()
-
       creatingGuest.value = true
 
       const response = await apiClient.post('/members/guests', guestForm.value)
-      const newGuest = response.data.member
 
-      // 添加到本地列表
-      allActiveMembers.value.push(newGuest)
+      if (!response?.data?.success || !response?.data?.member) {
+        throw new Error(`API響應格式不正確: ${JSON.stringify(response?.data)}`)
+      }
+
+      const apiMember = response.data.member
+
+      // 確保訪客對象有所有必需的屬性
+      const newGuest = {
+        id: apiMember.id,
+        name: apiMember.name || guestForm.value.name,
+        is_guest: true,
+        organization: apiMember.organization || null,
+        guest_phone: apiMember.guest_phone || guestForm.value.phone,
+        guest_role: apiMember.guest_role || guestForm.value.guest_role,
+        guest_notes: apiMember.guest_notes || guestForm.value.notes,
+        usage_count: apiMember.usage_count || 0,
+        last_used_at: apiMember.last_used_at || null,
+        created_at: apiMember.created_at || new Date().toISOString(),
+        // 確保其他可能需要的屬性也存在
+        mu: apiMember.mu || 25.0,
+        sigma: apiMember.sigma || 8.333,
+        score: apiMember.score || 0,
+        display_name: apiMember.display_name || apiMember.name || guestForm.value.name,
+        short_display_name: apiMember.short_display_name || apiMember.name || guestForm.value.name,
+        student_id: apiMember.student_id || null,
+        gender: apiMember.gender || null,
+        position: apiMember.position || null,
+        is_active: apiMember.is_active !== undefined ? apiMember.is_active : true,
+        joined_date: apiMember.joined_date || null,
+        leaved_date: apiMember.leaved_date || null,
+        user: apiMember.user || null,
+        racket: apiMember.racket || null,
+        notes: apiMember.notes || null
+      }
+
+      // 強制添加到兩個列表的頭部
+      allActiveMembers.value.unshift(newGuest)
       myGuestsList.value.unshift(newGuest)
+
+      // 強制觸發Vue的響應性更新
+      await nextTick()
+
+      // 驗證是否成功添加
+      const verifyInMainList = allActiveMembers.value.some(p => String(p.id) === String(newGuest.id))
+
+      if (!verifyInMainList) {
+        console.warn('訪客未正確添加到主列表，重試添加')
+        allActiveMembers.value = [newGuest, ...allActiveMembers.value]
+      }
 
       // 自動選擇新創建的訪客
       if (currentSelectingField.value) {
         updateData(currentSelectingField.value, newGuest.id)
+        await nextTick()
+
+        // 驗證選擇結果
+        const verifyName = getPlayerName(newGuest.id)
+        if (verifyName === '未知球員') {
+          console.error('訪客選擇失敗，嘗試同步修復')
+          syncGuestsToMainList()
+        }
       }
 
-      // 重置表單並關閉模態框
+      // 重置並關閉
       resetGuestForm()
       showPlayerSelector.value = false
       currentSelectingField.value = null
 
-      message.success(`訪客 "${newGuest.name}" 創建成功！`)
+      message.success(`訪客 "${newGuest.name}" 創建成功並已選擇！`)
     } catch (error) {
       console.error('創建訪客失敗:', error)
-      message.error(error.response?.data?.message || '創建訪客失敗')
+      const errorMessage = error.response?.data?.message || error.message || '創建訪客失敗'
+      message.error(errorMessage)
     } finally {
       creatingGuest.value = false
     }
@@ -992,15 +984,21 @@
       return
     }
 
-    if (currentSelectingField.value) {
-      updateData(currentSelectingField.value, guestId)
+    // 確保歷史訪客也存在於主球員列表中
+    const guest = myGuestsList.value.find(g => String(g.id) === String(guestId))
+    if (guest) {
+      const existsInMainList = allActiveMembers.value.some(p => String(p.id) === String(guestId))
+      if (!existsInMainList) {
+        allActiveMembers.value.unshift(guest)
+      }
 
       // 更新使用記錄
-      const guest = myGuestsList.value.find(g => g.id === guestId)
-      if (guest) {
-        guest.usage_count = (guest.usage_count || 0) + 1
-        guest.last_used_at = new Date().toISOString()
-      }
+      guest.usage_count = (guest.usage_count || 0) + 1
+      guest.last_used_at = new Date().toISOString()
+    }
+
+    if (currentSelectingField.value) {
+      updateData(currentSelectingField.value, guestId)
     }
 
     showPlayerSelector.value = false
@@ -1022,19 +1020,137 @@
     }
   }
 
-  const getGuestRoleTagType = role => {
-    const typeMap = {
-      teammate: 'success',
-      opponent: 'warning',
-      substitute: 'info',
-      neutral: 'default'
-    }
-    return typeMap[role] || 'default'
-  }
-
   const formatDate = dateString => {
     return new Date(dateString).toLocaleDateString('zh-TW')
   }
+
+  const fetchActiveMembers = async () => {
+    try {
+      const response = await apiClient.get('/members', {
+        params: {
+          all: 'false',
+          sort_by: 'name',
+          sort_order: 'asc'
+        }
+      })
+
+      // 處理不同可能的響應結構
+      let membersData = response.data
+      if (response.data.members) {
+        membersData = response.data.members
+      } else if (response.data.results) {
+        membersData = response.data.results
+      } else if (response.data.data) {
+        membersData = response.data.data
+      }
+
+      if (!Array.isArray(membersData)) {
+        console.warn('球員數據不是數組:', membersData)
+        membersData = []
+      }
+
+      allActiveMembers.value = membersData
+
+      // 構建組織選項
+      const organizations = new Set()
+      membersData.forEach(member => {
+        if (member.organization) {
+          organizations.add(
+            JSON.stringify({
+              value: member.organization.id,
+              label: member.organization.short_name || member.organization.name
+            })
+          )
+        }
+      })
+
+      organizationOptions.value = [...Array.from(organizations).map(org => JSON.parse(org))].sort((a, b) =>
+        a.label.localeCompare(b.label)
+      )
+    } catch (error) {
+      console.error('獲取球員列表失敗:', error)
+      message.error('獲取球員列表失敗。')
+    }
+  }
+
+  // 添加日期同步方法
+  const formatTimestampToDate = timestamp => {
+    if (!timestamp) return null
+    const date = new Date(timestamp)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
+  const syncDateFields = () => {
+    if (props.modelValue.match_date_ts && !props.modelValue.match_date) {
+      const dateString = formatTimestampToDate(props.modelValue.match_date_ts)
+      updateData('match_date', dateString)
+    }
+  }
+
+  const addPlayersToList = players => {
+    if (!Array.isArray(players)) {
+      console.warn('addPlayersToList: players 必須是陣列')
+      return
+    }
+
+    players.forEach(player => {
+      if (!player || !player.id) {
+        console.warn('跳過無效球員:', player)
+        return
+      }
+
+      // 檢查球員是否已存在
+      const existsInMainList = allActiveMembers.value.some(p => String(p.id) === String(player.id))
+
+      if (!existsInMainList) {
+        // 確保球員對象有所有必需的屬性
+        const completePlayer = {
+          id: player.id,
+          name: player.name || '未知球員',
+          is_guest: player.is_guest || false,
+          organization: player.organization || null,
+          guest_phone: player.guest_phone || null,
+          guest_role: player.guest_role || null,
+          guest_notes: player.guest_notes || null,
+          usage_count: player.usage_count || 0,
+          last_used_at: player.last_used_at || null,
+          created_at: player.created_at || null,
+          mu: player.mu || 25.0,
+          sigma: player.sigma || 8.333,
+          score: player.score || 0,
+          display_name: player.display_name || player.name,
+          short_display_name: player.short_display_name || player.name,
+          student_id: player.student_id || null,
+          gender: player.gender || null,
+          position: player.position || null,
+          is_active: player.is_active !== undefined ? player.is_active : true,
+          joined_date: player.joined_date || null,
+          leaved_date: player.leaved_date || null,
+          user: player.user || null,
+          racket: player.racket || null,
+          notes: player.notes || null
+        }
+
+        allActiveMembers.value.unshift(completePlayer)
+        console.log(`添加球員到列表: ${completePlayer.name} (ID: ${completePlayer.id})`)
+
+        // 如果是訪客，也添加到訪客列表
+        if (completePlayer.is_guest) {
+          const existsInGuestList = myGuestsList.value.some(g => String(g.id) === String(completePlayer.id))
+          if (!existsInGuestList) {
+            myGuestsList.value.unshift(completePlayer)
+          }
+        }
+      }
+    })
+
+    console.log(`當前球員列表大小: ${allActiveMembers.value.length}`)
+  }
+
+  // 🔧 暴露方法給父組件使用
+  defineExpose({
+    addPlayersToList
+  })
 
   // Watchers
   watch(
@@ -1044,10 +1160,13 @@
     }
   )
 
-  watch(showPlayerSelector, show => {
+  watch(showPlayerSelector, async show => {
     if (show) {
-      loadMyGuests()
-      loadGuestRoleOptions()
+      await loadMyGuests()
+      await loadGuestRoleOptions()
+
+      // 每次打開球員選擇器時，確保所有訪客都已同步
+      syncGuestsToMainList()
     }
   })
 
@@ -1058,233 +1177,482 @@
     }
   })
 
+  // 監聽日期時間戳變化，自動同步到字符串日期
+  watch(
+    () => props.modelValue.match_date_ts,
+    newTimestamp => {
+      if (newTimestamp && !props.modelValue.match_date) {
+        const dateString = formatTimestampToDate(newTimestamp)
+        updateData('match_date', dateString)
+      }
+    },
+    { immediate: true }
+  )
+
   // Lifecycle
-  onMounted(() => {
-    fetchActiveMembers()
+  onMounted(async () => {
+    await fetchActiveMembers()
+    syncDateFields()
+
+    // 初始化時也同步一次，確保所有已存在的訪客都在列表中
+    setTimeout(() => {
+      syncGuestsToMainList()
+    }, 1000) // 延遲一秒，確保所有初始化完成
   })
 </script>
 
 <style scoped>
   @import '@/assets/css/match-player-selector.css';
 
-  .position-indicator-simple {
-    position: absolute;
-    top: -8px;
-    left: -4px;
-    z-index: 15;
-    padding: 0.3rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #1f2937;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transform: scale(0.9);
-    white-space: nowrap;
-    line-height: 1;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  /* 外部分數控制樣式 - 簡化版 */
+  .external-score-control {
+    margin: 2rem 0;
   }
 
-  .position-indicator-simple.back-row {
-    background: linear-gradient(45deg, #fef3c7, #fcd34d);
-    border: 1px solid #f59e0b;
-    color: #92400e;
-  }
-
-  .position-indicator-simple.front-row {
-    background: linear-gradient(45deg, #dbeafe, #93c5fd);
-    border: 1px solid #3b82f6;
-    color: #1e40af;
-  }
-
-  .position-indicator-simple.back-row-alt {
-    background: #fed7d7;
-    border: 1px solid #f56565;
-    color: #c53030;
-  }
-
-  .position-indicator-simple.front-row-alt {
-    background: #bee3f8;
-    border: 1px solid #4299e1;
-    color: #2b6cb0;
-  }
-
-  .score-controls {
-    margin-top: 1rem;
-  }
-
-  .score-wrapper {
-    display: flex;
+  .simplified-score-container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1.5rem;
     align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    background: #ffffff;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1rem;
+    margin-bottom: 1rem;
   }
 
-  .score-display {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    min-width: 60px;
-    justify-content: center;
-  }
-
-  .score-number {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1f2937;
-    transition: all 0.3s ease;
-  }
-
-  .score-label {
-    font-size: 0.9rem;
-    color: #6b7280;
-    font-weight: 600;
-  }
-
-  .score-btn {
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-    width: 36px;
-    height: 36px;
-    border: 2px solid;
-    font-weight: 600;
-  }
-
-  .score-btn:hover:not(:disabled) {
-    transform: scale(1.1);
-  }
-
-  .score-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .score-btn.minus {
-    background: #ffffff;
-    border-color: #ef4444;
-    color: #ef4444;
-  }
-
-  .score-btn.minus:hover:not(:disabled) {
-    background: #ef4444;
-    color: #ffffff;
-  }
-
-  .score-btn.plus {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: #ffffff;
-  }
-
-  .score-btn.plus:hover:not(:disabled) {
-    background: #2563eb;
-    border-color: #2563eb;
-  }
-
-  .score-wrapper.winning .score-number {
-    color: #059669;
-    text-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
-  }
-
-  .score-wrapper.winning {
-    border-color: #10b981;
-    background: #f0fdf4;
-  }
-
-  .modal-content {
-    padding: 1rem;
-  }
-
-  .player-card-btn.disabled,
-  .player-card.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-
-  .player-card.disabled {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .selected-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(16, 185, 129, 0.9);
-    color: white;
+  .team-score-control {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
+    gap: 0.75rem;
+  }
+
+  .team-label-simple {
     font-weight: 600;
-    gap: 0.25rem;
+    color: #374151;
+    font-size: 0.9rem;
   }
 
-  .selected-player {
-    position: relative;
-    padding-top: 8px;
+  .score-buttons {
+    display: flex;
+    gap: 0.5rem;
   }
 
-  .player-card-compact {
-    margin-top: 4px;
+  .score-display-simple {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    justify-content: center;
+  }
+
+  .score-team-a,
+  .score-team-b {
+    min-width: 1.2em;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .score-team-a.winner,
+  .score-team-b.winner {
+    color: #059669;
+    text-shadow: 0 0 10px rgba(5, 150, 105, 0.3);
+    transform: scale(1.1);
+  }
+
+  .score-separator {
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  .winner-alert {
+    margin-top: 1rem;
+  }
+
+  /* 模態框樣式優化 */
+  .modal-content {
+    padding: 0;
+  }
+
+  /* 現代化訪客表單樣式 */
+  .modern-guest-form {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+  }
+
+  .form-section {
+    margin-bottom: 2rem;
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+  }
+
+  .section-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .section-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a202c;
+  }
+
+  .section-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
   }
 
   @media (max-width: 768px) {
-    .position-indicator-simple {
-      top: -6px;
-      left: -2px;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.65rem;
-      transform: scale(0.85);
-    }
-
-    .score-wrapper {
-      gap: 0.75rem;
-      padding: 0.75rem;
-    }
-
-    .score-number {
-      font-size: 1.75rem;
-    }
-
-    .score-btn {
-      width: 32px;
-      height: 32px;
+    .form-grid {
+      grid-template-columns: 1fr;
     }
   }
 
+  .form-item-modern {
+    margin-bottom: 0;
+  }
+
+  .modern-input,
+  .modern-select,
+  .modern-textarea {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .cancel-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    border-radius: 12px;
+  }
+
+  .create-btn {
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  .create-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  }
+
+  /* 現代化訪客列表樣式 */
+  .modern-guest-list {
+    padding: 1rem;
+  }
+
+  .search-container {
+    margin-bottom: 1.5rem;
+  }
+
+  .modern-search {
+    border-radius: 12px;
+    background: white;
+    border: 1px solid #e2e8f0;
+  }
+
+  .guest-cards-container {
+    display: grid;
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .modern-guest-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .modern-guest-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  }
+
+  .modern-guest-card.selected {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+  }
+
+  .guest-avatar-section {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .selected-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 24px;
+    height: 24px;
+    background: #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  }
+
+  .guest-info-section {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .guest-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .guest-name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a202c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .role-tag {
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .guest-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .organization-info,
+  .usage-info,
+  .last-used-info {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .detail-icon {
+    font-size: 0.75rem;
+  }
+
+  .guest-notes {
+    font-size: 0.875rem;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+    line-height: 1.5;
+  }
+
+  /* 空狀態樣式 */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  /* 統一隊伍標籤顏色 */
+  .position-label-fixed.team-a-position {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  }
+
+  .position-label-fixed.team-b-position {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  }
+
+  /* 獲勝隊伍高亮效果 - 只保留邊框發亮 */
+  .team-card.winner-glow {
+    border-color: #10b981 !important;
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.3),
+      0 0 20px rgba(16, 185, 129, 0.4),
+      0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    animation: winner-glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes winner-glow-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 3px rgba(16, 185, 129, 0.3),
+        0 0 20px rgba(16, 185, 129, 0.4),
+        0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    50% {
+      box-shadow:
+        0 0 0 5px rgba(16, 185, 129, 0.5),
+        0 0 30px rgba(16, 185, 129, 0.6),
+        0 15px 40px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  /* 球員卡片點擊區域優化 */
+  .selected-player {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .selected-player:hover {
+    transform: scale(1.02);
+  }
+
+  .player-card-compact {
+    position: relative;
+    overflow: visible;
+  }
+
+  /* 球員選擇卡片增加 padding */
+  .player-card {
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .player-card-inner {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    height: 100%;
+  }
+
+  /* 訪客相關樣式 */
   .selected-guest {
     background-color: #f0fdf4;
     border: 1px solid #10b981;
   }
 
-  .player-card.selected {
-    border-color: #10b981;
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  .player-card.guest {
+    border-left: 4px solid #f59e0b;
   }
 
-  .selected-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(16, 185, 129, 0.9);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: 600;
-    gap: 0.25rem;
+  .player-card-btn.guest {
+    border-left: 4px solid #f59e0b;
+  }
+
+  /* 響應式優化 */
+  @media (max-width: 768px) {
+    .simplified-score-container {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 1rem;
+      text-align: center;
+    }
+
+    .score-display-simple {
+      order: 2;
+      font-size: 2.2rem;
+    }
+
+    .team-label-simple {
+      font-size: 0.85rem;
+    }
+
+    .modern-guest-form {
+      padding: 1rem;
+    }
+
+    .form-section {
+      padding: 1rem;
+    }
+
+    .guest-details {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .guest-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .score-display-simple {
+      font-size: 2rem;
+    }
+
+    .team-label-simple {
+      font-size: 0.8rem;
+    }
+
+    .player-card-inner {
+      padding: 0.8rem;
+    }
+
+    .position-label-fixed.team-a-position,
+    .position-label-fixed.team-b-position {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.65rem;
+    }
   }
 </style>

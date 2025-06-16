@@ -211,33 +211,82 @@ class MatchRecordService:
             raise AppException("找不到指定的比賽記錄。", status_code=404)
 
         try:
-            # 更新 Match 相關欄位
+            # 🔧 更新 Match 相關欄位
             match = record.match
             if match:
-                for field in [
-                    "match_date",
-                    "match_type",
-                    "match_format",
-                    "court_surface",
-                    "court_environment",
-                    "time_slot",
-                    "total_points",
-                    "duration_minutes",
-                    "youtube_url",
-                ]:
-                    if field in data:
-                        setattr(match, field, data[field])
+                # Match 模型的直接欄位
+                match_fields_mapping = {
+                    "match_date": "match_date",
+                    "match_type": "match_type",
+                    "match_format": "match_format",
+                    "court_surface": "court_surface",
+                    "court_environment": "court_environment",
+                    "time_slot": "match_time_slot",  # 注意：前端 time_slot 映射到 match_time_slot
+                    "total_points": "total_points",
+                    "duration_minutes": "duration_minutes",
+                    "youtube_url": "youtube_url",
+                    "match_notes": "notes",  # 🔧 重要：前端 match_notes 映射到 Match.notes
+                }
 
-            # 更新 MatchRecord 相關欄位
-            for field in ["a_games", "b_games"]:
+                for request_field, model_field in match_fields_mapping.items():
+                    if request_field in data:
+                        setattr(match, model_field, data[request_field])
+
+            # 🔧 更新 MatchRecord 相關欄位（球員和分數）
+            record_fields = [
+                "player1_id",
+                "player2_id",
+                "player3_id",
+                "player4_id",
+                "a_games",
+                "b_games",
+            ]
+
+            for field in record_fields:
                 if field in data:
                     setattr(record, field, data[field])
 
-            # 重新計算結果
+            # 🔧 重新計算比賽結果（如果分數有變化）
             if "a_games" in data or "b_games" in data:
                 record.side_a_outcome = MatchRecordService._calculate_outcome(
                     record.a_games, record.b_games
                 )
+
+            # 🔧 如果球員發生變化，需要重新計算評分
+            player_fields_changed = any(
+                field in data
+                for field in ["player1_id", "player2_id", "player3_id", "player4_id"]
+            )
+            scores_changed = any(field in data for field in ["a_games", "b_games"])
+
+            if player_fields_changed or scores_changed:
+                # 獲取所有可能受影響的球員ID（更新前後的所有球員）
+                old_player_ids = set()
+                new_player_ids = set()
+
+                # 獲取更新前的球員ID
+                for field in ["player1_id", "player2_id", "player3_id", "player4_id"]:
+                    old_value = getattr(record, field, None)
+                    if old_value:
+                        old_player_ids.add(old_value)
+
+                # 獲取更新後的球員ID
+                for field in ["player1_id", "player2_id", "player3_id", "player4_id"]:
+                    new_value = data.get(field, getattr(record, field, None))
+                    if new_value:
+                        new_player_ids.add(new_value)
+
+                # 合併所有受影響的球員
+                affected_player_ids = list(old_player_ids.union(new_player_ids))
+
+                # 提交當前更改
+                db.session.commit()
+
+                # 重新計算評分
+                if affected_player_ids:
+                    from .rating_service import RatingService
+
+                    RatingService.recalculate_ratings_for_players(affected_player_ids)
 
             db.session.commit()
             return record
@@ -247,6 +296,8 @@ class MatchRecordService:
             current_app.logger.error(
                 f"更新比賽記錄 ID {record_id} 時出錯: {e}", exc_info=True
             )
+            if isinstance(e, (ValidationError, AppException)):
+                raise e
             raise AppException("更新比賽記錄時發生未預期錯誤。")
 
     @staticmethod

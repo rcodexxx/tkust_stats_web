@@ -184,20 +184,117 @@ class Member(db.Model):
 
     # --- 計算屬性 ---
     @property
+    def conservative_score(self):
+        """
+        保守評分 (R_conservative) - 官方排名依據
+        公式：μ - k*σ，其中 k 為可配置的保守係數
+
+        這是排行榜的主要排名依據，確保：
+        1. 新手因高 σ 而被適當抑制排名
+        2. 有經驗球員因低 σ 而獲得應有排名
+        3. 系統整體穩定性
+        """
+        config = self.get_trueskill_config()
+        k = config["conservative_k"]
+        return self.mu - (k * self.sigma)
+
+    @property
+    def official_rank_score(self):
+        """
+        官方排名分數 - conservative_score 的語義化別名
+        這是排行榜應該使用的主要分數
+        """
+        return self.conservative_score
+
+    @property
     def score(self):
         """
-        基於 TrueSkill 的保守評分計算
+        傳統評分計算，保持向後兼容
+        現在直接使用 conservative_score 確保一致性
+        """
+        return self.conservative_score
 
-        使用公式：(μ - 2σ)
-        這個公式提供了一個保守的技能評估，確保：
-        1. 新球員（高 σ）不會被高估
-        2. 有經驗球員（低 σ）得到公平評分
-        3. 分數範圍適合排行榜顯示
+    @property
+    def potential_skill(self):
+        """
+        潛在實力 (μ 值) - 系統認知的技術天花板
+        不受不確定性影響，反映純粹的技術水平
+        """
+        return self.mu
+
+    @property
+    def consistency_rating(self):
+        """
+        穩定度評分 - σ 值的反向指標 (0-100分制)
+
+        計算邏輯：
+        - σ >= max_sigma (8.33): 0分 (完全不穩定)
+        - σ <= min_sigma (1.0): 100分 (非常穩定)
+        - 中間值: 線性映射
+
+        應用場景：
+        - 判斷球員是否為「神鬼刀」型選手
+        - 評估球員經驗豐富程度
+        - 種子排位參考
+        """
+        config = self.get_trueskill_config()
+        max_sigma = config["stability_max_sigma"]
+        min_sigma = config["stability_min_sigma"]
+
+        if self.sigma >= max_sigma:
+            return 0
+        elif self.sigma <= min_sigma:
+            return 100
+        else:
+            # 線性映射到 0-100
+            normalized = (max_sigma - self.sigma) / (max_sigma - min_sigma)
+            return int(100 * normalized)
+
+    @property
+    def experience_level(self):
+        """
+        經驗等級 - 基於 σ 值的分級評估
 
         Returns:
-            int: 保守評分（通常在 0-5000 之間）
+            str: 經驗等級描述
         """
-        return int(self.mu - 2 * self.sigma)
+        sigma = self.sigma
+        if sigma >= 7.0:
+            return "新手"
+        elif sigma >= 5.0:
+            return "初級"
+        elif sigma >= 3.0:
+            return "中級"
+        elif sigma >= 2.0:
+            return "高級"
+        else:
+            return "資深"
+
+    @property
+    def is_experienced_player(self):
+        """
+        是否為有經驗的球員
+        基於 σ 值判斷，σ 較低表示經驗豐富
+        """
+        config = self.get_trueskill_config()
+        threshold_sigma = config["stability_max_sigma"] * 0.6  # 約 5.0
+        return self.sigma < threshold_sigma
+
+    @property
+    def rating_confidence(self):
+        """
+        評分可信度 (0-100分制)
+        σ 越低，評分越可信
+        """
+        config = self.get_trueskill_config()
+        max_sigma = config["stability_max_sigma"]
+
+        if self.sigma >= max_sigma:
+            return 0
+        else:
+            # 將 σ 值反向映射到可信度
+            confidence = (1 - self.sigma / max_sigma) * 100
+            return int(max(0, min(100, confidence)))
 
     @property
     def display_name(self):
@@ -393,22 +490,21 @@ class Member(db.Model):
 
     def to_dict(
         self,
+        four_d_score: bool = True,
         org_detail: bool = True,
         racket_detail: bool = True,
         user_detail: bool = True,
     ) -> Dict[str, Any]:
         """
-        將 Member 物件轉換為字典格式。
+        將 Member 物件轉換為字典格式
 
         Args:
-            org_detail (bool): 是否包含組織詳細資訊。
-            racket_detail (bool): 是否包含球拍詳細資訊。
-            user_detail (bool): 是否包含使用者帳號詳細資訊。
-
-        Returns:
-            Dict[str, Any]: 包含 Member 資訊的字典。
+            four_d_score: 是否包含四維度評分
+            org_detail: 是否包含組織詳細資訊
+            racket_detail: 是否包含球拍詳細資訊
+            user_detail: 是否包含使用者帳號詳細資訊
         """
-        # 1. 初始化核心資料
+        # 原有的基礎資料
         data = {
             "id": self.id,
             "name": self.name,
@@ -422,16 +518,41 @@ class Member(db.Model):
             "player_type": self.player_type,
             "joined_date": self.joined_date.isoformat() if self.joined_date else None,
             "leaved_date": self.leaved_date.isoformat() if self.leaved_date else None,
-            "mu": round(self.mu, 3) if self.mu is not None else None,
-            "sigma": round(self.sigma, 3) if self.sigma is not None else None,
-            "score": self.score,
             "notes": self.notes,
             "user_id": self.user_id,
             "is_guest": self.is_guest,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
-        # 2. 根據訪客身份，添加特定欄位
+        # 四維度評分系統
+        if four_d_score:
+            # 主要評分
+            data.update(
+                {
+                    "official_rank_score": round(self.conservative_score, 2),
+                    "conservative_score": round(self.conservative_score, 2),
+                    "potential_skill": round(self.potential_skill, 2),
+                    "consistency_rating": self.consistency_rating,
+                    "experience_level": self.experience_level,
+                    "rating_confidence": self.rating_confidence,
+                    "is_experienced_player": self.is_experienced_player,
+                }
+            )
+
+            # 原始 TrueSkill 數據
+            data.update(
+                {
+                    "mu": round(self.mu, 3) if self.mu is not None else None,
+                    "sigma": round(self.sigma, 3) if self.sigma is not None else None,
+                    "score": round(self.score, 2),  # 保持向後兼容
+                }
+            )
+
+            # 完整四維度數據
+            data["four_dimensions"] = self.get_four_dimension_scores()
+            data["rating_summary"] = self.get_rating_summary()
+
+        # 訪客相關資料 (保持原有邏輯)
         if self.is_guest:
             guest_data = {
                 "guest_phone": self.guest_phone,
@@ -447,14 +568,11 @@ class Member(db.Model):
             }
             data.update(guest_data)
 
-            # 訪客的創建者資訊
             if user_detail and self.creator:
                 data["creator_info"] = {
                     "username": self.creator.username,
                     "display_name": self.creator.display_name,
                 }
-
-        # 3. 處理正式會員的 user_info (如果不是訪客)
         elif user_detail and self.user:
             data["user_info"] = {
                 "username": self.user.username,
@@ -463,14 +581,13 @@ class Member(db.Model):
                 "is_active": self.user.is_active,
             }
 
-        # 4. 根據參數添加關聯資訊
+        # 組織和球拍資訊 (保持原有邏輯)
         if org_detail and self.organization:
             data["organization_id"] = self.organization_id
             data["organization_name"] = self.organization.name
 
         if racket_detail and self.racket:
             data["racket_id"] = self.racket_id
-            # 優先使用 to_dict()，若無則回退到 name
             if hasattr(self.racket, "to_dict"):
                 data["racket_info"] = self.racket.to_dict()
             else:
@@ -499,6 +616,95 @@ class Member(db.Model):
         org_info = f" (Org: {org_name})" if org_name else ""
         player_type = " [訪客]" if self.is_guest else ""
         return f"<Member id={self.id}, name='{self.get_current_display_name()}'{player_type}{org_info}>"
+
+    def get_four_dimension_scores(self):
+        """
+        獲取完整的四維度評分
+
+        Returns:
+            dict: 包含四個維度評分的字典
+        """
+        return {
+            "official_rank": round(self.conservative_score, 2),
+            "potential_skill": round(self.potential_skill, 2),
+            "consistency": self.consistency_rating,
+            "experience_level": self.experience_level,
+            "rating_confidence": self.rating_confidence,
+        }
+
+    def get_rating_summary(self):
+        """
+        獲取評分摘要信息
+
+        Returns:
+            dict: 評分摘要
+        """
+        return {
+            "official_score": round(self.conservative_score, 2),
+            "raw_mu": round(self.mu, 3),
+            "raw_sigma": round(self.sigma, 3),
+            "stability_rating": self.consistency_rating,
+            "experience_level": self.experience_level,
+            "confidence": self.rating_confidence,
+            "is_experienced": self.is_experienced_player,
+        }
+
+    # --- 比較和排名方法 ---
+    def compare_skill_with(self, other_member):
+        """
+        與另一位球員比較技術水平
+
+        Args:
+            other_member: 另一位 Member 實例
+
+        Returns:
+            dict: 比較結果
+        """
+        if not isinstance(other_member, Member):
+            raise ValueError("比較對象必須是 Member 實例")
+
+        skill_diff = self.conservative_score - other_member.conservative_score
+        confidence_diff = self.rating_confidence - other_member.rating_confidence
+
+        return {
+            "skill_advantage": round(skill_diff, 2),
+            "confidence_advantage": confidence_diff,
+            "is_likely_stronger": skill_diff > 0,
+            "comparison_reliability": min(
+                self.rating_confidence, other_member.rating_confidence
+            ),
+        }
+
+    @classmethod
+    def get_ranking_by_conservative_score(cls, limit=None, include_guests=True):
+        """
+        基於保守評分的排行榜查詢
+
+        這是推薦的排行榜生成方法，使用 conservative_score 作為排序依據
+
+        Args:
+            limit: 限制返回數量
+            include_guests: 是否包含訪客
+
+        Returns:
+            Query: 按保守評分排序的查詢對象
+        """
+        query = cls.get_active_players(include_guests=include_guests)
+
+        # 按保守評分降序排列
+        query = query.order_by(
+            # 主要排序：保守評分
+            (cls.mu - 2.0 * cls.sigma).desc(),
+            # 次要排序：穩定度 (σ 越小越前)
+            cls.sigma.asc(),
+            # 第三排序：潛在技能
+            cls.mu.desc(),
+        )
+
+        if limit:
+            query = query.limit(limit)
+
+        return query
 
     # --- 類方法（Class Methods）---
     @classmethod

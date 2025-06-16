@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import List, Tuple, Optional, TypeVar, Type
+from typing import List, Optional, Tuple, Type, TypeVar
 
 # _S 用於表示 BaseEnum 的子類別型別，確保型別提示的精確性
 _S = TypeVar("_S", bound="BaseEnum")

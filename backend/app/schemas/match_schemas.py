@@ -220,6 +220,9 @@ class MatchRecordResponseSchema(Schema):
     duration_minutes = fields.Int(attribute="match.duration_minutes", dump_only=True)
     youtube_url = fields.Str(attribute="match.youtube_url", dump_only=True)
 
+    # 🔧 重要：比賽備註 - 從 Match.notes 映射到前端期望的 match_notes
+    match_notes = fields.Str(attribute="match.notes", dump_only=True, allow_none=True)
+
     # 球員資訊（使用 SimpleMemberSchema）
     player1 = fields.Nested(SimpleMemberSchema, dump_only=True)
     player2 = fields.Nested(SimpleMemberSchema, dump_only=True, allow_none=True)
@@ -231,9 +234,6 @@ class MatchRecordResponseSchema(Schema):
     b_games = fields.Int(dump_only=True)
     total_games = fields.Method("get_total_games", dump_only=True)
     side_a_outcome = fields.Str(attribute="side_a_outcome.value", dump_only=True)
-
-    # 比賽備註
-    match_notes = fields.Str(dump_only=True, allow_none=True)
 
     def get_total_games(self, obj):
         """計算總局數"""
@@ -337,9 +337,19 @@ class MatchUpdateSchema(Schema):
         required=False, allow_none=True, validate=validate.Range(min=0)
     )
     duration_minutes = fields.Int(
-        required=False, allow_none=True, validate=validate.Range(min=20, max=60)
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=20, max=180),  # 修正最大值
     )
     youtube_url = fields.Url(required=False, allow_none=True)
+
+    # 🔧 新增：比賽備註欄位 (前端發送 match_notes，後端映射到 Match.notes)
+    match_notes = fields.Str(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(max=500),
+        metadata={"description": "比賽備註"},
+    )
 
     # MatchRecord 相關欄位
     player1_id = fields.Int(required=False, validate=validate.Range(min=1))
@@ -351,42 +361,12 @@ class MatchUpdateSchema(Schema):
         required=False, allow_none=True, validate=validate.Range(min=1)
     )
 
+    # 比分欄位
     a_games = fields.Int(required=False, validate=validate.Range(min=0))
     b_games = fields.Int(required=False, validate=validate.Range(min=0))
 
-    match_notes = fields.Str(
-        required=False, allow_none=True, validate=validate.Length(max=500)
-    )
-
-    @validates_schema
-    def validate_players_selection(self, data, **kwargs):
-        """驗證球員選擇的合理性"""
-        match_type = data.get("match_type")
-
-        # 只有在提供 match_type 時才進行驗證
-        if match_type:
-            # 驗證雙打模式下必須有4個球員
-            if match_type == MatchTypeEnum.DOUBLES:
-                required_players = [
-                    "player1_id",
-                    "player2_id",
-                    "player3_id",
-                    "player4_id",
-                ]
-                for player_field in required_players:
-                    if player_field in data and not data.get(player_field):
-                        raise ValidationError(
-                            "雙打模式下必須選擇4個球員。", field_name="_schema"
-                        )
-
-            # 驗證單打模式下只能有2個球員
-            elif match_type == MatchTypeEnum.SINGLES:
-                if (data.get("player2_id") is not None) or (
-                    data.get("player4_id") is not None
-                ):
-                    raise ValidationError(
-                        "單打模式下只能選擇2個球員。", field_name="_schema"
-                    )
+    class Meta:
+        ordered = True
 
     @validates_schema
     def validate_duration_against_games(self, data, **kwargs):

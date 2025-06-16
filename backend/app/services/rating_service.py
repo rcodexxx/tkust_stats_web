@@ -3,7 +3,7 @@ import trueskill
 from flask import current_app
 
 from ..extensions import db
-from ..models import Member, MatchRecord, Match
+from ..models import Match, MatchRecord, Member
 from ..models.enums import GenderEnum, MatchOutcomeEnum
 
 # --- 評分相關常數 ---
@@ -25,7 +25,8 @@ class RatingService:
     @staticmethod
     def update_ratings_from_match(match_record: MatchRecord):
         """
-        根據一場新的比賽結果，更新所有參與者的 TrueSkill 評分，並應用性別差異獎勵。
+        根據一場新的比賽結果，更新所有參與者的 TrueSkill 評分
+        新增：根據比賽分差動態調整 Beta 參數
         """
         side_a_ids = [p_id for p_id in [match_record.player1_id, match_record.player2_id] if p_id]
         side_b_ids = [p_id for p_id in [match_record.player3_id, match_record.player4_id] if p_id]
@@ -38,12 +39,31 @@ class RatingService:
             current_app.logger.warning(f"評分中止：找不到球員 ID {missing_ids}。")
             return
 
+        # 計算懸殊度 (D)
+        total_games = match_record.a_games + match_record.b_games
+        suspense_degree = abs(match_record.a_games - match_record.b_games) / total_games if total_games > 0 else 0
+
+        # 動態調整 Beta 參數
+        alpha = 0.5  # 調整係數，可設為配置參數
+        default_beta = trueskill_env.beta
+        dynamic_beta = default_beta * (1 - suspense_degree * alpha)
+
+        # 創建臨時的 TrueSkill 環境，使用動態 Beta
+        temp_env = trueskill.TrueSkill(
+            mu=trueskill_env.mu,
+            sigma=trueskill_env.sigma,
+            beta=dynamic_beta,
+            tau=trueskill_env.tau,
+            draw_probability=trueskill_env.draw_probability
+        )
+
+        # 建立隊伍評分
         team1_ratings = {
-            p_id: trueskill_env.create_rating(mu=players_data[p_id].mu, sigma=players_data[p_id].sigma)
+            p_id: temp_env.create_rating(mu=players_data[p_id].mu, sigma=players_data[p_id].sigma)
             for p_id in side_a_ids
         }
         team2_ratings = {
-            p_id: trueskill_env.create_rating(mu=players_data[p_id].mu, sigma=players_data[p_id].sigma)
+            p_id: temp_env.create_rating(mu=players_data[p_id].mu, sigma=players_data[p_id].sigma)
             for p_id in side_b_ids
         }
 
@@ -54,14 +74,14 @@ class RatingService:
             ranks = [1, 0]
             winning_team_ids, losing_team_ids = side_b_ids, side_a_ids
 
-        # 1. 標準 TrueSkill 評分更新
-        new_team1_ratings, new_team2_ratings = trueskill_env.rate([team1_ratings, team2_ratings], ranks=ranks)
+        # 使用動態 Beta 進行評分更新
+        new_team1_ratings, new_team2_ratings = temp_env.rate([team1_ratings, team2_ratings], ranks=ranks)
 
         final_ratings = {}
         for p_id, rating in {**new_team1_ratings, **new_team2_ratings}.items():
             final_ratings[p_id] = {"mu": rating.mu, "sigma": rating.sigma}
 
-        # 2. 應用性別差異獎勵
+        # 應用性別差異獎勵（保持原有邏輯）
         winning_team_genders = {p_id: players_data[p_id].gender for p_id in winning_team_ids}
         losing_team_genders = {p_id: players_data[p_id].gender for p_id in losing_team_ids}
 
@@ -74,14 +94,17 @@ class RatingService:
                     final_ratings[p_id]["mu"] += GENDER_BONUS_MU
                     current_app.logger.info(f"性別獎勵已應用於球員 ID {p_id} (女性勝男性)。Mu +{GENDER_BONUS_MU}")
 
-        # 3. 將最終的評分寫回資料庫的 Member 物件
+        # 將最終的評分寫回資料庫
         for p_id, new_rating_values in final_ratings.items():
             member = players_data.get(p_id)
             if member:
                 member.mu = new_rating_values["mu"]
                 member.sigma = new_rating_values["sigma"]
 
-        current_app.logger.info(f"已為比賽記錄 ID {match_record.id} 更新評分。")
+        current_app.logger.info(
+            f"已為比賽記錄 ID {match_record.id} 更新評分。"
+            f"懸殊度: {suspense_degree:.3f}, 動態Beta: {dynamic_beta:.3f}"
+        )
 
     @staticmethod
     def recalculate_ratings_for_players(player_ids: list[int]):

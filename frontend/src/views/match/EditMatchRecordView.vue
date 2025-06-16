@@ -48,7 +48,7 @@
             <n-text style="font-size: 14px; color: #666">球員設定</n-text>
           </n-divider>
 
-          <MatchPlayerSelector v-model="matchForm" />
+          <MatchPlayerSelector ref="playerSelectorRef" v-model="matchForm" />
 
           <!-- 可折疊的詳細設定區塊 -->
           <n-divider style="margin-top: 2rem; margin-bottom: 1rem">
@@ -187,8 +187,8 @@
 </template>
 
 <script setup>
-  import { computed, onMounted, ref, watch } from 'vue'
-  import { useRoute, useRouter } from 'vue-router'
+  import { computed, ref, watch, onMounted, nextTick } from 'vue'
+  import { useRouter, useRoute } from 'vue-router'
   import { useMessage } from 'naive-ui'
   import apiClient from '@/services/apiClient'
   import MatchPlayerSelector from '@/components/MatchPlayerSelector.vue'
@@ -206,20 +206,20 @@
   const route = useRoute()
   const message = useMessage()
 
-  // Props
-  const recordId = computed(() => parseInt(route.params.id))
-
   // State
   const loading = ref(true)
   const submitting = ref(false)
   const showAdvancedSettings = ref(false)
   const formRef = ref(null)
+  const recordId = ref(route.params.id)
+  const playerSelectorRef = ref(null)
 
   // Form data
   const matchForm = ref({
     match_date_ts: null,
-    match_type: 'singles',
-    match_format: 'best_of_3',
+    match_date: '',
+    match_type: 'doubles',
+    match_format: 'games_9',
     player1_id: null,
     player2_id: null,
     player3_id: null,
@@ -282,7 +282,7 @@
       games_7: 4,
       games_9: 5
     }
-    return formatMap[matchForm.value.match_format] || 2
+    return formatMap[matchForm.value.match_format] || 5
   })
 
   const canSubmit = computed(() => {
@@ -306,6 +306,48 @@
     )
   })
 
+  // 🔧 載入比賽記錄相關球員的方法
+  const loadMatchPlayers = async (playerIds) => {
+    try {
+      // 過濾掉空值
+      const validPlayerIds = playerIds.filter(id => id !== null && id !== undefined)
+
+      if (validPlayerIds.length === 0) {
+        return
+      }
+
+      console.log('載入比賽相關球員:', validPlayerIds)
+
+      // 為每個球員ID獲取詳細信息
+      const playerPromises = validPlayerIds.map(async (playerId) => {
+        try {
+          const response = await apiClient.get(`/members/${playerId}`)
+          return response.data.member || response.data
+        } catch (error) {
+          console.warn(`無法載入球員 ${playerId}:`, error)
+          return null
+        }
+      })
+
+      const players = await Promise.all(playerPromises)
+      const validPlayers = players.filter(player => player !== null)
+
+      console.log('成功載入球員信息:', validPlayers)
+
+      // 通知 MatchPlayerSelector 組件新增這些球員
+      if (playerSelectorRef.value && validPlayers.length > 0) {
+        await nextTick()
+        // 調用組件的方法來添加球員
+        if (typeof playerSelectorRef.value.addPlayersToList === 'function') {
+          playerSelectorRef.value.addPlayersToList(validPlayers)
+        }
+      }
+
+    } catch (error) {
+      console.error('載入比賽球員失敗:', error)
+    }
+  }
+
   // API Methods
   const fetchMatchRecord = async () => {
     try {
@@ -315,7 +357,8 @@
       const response = await apiClient.get(`/match-records/${recordId.value}`)
       console.log('完整 API 響應:', response.data)
 
-      const record = response.data.match_record
+      // 🔧 正確的數據結構解析
+      const record = response.data.match_record || response.data.record || response.data
       console.log('解析後的比賽記錄:', record)
 
       if (!record) {
@@ -337,15 +380,17 @@
         }
       }
 
-      // 根據 MatchRecordResponseSchema 的結構填充表單
+      // 🔧 正確填充表單數據，處理球員對象結構
       matchForm.value = {
         match_date_ts: matchDate,
-        match_type: record.match_type || 'singles',
-        match_format: record.match_format || 'best_of_3',
-        player1_id: record.player1?.id || null,
-        player2_id: record.player2?.id || null,
-        player3_id: record.player3?.id || null,
-        player4_id: record.player4?.id || null,
+        match_date: record.match_date || '',
+        match_type: record.match_type || 'doubles',
+        match_format: record.match_format || 'games_9',
+        // 🔧 正確處理球員ID - 支持直接ID和對象結構
+        player1_id: record.player1?.id || record.player1_id || null,
+        player2_id: record.player2?.id || record.player2_id || null,
+        player3_id: record.player3?.id || record.player3_id || null,
+        player4_id: record.player4?.id || record.player4_id || null,
         a_games: record.a_games || 0,
         b_games: record.b_games || 0,
         match_notes: record.match_notes || '',
@@ -358,6 +403,21 @@
       }
 
       console.log('填充後的表單數據:', matchForm.value)
+
+      // 🔧 載入完比賽數據後，確保相關球員信息也已載入
+      await nextTick()
+
+      const playerIds = [
+        matchForm.value.player1_id,
+        matchForm.value.player2_id,
+        matchForm.value.player3_id,
+        matchForm.value.player4_id
+      ].filter(id => id !== null && id !== undefined)
+
+      if (playerIds.length > 0) {
+        await loadMatchPlayers(playerIds)
+      }
+
     } catch (error) {
       console.error('載入比賽記錄失敗:', error)
       const errorMsg = error.response?.data?.message || error.message || '載入比賽記錄失敗'
@@ -408,7 +468,7 @@
       }
 
       const payload = {
-        match_date: formatDate(matchForm.value.match_date_ts),
+        match_date: formatDate(matchForm.value.match_date_ts) || matchForm.value.match_date,
         match_type: matchForm.value.match_type,
         match_format: matchForm.value.match_format,
         player1_id: matchForm.value.player1_id,
@@ -507,6 +567,25 @@
         matchForm.value.player4_id = null
       }
     }
+  )
+
+  // 🔧 監聽球員變化，確保新選擇的球員信息已載入
+  watch(
+    [
+      () => matchForm.value.player1_id,
+      () => matchForm.value.player2_id,
+      () => matchForm.value.player3_id,
+      () => matchForm.value.player4_id
+    ],
+    async (newPlayerIds, oldPlayerIds) => {
+      // 檢查是否有新的球員被選擇
+      const newIds = newPlayerIds.filter((id, index) => id !== oldPlayerIds?.[index] && id !== null)
+
+      if (newIds.length > 0) {
+        await loadMatchPlayers(newIds)
+      }
+    },
+    { deep: true }
   )
 
   // Lifecycle
