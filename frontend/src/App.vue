@@ -7,9 +7,7 @@
             <n-layout-header bordered class="app-header">
               <div class="navbar-content">
                 <!-- 桌面版 LOGO -->
-                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom">
-                  TKU Soft Tennis Web
-                </router-link>
+                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom"> TKU Soft Tennis Web </router-link>
 
                 <!-- 移動版選單觸發器 -->
                 <div v-if="isMobile" class="mobile-nav-trigger">
@@ -84,11 +82,7 @@
             </n-layout-header>
 
             <!-- 主要內容區域 -->
-            <n-layout-content
-              class="main-layout-content"
-              :content-style="contentStyle"
-              :native-scrollbar="false"
-            >
+            <n-layout-content class="main-layout-content" :content-style="contentStyle" :native-scrollbar="false">
               <n-spin :show="isInitializing" description="載入中...">
                 <router-view v-slot="{ Component }">
                   <transition name="fade" mode="out-in">
@@ -145,12 +139,17 @@
                   </div>
                 </div>
 
-                <n-space vertical :size="8" style="margin-top: 1rem;">
+                <n-space vertical :size="8" style="margin-top: 1rem">
                   <router-link v-slot="{ navigate }" :to="{ name: 'EditProfile' }">
                     <n-button
                       block
                       ghost
-                      @click="navigate(); handleMobileMenuClick()"
+                      @click="
+                        () => {
+                          navigate()
+                          handleMobileMenuClick()
+                        }
+                      "
                       class="mobile-action-btn"
                     >
                       <template #icon>
@@ -159,13 +158,7 @@
                       編輯個人資料
                     </n-button>
                   </router-link>
-                  <n-button
-                    block
-                    type="error"
-                    ghost
-                    @click="handleLogout"
-                    class="mobile-action-btn"
-                  >
+                  <n-button block type="error" ghost @click="handleLogout" class="mobile-action-btn">
                     <template #icon>
                       <n-icon :component="LogoutIcon" />
                     </template>
@@ -182,7 +175,12 @@
                     <n-button
                       block
                       ghost
-                      @click="navigate(); handleMobileMenuClick()"
+                      @click="
+                        () => {
+                          navigate()
+                          handleMobileMenuClick()
+                        }
+                      "
                       class="mobile-action-btn"
                     >
                       快速註冊
@@ -192,7 +190,12 @@
                     <n-button
                       block
                       type="primary"
-                      @click="navigate(); handleMobileMenuClick()"
+                      @click="
+                        () => {
+                          navigate()
+                          handleMobileMenuClick()
+                        }
+                      "
                       class="mobile-action-btn"
                     >
                       登入
@@ -209,606 +212,624 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from './stores/authStore'
-import { useWindowSize } from '@vueuse/core'
-import '@/assets/css/main.css'
-import {
-  dateZhTW,
-  NAvatar,
-  NButton,
-  NConfigProvider,
-  NDialogProvider,
-  NDivider,
-  NDrawer,
-  NDrawerContent,
-  NDropdown,
-  NIcon,
-  NLayout,
-  NLayoutContent,
-  NLayoutFooter,
-  NLayoutHeader,
-  NMenu,
-  NMessageProvider,
-  NNotificationProvider,
-  NSpace,
-  NSpin,
-  zhTW
-} from 'naive-ui'
-import {
-  ChevronDownOutline as ChevronDownIcon,
-  ClipboardOutline as RecordMatchIcon,
-  ListCircleOutline as MatchManagementIcon,
-  LogOutOutline as LogoutIcon,
-  MenuOutline as MenuIcon,
-  PeopleOutline as TeamManagementIcon,
-  PersonCircleOutline as PersonCircleOutlineIcon,
-  PodiumOutline as HomeIcon,
-  SettingsOutline as SettingsIcon
-} from '@vicons/ionicons5'
+  import { computed, h, onMounted, ref, watch } from 'vue'
+  import { RouterLink, useRoute, useRouter } from 'vue-router'
+  import { useAuthStore } from './stores/authStore'
+  import { useWindowSize } from '@vueuse/core'
+  import '@/assets/css/main.css'
+  import {
+    dateZhTW,
+    NAvatar,
+    NButton,
+    NConfigProvider,
+    NDialogProvider,
+    NDivider,
+    NDrawer,
+    NDrawerContent,
+    NDropdown,
+    NIcon,
+    NLayout,
+    NLayoutContent,
+    NLayoutFooter,
+    NLayoutHeader,
+    NMenu,
+    NMessageProvider,
+    NNotificationProvider,
+    NSpace,
+    NSpin,
+    zhTW
+  } from 'naive-ui'
+  import {
+    ChevronDownOutline as ChevronDownIcon,
+    ClipboardOutline as RecordMatchIcon,
+    ListCircleOutline as MatchManagementIcon,
+    LogOutOutline as LogoutIcon,
+    MenuOutline as MenuIcon,
+    PeopleOutline as TeamManagementIcon,
+    PersonCircleOutline as PersonCircleOutlineIcon,
+    PodiumOutline as HomeIcon,
+    SettingsOutline as SettingsIcon
+  } from '@vicons/ionicons5'
 
-// 修復後的主題配置
-const themeOverrides = {
-  common: {
-    primaryColor: '#e60012',
-    primaryColorHover: '#cc0010',
-    primaryColorPressed: '#b3000e',
-    primaryColorSuppl: '#e60012',
-    bodyColor: '#f5f5f5',
-    textColorBase: '#333333',
-    fontSize: '14px'
-  },
-  Button: {
-    textColorPrimary: '#ffffff'
-  },
-  Menu: {
-    // 桌面版橫向選單 - 修復顏色
-    itemTextColorHorizontal: '#333333',
-    itemIconColorHorizontal: '#333333',
-    itemTextColorHoverHorizontal: '#e60012',
-    itemIconColorHoverHorizontal: '#e60012',
-    itemTextColorActiveHorizontal: '#e60012',
-    itemIconColorActiveHorizontal: '#e60012',
-    itemColorActiveHorizontal: 'rgba(230, 0, 18, 0.1)',
+  // 修復後的主題配置
+  const themeOverrides = {
+    common: {
+      primaryColor: '#e60012',
+      primaryColorHover: '#cc0010',
+      primaryColorPressed: '#b3000e',
+      primaryColorSuppl: '#e60012',
+      bodyColor: '#f5f5f5',
+      textColorBase: '#333333',
+      fontSize: '14px'
+    },
+    Button: {
+      textColorPrimary: '#ffffff'
+    },
+    Menu: {
+      // 桌面版橫向選單 - 修復顏色
+      itemTextColorHorizontal: '#333333',
+      itemIconColorHorizontal: '#333333',
+      itemTextColorHoverHorizontal: '#e60012',
+      itemIconColorHoverHorizontal: '#e60012',
+      itemTextColorActiveHorizontal: '#e60012',
+      itemIconColorActiveHorizontal: '#e60012',
+      itemColorActiveHorizontal: 'rgba(230, 0, 18, 0.1)',
 
-    // 移動版垂直選單
-    itemTextColorVertical: '#333333',
-    itemIconColorVertical: '#333333',
-    itemTextColorHoverVertical: '#e60012',
-    itemIconColorHoverVertical: '#e60012',
-    itemTextColorActiveVertical: '#ffffff',
-    itemIconColorActiveVertical: '#ffffff',
-    itemColorActiveVertical: '#e60012',
-    itemColorHoverVertical: 'rgba(230, 0, 18, 0.1)'
-  },
-  Layout: {},
-  Drawer: {
-    titleTextColor: '#e60012',
-    titleFontSize: '1.2rem'
-  },
-  Dropdown: {
-    optionTextColor: '#333333'
+      // 移動版垂直選單
+      itemTextColorVertical: '#333333',
+      itemIconColorVertical: '#333333',
+      itemTextColorHoverVertical: '#e60012',
+      itemIconColorHoverVertical: '#e60012',
+      itemTextColorActiveVertical: '#ffffff',
+      itemIconColorActiveVertical: '#ffffff',
+      itemColorActiveVertical: '#e60012',
+      itemColorHoverVertical: 'rgba(230, 0, 18, 0.1)'
+    },
+    Layout: {},
+    Drawer: {
+      titleTextColor: '#e60012',
+      titleFontSize: '1.2rem'
+    },
+    Dropdown: {
+      optionTextColor: '#333333'
+    }
   }
-}
 
-// Constants - 調整斷點避免768px問題
-const MOBILE_BREAKPOINT = 900  // 提高到900px，避免768px時的問題
-const TABLET_BREAKPOINT = 1024
+  // Constants - 調整斷點避免768px問題
+  const MOBILE_BREAKPOINT = 900 // 提高到900px，避免768px時的問題
+  const TABLET_BREAKPOINT = 1024
 
-// Stores and route
-const authStore = useAuthStore()
-const route = useRoute()
-const router = useRouter()
+  // Stores and route
+  const authStore = useAuthStore()
+  const route = useRoute()
+  const router = useRouter()
 
-// State
-const showMobileDrawer = ref(false)
-const activeMenuKey = ref(route.name)
-const isInitializing = ref(true)
+  // State
+  const showMobileDrawer = ref(false)
+  const activeMenuKey = ref(route.name)
+  const isInitializing = ref(true)
 
-// 響應式設計 - 調整斷點
-const { width } = useWindowSize()
-const isMobile = computed(() => width.value < MOBILE_BREAKPOINT)
-const isTablet = computed(() => width.value >= MOBILE_BREAKPOINT && width.value < TABLET_BREAKPOINT)
+  // 響應式設計 - 調整斷點
+  const { width } = useWindowSize()
+  const isMobile = computed(() => width.value < MOBILE_BREAKPOINT)
+  const isTablet = computed(() => width.value >= MOBILE_BREAKPOINT && width.value < TABLET_BREAKPOINT)
 
-// 動態內容樣式
-const contentStyle = computed(() => ({
-  padding: isMobile.value ? '10px' : '20px',
-  height: '100%'
-}))
+  // 動態內容樣式
+  const contentStyle = computed(() => ({
+    padding: isMobile.value ? '10px' : '20px',
+    height: '100%'
+  }))
 
-// 當前年份
-const currentYear = computed(() => new Date().getFullYear())
+  // 當前年份
+  const currentYear = computed(() => new Date().getFullYear())
 
-// 用戶頭像首字母
-const getUserInitial = computed(() => {
-  const name = authStore.userDisplayName
-  return name ? name.charAt(0).toUpperCase() : 'U'
-})
+  // 用戶頭像首字母
+  const getUserInitial = computed(() => {
+    const name = authStore.userDisplayName
+    return name ? name.charAt(0).toUpperCase() : 'U'
+  })
 
-// 權限管理
-const hasManagementAccess = computed(
-  () => authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin || authStore.isCoach)
-)
+  // 權限管理
+  const hasManagementAccess = computed(
+    () => authStore.isAuthenticated && (authStore.isCadre || authStore.isAdmin || authStore.isCoach)
+  )
 
-// 角色顯示映射
-const roleDisplayMap = {
-  admin: '管理員',
-  cadre: '幹部',
-  coach: '教練',
-  member: '隊員'
-}
+  const isLogin = computed(() => authStore.isAuthenticated)
 
-// Watch route changes
-watch(
-  () => route.name,
-  newName => {
-    activeMenuKey.value = newName
-    // 在路由變化時自動關閉移動選單
-    if (showMobileDrawer.value) {
-      showMobileDrawer.value = false
-    }
-  },
-  { immediate: true }
-)
-
-// Helper functions
-const renderIcon = icon => () => h(NIcon, { color: '#333' }, { default: () => h(icon) })
-
-const renderRouterLink = (routeName, label) => () =>
-  h(RouterLink, {
-    to: { name: routeName },
-    style: {
-      color: 'inherit',
-      textDecoration: 'none',
-      display: 'flex',
-      alignItems: 'center',
-      width: '100%'
-    }
-  }, { default: () => label })
-
-// 桌面版選單選項
-const menuOptions = computed(() =>
-  [
-    {
-      label: renderRouterLink('Leaderboard', '排行榜'),
-      key: 'Leaderboard',
-      icon: renderIcon(HomeIcon)
-    },
-    {
-      label: renderRouterLink('RecordMatch', '記錄比賽'),
-      key: 'RecordMatch',
-      icon: renderIcon(RecordMatchIcon)
-    },
-    {
-      label: renderRouterLink('MatchManagement', '比賽管理'),
-      key: 'MatchManagement',
-      icon: renderIcon(MatchManagementIcon),
-      show: hasManagementAccess.value
-    },
-    {
-      label: renderRouterLink('ManagementCenter', '團隊管理'),
-      key: 'ManagementCenter',
-      icon: renderIcon(TeamManagementIcon),
-      show: hasManagementAccess.value
-    }
-  ].filter(option => option.show !== false)
-)
-
-// 移動版選單選項 - 修復：直接處理路由導航
-const mobileMenuOptions = computed(() =>
-  [
-    {
-      label: '排行榜',
-      key: 'Leaderboard',
-      icon: renderIcon(HomeIcon)
-    },
-    {
-      label: '記錄比賽',
-      key: 'RecordMatch',
-      icon: renderIcon(RecordMatchIcon)
-    },
-    {
-      label: '比賽管理',
-      key: 'MatchManagement',
-      icon: renderIcon(MatchManagementIcon),
-      show: hasManagementAccess.value
-    },
-    {
-      label: '團隊管理',
-      key: 'ManagementCenter',
-      icon: renderIcon(TeamManagementIcon),
-      show: hasManagementAccess.value
-    }
-  ].filter(option => option.show !== false)
-)
-
-// 用戶下拉選單選項
-const userDropdownOptions = computed(() => [
-  {
-    label: () =>
-      h(
-        RouterLink,
-        {
-          to: { name: 'EditProfile' },
-          style: { color: 'inherit', textDecoration: 'none', display: 'block', width: '100%' }
-        },
-        { default: () => '編輯個人資料' }
-      ),
-    key: 'edit-profile',
-    icon: renderIcon(SettingsIcon)
-  },
-  { type: 'divider', key: 'd1' },
-  {
-    label: '登出',
-    key: 'logout',
-    icon: renderIcon(LogoutIcon)
+  // 角色顯示映射
+  const roleDisplayMap = {
+    admin: '管理員',
+    cadre: '幹部',
+    coach: '教練',
+    member: '隊員',
+    guset: '訪客'
   }
-])
 
-// Event handlers
-const handleUserDropdownSelect = key => {
-  if (key === 'logout') {
+  // Watch route changes
+  watch(
+    () => route.name,
+    newName => {
+      activeMenuKey.value = newName
+      // 在路由變化時自動關閉移動選單
+      if (showMobileDrawer.value) {
+        showMobileDrawer.value = false
+      }
+    },
+    { immediate: true }
+  )
+
+  // Helper functions
+  const renderIcon = icon => () => h(NIcon, { color: '#333' }, { default: () => h(icon) })
+
+  const renderRouterLink = (routeName, label) => () =>
+    h(
+      RouterLink,
+      {
+        to: { name: routeName },
+        style: {
+          color: 'inherit',
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%'
+        }
+      },
+      { default: () => label }
+    )
+
+  // 桌面版選單選項
+  const menuOptions = computed(() =>
+    [
+      {
+        label: renderRouterLink('Leaderboard', '排行榜'),
+        key: 'Leaderboard',
+        icon: renderIcon(HomeIcon)
+      },
+      {
+        label: renderRouterLink('DetailLeaderboard', '排行榜(完整)'),
+        key: 'DetailLeaderboard',
+        icon: renderIcon(HomeIcon),
+        show: isLogin.value
+      },
+      {
+        label: renderRouterLink('RecordMatch', '記錄比賽'),
+        key: 'RecordMatch',
+        icon: renderIcon(RecordMatchIcon)
+      },
+      {
+        label: renderRouterLink('MatchManagement', '比賽管理'),
+        key: 'MatchManagement',
+        icon: renderIcon(MatchManagementIcon),
+        show: hasManagementAccess.value
+      },
+      {
+        label: renderRouterLink('ManagementCenter', '團隊管理'),
+        key: 'ManagementCenter',
+        icon: renderIcon(TeamManagementIcon),
+        show: hasManagementAccess.value
+      }
+    ].filter(option => option.show !== false)
+  )
+
+  const mobileMenuOptions = computed(() =>
+    [
+      {
+        label: '排行榜',
+        key: 'Leaderboard',
+        icon: renderIcon(HomeIcon)
+      },
+      {
+        label: '排行榜(完整)',
+        key: 'DetailLeaderboard',
+        icon: renderIcon(HomeIcon),
+        show: hasManagementAccess.value
+      },
+      {
+        label: '記錄比賽',
+        key: 'RecordMatch',
+        icon: renderIcon(RecordMatchIcon)
+      },
+      {
+        label: '比賽管理',
+        key: 'MatchManagement',
+        icon: renderIcon(MatchManagementIcon),
+        show: hasManagementAccess.value
+      },
+      {
+        label: '團隊管理',
+        key: 'ManagementCenter',
+        icon: renderIcon(TeamManagementIcon),
+        show: hasManagementAccess.value
+      }
+    ].filter(option => option.show !== false)
+  )
+
+  // 用戶下拉選單選項
+  const userDropdownOptions = computed(() => [
+    {
+      label: () =>
+        h(
+          RouterLink,
+          {
+            to: { name: 'EditProfile' },
+            style: { color: 'inherit', textDecoration: 'none', display: 'block', width: '100%' }
+          },
+          { default: () => '編輯個人資料' }
+        ),
+      key: 'edit-profile',
+      icon: renderIcon(SettingsIcon)
+    },
+    { type: 'divider', key: 'd1' },
+    {
+      label: '登出',
+      key: 'logout',
+      icon: renderIcon(LogoutIcon)
+    }
+  ])
+
+  // Event handlers
+  const handleUserDropdownSelect = key => {
+    if (key === 'logout') {
+      authStore.logoutAndRedirect()
+    }
+  }
+
+  const handleMobileMenuClick = () => {
+    showMobileDrawer.value = false
+  }
+
+  // 修復：移動版選單選擇處理器
+  const handleMobileMenuSelect = menuKey => {
+    console.log('Mobile menu selected:', menuKey)
+
+    // 關閉抽屜
+    showMobileDrawer.value = false
+
+    // 導航到對應頁面
+    if (menuKey && typeof menuKey === 'string') {
+      try {
+        router.push({ name: menuKey })
+      } catch (error) {
+        console.error('Navigation error:', error)
+      }
+    }
+  }
+
+  const handleLogout = () => {
+    showMobileDrawer.value = false
     authStore.logoutAndRedirect()
   }
-}
 
-const handleMobileMenuClick = () => {
-  showMobileDrawer.value = false
-}
+  // Helper functions
+  function getRoleDisplay(roleName) {
+    return roleDisplayMap[roleName] || roleName
+  }
 
-// 修復：移動版選單選擇處理器
-const handleMobileMenuSelect = (menuKey) => {
-  console.log('Mobile menu selected:', menuKey)
-
-  // 關閉抽屜
-  showMobileDrawer.value = false
-
-  // 導航到對應頁面
-  if (menuKey && typeof menuKey === 'string') {
+  // Lifecycle
+  onMounted(async () => {
     try {
-      router.push({ name: menuKey })
-    } catch (error) {
-      console.error('Navigation error:', error)
+      if (authStore.accessToken && !authStore.user) {
+        await authStore.fetchCurrentUser()
+      }
+      activeMenuKey.value = route.name
+    } finally {
+      isInitializing.value = false
     }
-  }
-}
-
-const handleLogout = () => {
-  showMobileDrawer.value = false
-  authStore.logoutAndRedirect()
-}
-
-// Helper functions
-function getRoleDisplay(roleName) {
-  return roleDisplayMap[roleName] || roleName
-}
-
-// Lifecycle
-onMounted(async () => {
-  try {
-    if (authStore.accessToken && !authStore.user) {
-      await authStore.fetchCurrentUser()
-    }
-    activeMenuKey.value = route.name
-  } finally {
-    isInitializing.value = false
-  }
-})
+  })
 </script>
 
 <style scoped>
-/* === 主要樣式改進 === */
-.mobile-menu-btn {
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-}
-
-.mobile-menu-btn:hover {
-  background-color: rgba(51, 51, 51, 0.1);
-}
-
-.user-actions-area {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.user-display-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  max-width: 200px;
-  color: #333 !important;
-}
-
-.user-display-button:hover {
-  background-color: rgba(51, 51, 51, 0.05) !important;
-  color: #e60012 !important;
-}
-
-.user-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100px;
-  color: inherit;
-}
-
-.user-role-display {
-  color: #666;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.dropdown-arrow-icon {
-  opacity: 0.7;
-  transition: transform 0.2s ease;
-}
-
-.user-display-button:hover .dropdown-arrow-icon {
-  transform: rotate(180deg);
-}
-
-/* === 導航選單樣式強化 === */
-.main-nav-menu :deep(.n-menu-item-content) {
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  margin: 0 2px;
-  white-space: nowrap; /* 防止文字換行 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.main-nav-menu :deep(.n-menu-item:hover .n-menu-item-content) {
-  background-color: rgba(230, 0, 18, 0.08);
-  transform: translateY(-1px);
-}
-
-.main-nav-menu :deep(.n-menu-item--selected .n-menu-item-content) {
-  background-color: rgba(230, 0, 18, 0.1);
-  font-weight: 600;
-}
-
-/* === 特殊修復：768px附近的LOGO保護 === */
-@media (min-width: 768px) and (max-width: 899px) {
-  .navbar-content {
-    justify-content: space-between;
-    gap: 0.5rem;
+  /* === 主要樣式改進 === */
+  .mobile-menu-btn {
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
   }
 
-  .main-nav-menu {
-    flex-grow: 0 !important; /* 防止選單過度擴展 */
-    flex-shrink: 1;
-    min-width: 0;
-  }
-
-  .navbar-brand-custom {
-    flex-shrink: 0; /* 防止LOGO被擠壓 */
-    z-index: 10; /* 確保LOGO在最上層 */
+  .mobile-menu-btn:hover {
+    background-color: rgba(51, 51, 51, 0.1);
   }
 
   .user-actions-area {
-    flex-shrink: 0; /* 防止用戶區域被擠壓 */
-  }
-}
-
-/* === 平板版響應式修復 === */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .navbar-brand-custom {
-    font-size: 1rem;
-    padding: 8px 16px;
-    margin-right: 1rem;
-  }
-
-  .main-nav-menu :deep(.n-menu-item-content) {
-    padding: 10px 12px !important;
-    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .user-display-button {
-    padding: 0.375rem 0.75rem;
-    max-width: 150px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    max-width: 200px;
+    color: #333 !important;
+  }
+
+  .user-display-button:hover {
+    background-color: rgba(51, 51, 51, 0.05) !important;
+    color: #e60012 !important;
   }
 
   .user-name {
-    max-width: 80px;
-    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+    color: inherit;
   }
 
   .user-role-display {
-    display: none; /* 平板版隱藏角色顯示 */
-  }
-}
-
-/* === 移動版樣式 === */
-.mobile-nav-menu :deep(.n-menu-item-content) {
-  margin: 2px 0;
-  border-radius: 8px;
-  padding: 16px 20px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.mobile-nav-menu :deep(.n-menu-item:hover .n-menu-item-content) {
-  transform: translateX(4px);
-}
-
-.mobile-nav-menu :deep(.n-menu-item--selected .n-menu-item-content) {
-  background-color: #e60012;
-  color: #ffffff;
-}
-
-.mobile-user-info {
-  margin-top: 2rem;
-}
-
-.mobile-user-profile {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(230, 0, 18, 0.05);
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.mobile-user-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.mobile-user-name {
-  font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mobile-user-role {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
-}
-
-.mobile-action-btn {
-  height: 44px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.mobile-guest-actions {
-  margin-top: 2rem;
-}
-
-/* === 頁腳樣式 === */
-.app-footer {
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  padding: 1rem 2rem;
-}
-
-.footer-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.footer-separator {
-  color: #d1d5db;
-}
-
-/* === 登入註冊按鈕樣式 === */
-.register-btn,
-.login-btn {
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.register-btn:hover {
-  transform: translateY(-1px);
-  border-color: #e60012;
-  color: #e60012;
-}
-
-.login-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(230, 0, 18, 0.3);
-}
-
-/* === 頁面過渡動畫 === */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* === 移動版響應式調整 === */
-@media (max-width: 768px) {
-  .app-header {
-    padding: 0 16px;
-    height: 56px;
+    color: #666;
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 
-  .navbar-content {
-    height: 100%;
+  .dropdown-arrow-icon {
+    opacity: 0.7;
+    transition: transform 0.2s ease;
   }
 
-  .mobile-nav-trigger {
-    flex-grow: 0;
+  .user-display-button:hover .dropdown-arrow-icon {
+    transform: rotate(180deg);
   }
 
-  .user-actions-area {
-    margin-left: auto;
+  /* === 導航選單樣式強化 === */
+  .main-nav-menu :deep(.n-menu-item-content) {
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin: 0 2px;
+    white-space: nowrap; /* 防止文字換行 */
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .user-display-button {
-    padding: 0.25rem 0.5rem;
-    max-width: 120px;
+  .main-nav-menu :deep(.n-menu-item:hover .n-menu-item-content) {
+    background-color: rgba(230, 0, 18, 0.08);
+    transform: translateY(-1px);
   }
 
-  .user-name {
-    max-width: 60px;
-    font-size: 0.875rem;
+  .main-nav-menu :deep(.n-menu-item--selected .n-menu-item-content) {
+    background-color: rgba(230, 0, 18, 0.1);
+    font-weight: 600;
   }
 
-  .register-btn,
-  .login-btn {
-    font-size: 0.875rem;
-    padding: 0.375rem 0.75rem;
+  /* === 特殊修復：768px附近的LOGO保護 === */
+  @media (min-width: 768px) and (max-width: 899px) {
+    .navbar-content {
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .main-nav-menu {
+      flex-grow: 0 !important; /* 防止選單過度擴展 */
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .navbar-brand-custom {
+      flex-shrink: 0; /* 防止LOGO被擠壓 */
+      z-index: 10; /* 確保LOGO在最上層 */
+    }
+
+    .user-actions-area {
+      flex-shrink: 0; /* 防止用戶區域被擠壓 */
+    }
+  }
+
+  /* === 平板版響應式修復 === */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .navbar-brand-custom {
+      font-size: 1rem;
+      padding: 8px 16px;
+      margin-right: 1rem;
+    }
+
+    .main-nav-menu :deep(.n-menu-item-content) {
+      padding: 10px 12px !important;
+      font-size: 0.9rem;
+    }
+
+    .user-display-button {
+      padding: 0.375rem 0.75rem;
+      max-width: 150px;
+    }
+
+    .user-name {
+      max-width: 80px;
+      font-size: 0.9rem;
+    }
+
+    .user-role-display {
+      display: none; /* 平板版隱藏角色顯示 */
+    }
+  }
+
+  /* === 移動版樣式 === */
+  .mobile-nav-menu :deep(.n-menu-item-content) {
+    margin: 2px 0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-nav-menu :deep(.n-menu-item:hover .n-menu-item-content) {
+    transform: translateX(4px);
+  }
+
+  .mobile-nav-menu :deep(.n-menu-item--selected .n-menu-item-content) {
+    background-color: #e60012;
+    color: #ffffff;
+  }
+
+  .mobile-user-info {
+    margin-top: 2rem;
+  }
+
+  .mobile-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(230, 0, 18, 0.05);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .mobile-user-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-user-name {
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-user-role {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+
+  .mobile-action-btn {
+    height: 44px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .mobile-guest-actions {
+    margin-top: 2rem;
+  }
+
+  /* === 頁腳樣式 === */
+  .app-footer {
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem 2rem;
   }
 
   .footer-content {
-    flex-direction: column;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #6b7280;
   }
 
   .footer-separator {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-header {
-    padding: 0 12px;
+    color: #d1d5db;
   }
 
-  .user-actions-area .n-space {
-    gap: 0.5rem;
-  }
-
+  /* === 登入註冊按鈕樣式 === */
   .register-btn,
   .login-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-  }
-}
-
-/* === 極小螢幕特殊處理 === */
-@media (max-width: 320px) {
-  .user-actions-area {
-    gap: 0.25rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
   }
 
-  .register-btn,
-  .login-btn {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.75rem;
-    min-width: auto;
+  .register-btn:hover {
+    transform: translateY(-1px);
+    border-color: #e60012;
+    color: #e60012;
   }
-}
+
+  .login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(230, 0, 18, 0.3);
+  }
+
+  /* === 頁面過渡動畫 === */
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
+
+  /* === 移動版響應式調整 === */
+  @media (max-width: 768px) {
+    .app-header {
+      padding: 0 16px;
+      height: 56px;
+    }
+
+    .navbar-content {
+      height: 100%;
+    }
+
+    .mobile-nav-trigger {
+      flex-grow: 0;
+    }
+
+    .user-actions-area {
+      margin-left: auto;
+    }
+
+    .user-display-button {
+      padding: 0.25rem 0.5rem;
+      max-width: 120px;
+    }
+
+    .user-name {
+      max-width: 60px;
+      font-size: 0.875rem;
+    }
+
+    .register-btn,
+    .login-btn {
+      font-size: 0.875rem;
+      padding: 0.375rem 0.75rem;
+    }
+
+    .footer-content {
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .footer-separator {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .app-header {
+      padding: 0 12px;
+    }
+
+    .user-actions-area .n-space {
+      gap: 0.5rem;
+    }
+
+    .register-btn,
+    .login-btn {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  /* === 極小螢幕特殊處理 === */
+  @media (max-width: 320px) {
+    .user-actions-area {
+      gap: 0.25rem;
+    }
+
+    .register-btn,
+    .login-btn {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.75rem;
+      min-width: auto;
+    }
+  }
 </style>

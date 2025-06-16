@@ -13,6 +13,7 @@
     "lint:check": "eslint . --ext .vue,.js,.jsx"
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "@popperjs/core": "^2.11.8",
     "@vicons/ionicons5": "^0.13.0",
     "@vicons/material": "^0.13.0",

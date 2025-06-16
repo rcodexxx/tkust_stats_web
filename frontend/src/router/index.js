@@ -11,13 +11,19 @@ import AddMemberView from '../views/team/AddMemberView.vue'
 import EditMemberView from '@/views/team/EditMemberView.vue'
 import AddMatchRecordView from '../views/match/AddMatchRecordView.vue'
 import MatchManagementView from '@/views/match/MatchManagementView.vue'
-import EditMatchRecordView from '../views/match/EditMatchRecordView.vue' // 🔧 新增編輯比賽頁面
+import EditMatchRecordView from '../views/match/EditMatchRecordView.vue'
+import DetailLeaderboardView from '@/views/DetailLeaderboardView.vue' // 🔧 新增編輯比賽頁面
 
 const routes = [
   {
     path: '/',
     name: 'Leaderboard',
     component: LeaderboardView
+  },
+  {
+    path: '/detail-leaderboard',
+    name: 'DetailLeaderboard',
+    component: DetailLeaderboardView
   },
   {
     path: '/login',
