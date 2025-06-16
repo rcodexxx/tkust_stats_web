@@ -6,13 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models import User, Member, MatchRecord
-from ..models.enums import UserRoleEnum, MatchOutcomeEnum
-from ..tools.exceptions import UserAlreadyExistsError, AppException, UserNotFoundError
+from ..models import MatchRecord, Member, User
+from ..models.enums import MatchOutcomeEnum, UserRoleEnum
+from ..tools.exceptions import AppException, UserAlreadyExistsError, UserNotFoundError
 
 
 class MemberService:
-
     @staticmethod
     def _get_leaderboard_data():
         """
@@ -20,17 +19,26 @@ class MemberService:
         """
         current_app.logger.info("--- [Leaderboard] 正在計算排行榜數據 ---")
 
-        # 1. 查詢所有比賽記錄
+        # 步驟 1: 查詢所有比賽記錄
         all_records = MatchRecord.query.all()
-        current_app.logger.info(f"[Leaderboard] 找到 {len(all_records)} 筆總比賽記錄。")
 
-        # 2. 計算每個球員的勝敗場次
+        # 步驟 2: 在 Python 字典中計算每個球員的勝敗場次
         stats = {}
         for record in all_records:
             if record.side_a_outcome == MatchOutcomeEnum.WIN:
-                winner_ids, loser_ids = [record.player1_id, record.player2_id], [record.player3_id, record.player4_id]
+                winner_ids = [
+                    p_id for p_id in [record.player1_id, record.player2_id] if p_id
+                ]
+                loser_ids = [
+                    p_id for p_id in [record.player3_id, record.player4_id] if p_id
+                ]
             elif record.side_a_outcome == MatchOutcomeEnum.LOSS:
-                winner_ids, loser_ids = [record.player3_id, record.player4_id], [record.player1_id, record.player2_id]
+                winner_ids = [
+                    p_id for p_id in [record.player3_id, record.player4_id] if p_id
+                ]
+                loser_ids = [
+                    p_id for p_id in [record.player1_id, record.player2_id] if p_id
+                ]
             else:
                 continue
 
@@ -41,35 +49,41 @@ class MemberService:
                 if p_id:
                     stats.setdefault(p_id, {"wins": 0, "losses": 0})["losses"] += 1
 
-        current_app.logger.info(f"[Leaderboard] 計算出的球員統計: {stats}")
-
-        # 3. 獲取所有有比賽記錄且為現役的成員
         player_ids_with_matches = list(stats.keys())
         if not player_ids_with_matches:
-            current_app.logger.warning("[Leaderboard] 沒有任何球員有比賽記錄，返回空列表。")
             return []
 
-        query = (
-            Member.query.filter(Member.id.in_(player_ids_with_matches))
-            .join(Member.user)
-            .filter(User.is_active == True)
-            .options(joinedload(Member.organization))
+        # 步驟 3: 獲取所有成員的資料
+        all_members = (
+            db.session.query(Member)
+            .options(joinedload(Member.user), joinedload(Member.organization))
+            .all()
         )
-        members_for_leaderboard = query.all()
-        current_app.logger.info(f"[Leaderboard] 查詢到 {len(members_for_leaderboard)} 位符合條件的現役成員。")
 
-        # 4. 將統計數據附加到成員物件上
-        for member in members_for_leaderboard:
-            member_stats = stats.get(member.id, {"wins": 0, "losses": 0})
-            member.wins = member_stats["wins"]
-            member.losses = member_stats["losses"]
-            member.total_matches = member.wins + member.losses
-            member.win_rate = round((member.wins / member.total_matches) * 100, 2) if member.total_matches > 0 else 0
-            current_app.logger.info(f"[Leaderboard] 處理成員 ID {member.id}: 勝={member.wins}, 敗={member.losses}")
+        # 步驟 4: 在 Python 中過濾出活躍且有比賽記錄的成員，並附加統計數據
+        members_for_leaderboard = []
+        for member in all_members:
+            # 檢查球員是否活躍 (member.is_active 會處理訪客和會員)
+            # 且該球員的 ID 存在於我們的統計字典中
+            if member.id in player_ids_with_matches and member.is_active:
+                member_stats = stats.get(member.id, {"wins": 0, "losses": 0})
 
-        # 5. 排序並返回
+                # 直接將勝敗場次附加到 member 物件上
+                member.wins = member_stats["wins"]
+                member.losses = member_stats["losses"]
+                member.total_matches = member.wins + member.losses
+                member.win_rate = (
+                    round((member.wins / member.total_matches) * 100, 2)
+                    if member.total_matches > 0
+                    else 0
+                )
+                members_for_leaderboard.append(member)
+
+        # 步驟 5: 根據分數排序並返回
         members_for_leaderboard.sort(key=lambda m: m.score, reverse=True)
-        current_app.logger.info("--- [Leaderboard] 排行榜數據計算完成 ---")
+        current_app.logger.info(
+            f"--- [Leaderboard] 排行榜計算完成，返回 {len(members_for_leaderboard)} 位成員的數據 ---"
+        )
         return members_for_leaderboard
 
     @staticmethod
@@ -81,7 +95,9 @@ class MemberService:
             return MemberService._get_leaderboard_data()
 
         # --- 以下為標準的成員列表查詢邏輯 ---
-        query = Member.query.options(joinedload(Member.user), joinedload(Member.organization))
+        query = Member.query.options(
+            joinedload(Member.user), joinedload(Member.organization)
+        )
 
         if args.get("all", "false").lower() != "true":
             query = query.join(Member.user).filter(User.is_active == True)
@@ -100,7 +116,9 @@ class MemberService:
         sort_by = args.get("sort_by", "name")
         sort_order = args.get("sort_order", "asc")
         sort_attr = getattr(Member, sort_by, Member.name)
-        query = query.order_by(sort_attr.desc() if sort_order == "desc" else sort_attr.asc())
+        query = query.order_by(
+            sort_attr.desc() if sort_order == "desc" else sort_attr.asc()
+        )
 
         return query.all()
 
@@ -124,7 +142,11 @@ class MemberService:
         try:
             # 創建 User 物件
             new_user = User(
-                username=username, email=None, role=UserRoleEnum.MEMBER, display_name=default_name, is_active=True
+                username=username,
+                email=None,
+                role=UserRoleEnum.MEMBER,
+                display_name=default_name,
+                is_active=True,
             )
             new_user.set_password(initial_password)
             db.session.add(new_user)
@@ -145,7 +167,7 @@ class MemberService:
                 "initial_password_warning": f"註冊成功並已自動登入！您的初始密碼與手機號碼相同 ({initial_password})，請盡快修改密碼。",
             }
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             raise AppException("註冊過程中發生未預期錯誤。")
 
@@ -227,15 +249,23 @@ class MemberService:
 
             # 處理唯一性檢查
             if "username" in data and data["username"] != user_to_update.username:
-                if User.query.filter(User.username == data["username"], User.id != user_to_update.id).first():
-                    raise UserAlreadyExistsError(f"手機號碼 '{data['username']}' 已被其他帳號使用。")
+                if User.query.filter(
+                    User.username == data["username"], User.id != user_to_update.id
+                ).first():
+                    raise UserAlreadyExistsError(
+                        f"手機號碼 '{data['username']}' 已被其他帳號使用。"
+                    )
 
             if "email" in data and data["email"] != user_to_update.email:
                 if (
                     data["email"]
-                    and User.query.filter(User.email == data["email"], User.id != user_to_update.id).first()
+                    and User.query.filter(
+                        User.email == data["email"], User.id != user_to_update.id
+                    ).first()
                 ):
-                    raise UserAlreadyExistsError(f"電子郵件 '{data['email']}' 已被其他帳號使用。")
+                    raise UserAlreadyExistsError(
+                        f"電子郵件 '{data['email']}' 已被其他帳號使用。"
+                    )
 
             # 更新欄位值
             for field in user_fields:

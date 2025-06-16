@@ -20,24 +20,23 @@
         </div>
 
         <!-- 排行榜統計摘要 (桌面版顯示) -->
-        <div v-if="!loading && !error && hasValidStats" class="stats-summary mb-4 desktop-only">
+        <div v-if="!loading && !error && displayMembers.length > 0" class="stats-summary mb-4 desktop-only">
           <n-card size="small" class="stats-card">
             <div class="stats-row">
               <div class="stat-item">
-                <n-statistic label="總球員數" :value="safeGet(systemStats, 'basic.total_active_players', 0)" />
+                <n-statistic label="活躍球員" :value="displayMembers.length" />
+              </div>
+              <div class="stat-item">
+                <n-statistic label="最高技能值" :value="Math.round((topThree[0]?.mu || 0) * 100) / 100" />
               </div>
               <div class="stat-item">
                 <n-statistic
-                  label="平均分數"
-                  :value="formatDisplayScore(safeGet(systemStats, 'basic.average_conservative_score', 0))"
-                  suffix="分"
-                />
-              </div>
-              <div class="stat-item">
-                <n-statistic
-                  label="最高分數"
-                  :value="formatDisplayScore(safeGet(systemStats, 'basic.score_range.max', 0))"
-                  suffix="分"
+                  label="平均信心度"
+                  :value="
+                    Math.round(
+                      displayMembers.reduce((sum, m) => sum + (m.rating_confidence || 0), 0) / displayMembers.length
+                    )
+                  "
                 />
               </div>
             </div>
@@ -65,22 +64,22 @@
                         {{ topThree[1].organization_name }}
                       </div>
                       <div class="experience-badge">
-                        <n-tag
-                          :type="getExperienceTagType(safeGet(topThree[1], 'experience_level', '未知'))"
-                          size="small"
-                        >
-                          {{ safeGet(topThree[1], 'experience_level', '未知') }}
-                        </n-tag>
+                        <span class="experience-icon">{{
+                          getExperienceIcon(safeGet(topThree[1], 'experience_level', '新手'))
+                        }}</span>
+                        <span class="experience-text">{{ safeGet(topThree[1], 'experience_level', '新手') }}</span>
                       </div>
                     </div>
                     <div class="score-display">
                       <div class="score-number">
                         {{ formatDisplayScore(safeGet(topThree[1], 'official_rank_score', 0)) }}
                       </div>
-                      <div class="score-label">分</div>
                     </div>
-                    <div class="match-count">{{ getMatchCount(topThree[1]) }} 場比賽</div>
+                    <div class="match-count" v-if="getMatchCount(topThree[1])">
+                      {{ getMatchCount(topThree[1]) }} 場比賽
+                    </div>
                   </div>
+                  <div class="podium-base podium-base-2"></div>
                 </div>
 
                 <!-- 第一名 (中間，最高) -->
@@ -96,22 +95,22 @@
                         {{ topThree[0].organization_name }}
                       </div>
                       <div class="experience-badge">
-                        <n-tag
-                          :type="getExperienceTagType(safeGet(topThree[0], 'experience_level', '未知'))"
-                          size="small"
-                        >
-                          {{ safeGet(topThree[0], 'experience_level', '未知') }}
-                        </n-tag>
+                        <span class="experience-icon">{{
+                          getExperienceIcon(safeGet(topThree[0], 'experience_level', '新手'))
+                        }}</span>
+                        <span class="experience-text">{{ safeGet(topThree[0], 'experience_level', '新手') }}</span>
                       </div>
                     </div>
                     <div class="score-display">
                       <div class="score-number">
                         {{ formatDisplayScore(safeGet(topThree[0], 'official_rank_score', 0)) }}
                       </div>
-                      <div class="score-label">分</div>
                     </div>
-                    <div class="match-count">{{ getMatchCount(topThree[0]) }} 場比賽</div>
+                    <div class="match-count" v-if="getMatchCount(topThree[0])">
+                      {{ getMatchCount(topThree[0]) }} 場比賽
+                    </div>
                   </div>
+                  <div class="podium-base podium-base-1"></div>
                 </div>
 
                 <!-- 第三名 (右邊) -->
@@ -126,22 +125,22 @@
                         {{ topThree[2].organization_name }}
                       </div>
                       <div class="experience-badge">
-                        <n-tag
-                          :type="getExperienceTagType(safeGet(topThree[2], 'experience_level', '未知'))"
-                          size="small"
-                        >
-                          {{ safeGet(topThree[2], 'experience_level', '未知') }}
-                        </n-tag>
+                        <span class="experience-icon">{{
+                          getExperienceIcon(safeGet(topThree[2], 'experience_level', '新手'))
+                        }}</span>
+                        <span class="experience-text">{{ safeGet(topThree[2], 'experience_level', '新手') }}</span>
                       </div>
                     </div>
                     <div class="score-display">
                       <div class="score-number">
                         {{ formatDisplayScore(safeGet(topThree[2], 'official_rank_score', 0)) }}
                       </div>
-                      <div class="score-label">分</div>
                     </div>
-                    <div class="match-count">{{ getMatchCount(topThree[2]) }} 場比賽</div>
+                    <div class="match-count" v-if="getMatchCount(topThree[2])">
+                      {{ getMatchCount(topThree[2]) }} 場比賽
+                    </div>
                   </div>
+                  <div class="podium-base podium-base-3"></div>
                 </div>
               </div>
             </div>
@@ -158,15 +157,17 @@
                     />
                   </div>
                   <div class="player-name-mobile">{{ getPlayerDisplayName(member) }}</div>
-                  <div class="score-mobile">{{ formatDisplayScore(safeGet(member, 'official_rank_score', 0)) }}分</div>
-                  <div class="matches-mobile">{{ getMatchCount(member) }}場</div>
+                  <div class="score-mobile">{{ formatDisplayScore(safeGet(member, 'official_rank_score', 0)) }}</div>
+                  <div class="experience-mobile">
+                    {{ getExperienceIcon(safeGet(member, 'experience_level', '新手')) }}
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- 其他排名 -->
             <div v-if="otherRanks.length > 0" class="other-ranks">
-              <h3 class="section-title">第 4 - {{ Math.min(displayMembers.length, 20) }} 名</h3>
+              <h3 class="section-title">第 4 - {{ Math.min(displayMembers.length, 50) }} 名</h3>
 
               <!-- 桌面版列表 -->
               <n-list class="ranking-list desktop-only">
@@ -180,17 +181,15 @@
                         <span v-if="member.organization_name" class="org-name">
                           {{ member.organization_name }}
                         </span>
-                        <n-tag :type="getExperienceTagType(safeGet(member, 'experience_level', '未知'))" size="tiny">
-                          {{ safeGet(member, 'experience_level', '未知') }}
-                        </n-tag>
+                        <span class="experience-icon-small">{{
+                          getExperienceIcon(safeGet(member, 'experience_level', '新手'))
+                        }}</span>
+                        <span class="experience-text-small">{{ safeGet(member, 'experience_level', '新手') }}</span>
                       </div>
                     </div>
 
                     <div class="score-section">
-                      <div class="score-main">
-                        {{ formatDisplayScore(safeGet(member, 'official_rank_score', 0)) }} 分
-                      </div>
-                      <div class="match-info">{{ getMatchCount(member) }} 場</div>
+                      <div class="match-info">{{ getMatchCount(member) }} 場比賽</div>
                     </div>
                   </div>
                 </n-list-item>
@@ -202,21 +201,21 @@
                   <div class="mobile-rank-content">
                     <div class="rank-number-mobile">{{ member.rank }}</div>
                     <div class="player-name-mobile">{{ getPlayerDisplayName(member) }}</div>
-                    <div class="score-mobile">
-                      {{ formatDisplayScore(safeGet(member, 'official_rank_score', 0)) }}分
+                    <div class="score-mobile">{{ formatDisplayScore(safeGet(member, 'official_rank_score', 0)) }}</div>
+                    <div class="experience-mobile">
+                      {{ getExperienceIcon(safeGet(member, 'experience_level', '新手')) }}
                     </div>
-                    <div class="matches-mobile">{{ getMatchCount(member) }}場</div>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- 查看更多提示 -->
-            <div v-if="displayMembers.length >= 20" class="view-more-hint">
+            <div v-if="displayMembers.length >= 50" class="view-more-hint">
               <n-card class="hint-card">
                 <div class="hint-content">
                   <n-icon :component="InfoIcon" size="20" color="#6366f1" />
-                  <span>想查看完整排行榜和詳細統計？</span>
+                  <span>顯示前 {{ displayMembers.length }} 名球員。想查看完整排行榜和詳細統計？</span>
                   <n-button type="primary" size="small" @click="goToDetailedRanking"> 前往詳細排行榜 </n-button>
                 </div>
               </n-card>
@@ -232,7 +231,7 @@
   import { computed, onMounted, ref } from 'vue'
   import { useRouter } from 'vue-router'
   import apiClient from '@/services/apiClient.js'
-  import { NAlert, NButton, NCard, NEmpty, NIcon, NList, NListItem, NSpin, NStatistic, NTag, NText } from 'naive-ui'
+  import { NAlert, NButton, NCard, NEmpty, NIcon, NList, NListItem, NSpin, NStatistic, NText } from 'naive-ui'
   import { Medal as Rank3Icon, ShieldSharp as Rank2Icon, TrophySharp as Rank1Icon } from '@vicons/ionicons5'
   import { InformationCircleIcon as InfoIcon } from '@heroicons/vue/24/outline'
 
@@ -261,50 +260,57 @@
     return current !== undefined ? current : defaultValue
   }
 
-  // 格式化顯示分數 (x100)
-  const formatDisplayScore = score => {
-    if (typeof score !== 'number' || isNaN(score)) return '0'
-    return Math.round(score * 100).toString()
-  }
-
   // 獲取球員顯示名稱
   const getPlayerDisplayName = member => {
     return safeGet(member, 'display_name') || safeGet(member, 'name', '未知球員')
   }
 
-  // 獲取比賽場數 (檢查多個可能的字段名稱)
+  // 獲取經驗等級圖標
+  const getExperienceIcon = experienceLevel => {
+    const iconMap = {
+      新手: '🌱', // 新芽
+      初級: '🌿', // 葉子
+      中級: '🌳', // 樹
+      高級: '💫', // 閃爍星
+      資深: '⭐' // 星星
+    }
+    return iconMap[experienceLevel] || '🌱'
+  }
+
+  // 格式化顯示分數 (x100，不顯示"分"字)
+  const formatDisplayScore = score => {
+    if (typeof score !== 'number' || isNaN(score)) return '0'
+    return Math.round(score * 100).toString()
+  }
+
+  // 深入調查比賽場數問題
   const getMatchCount = member => {
     const totalMatches = safeGet(member, 'total_matches', 0)
 
-    // 調試：顯示實際的 total_matches 值
+    // 調試：檢查更多可能的數據源
     if (process.env.NODE_ENV === 'development' && member) {
-      console.log(
-        `Player: ${getPlayerDisplayName(member)}, total_matches: ${totalMatches}, type: ${typeof totalMatches}`
-      )
+      console.log(`=== 深度調查球員: ${getPlayerDisplayName(member)} ===`)
+      console.log('完整member對象:', member)
+      console.log('id:', member.id)
+      console.log('is_active:', member.is_active)
+      console.log('is_experienced_player:', member.is_experienced_player)
+      console.log('mu:', member.mu) // TrueSkill mu值
+      console.log('sigma:', member.sigma) // TrueSkill sigma值
+      console.log('官方排名分數:', member.official_rank_score)
+      console.log('潛在技能:', member.potential_skill)
+      console.log('一致性評分:', member.consistency_rating)
+      console.log('評分信心度:', member.rating_confidence)
+      console.log('================================')
     }
 
-    return (
-      totalMatches ||
-      safeGet(member, 'matches_played', 0) ||
-      safeGet(member, 'match_count', 0) ||
-      safeGet(member, 'games_played', 0) ||
-      safeGet(member, 'total_games', 0) ||
-      safeGet(member, 'matches', 0) ||
-      safeGet(member, 'games', 0) ||
-      0
-    )
+    return totalMatches
   }
 
   // === 計算屬性 ===
-  const hasValidStats = computed(() => {
-    return (
-      systemStats.value && typeof systemStats.value === 'object' && safeGet(systemStats.value, 'basic') !== undefined
-    )
-  })
 
-  // 顯示的球員（前20名）
+  // 顯示的球員（前50名）
   const displayMembers = computed(() => {
-    return leaderboardData.value.slice(0, 20)
+    return leaderboardData.value.slice(0, 50)
   })
 
   // 前三名
@@ -312,7 +318,7 @@
     return displayMembers.value.slice(0, 3)
   })
 
-  // 其他排名（第4-20名）
+  // 其他排名（第4-50名）
   const otherRanks = computed(() => {
     return displayMembers.value.slice(3)
   })
@@ -323,60 +329,81 @@
     error.value = null
 
     try {
-      // 固定參數：只顯示正式會員，前20名
-      const params = new URLSearchParams({
-        include_guests: false,
-        limit: 20
-      })
-
       let response
       let data
 
       try {
-        response = await apiClient.get(`/members/leaderboard?${params}`)
-        data = response.data
+        console.log('=== API 調用調試 ===')
 
-        if (data && Array.isArray(data.data)) {
-          leaderboardData.value = data.data.map((member, index) => ({
-            ...member,
-            rank: index + 1,
-            // 確保必要屬性存在
-            official_rank_score: safeGet(member, 'official_rank_score', 0),
-            experience_level: safeGet(member, 'experience_level', '未知'),
-            organization_name: safeGet(member, 'organization_name', '')
-          }))
-
-          systemStats.value = safeGet(data, 'statistics', null)
-        } else {
-          throw new Error('API 回應格式不正確')
-        }
-      } catch (newApiError) {
-        console.warn('新 API 失敗，使用備用方案:', newApiError.message)
-
-        // 備用：舊 API
+        // 方法1: 嘗試詳細的會員資料API
+        console.log('嘗試方法1: /members 基本API')
         response = await apiClient.get('/members', {
-          params: { view: 'leaderboard' }
+          params: {
+            view: 'leaderboard',
+            limit: 50
+          }
         })
 
         if (response && Array.isArray(response.data)) {
-          const membersOnly = response.data.filter(member => !safeGet(member, 'is_guest', false)).slice(0, 20)
+          console.log('方法1成功，檢查第一個球員的完整數據:', response.data[0])
+
+          const membersOnly = response.data.filter(member => !safeGet(member, 'is_guest', false))
 
           leaderboardData.value = membersOnly.map((member, index) => ({
             ...member,
             rank: index + 1,
-            official_rank_score: safeGet(member, 'score', 0) || safeGet(member, 'conservative_score', 0),
-            experience_level: safeGet(member, 'experience_level', '未知'),
+            official_rank_score:
+              safeGet(member, 'official_rank_score', 0) ||
+              safeGet(member, 'score', 0) ||
+              safeGet(member, 'conservative_score', 0),
+            experience_level: safeGet(member, 'experience_level', '新手'),
             organization_name: safeGet(member, 'organization_name', '')
           }))
 
           systemStats.value = null
+          console.log('成功載入', leaderboardData.value.length, '筆記錄')
+
+          // 嘗試針對第一個球員獲取詳細資料
+          if (leaderboardData.value.length > 0) {
+            const firstPlayer = leaderboardData.value[0]
+            console.log('=== 嘗試獲取單一球員詳細資料 ===')
+            try {
+              const detailResponse = await apiClient.get(`/members/${firstPlayer.id}`)
+              console.log('球員詳細資料:', detailResponse.data)
+            } catch (detailError) {
+              console.log('無法獲取球員詳細資料:', detailError.message)
+            }
+
+            // 嘗試獲取比賽記錄
+            console.log('=== 嘗試獲取比賽記錄 ===')
+            try {
+              const matchesResponse = await apiClient.get('/matches', {
+                params: { player_id: firstPlayer.id, limit: 10 }
+              })
+              console.log('比賽記錄:', matchesResponse.data)
+            } catch (matchError) {
+              console.log('比賽記錄API 1失敗，嘗試其他端點')
+
+              try {
+                const gamesResponse = await apiClient.get('/games', {
+                  params: { player_id: firstPlayer.id, limit: 10 }
+                })
+                console.log('遊戲記錄:', gamesResponse.data)
+              } catch (gameError) {
+                console.log('遊戲記錄也失敗:', gameError.message)
+              }
+            }
+          }
         } else {
           throw new Error('無法獲取排行榜數據')
         }
+      } catch (apiError) {
+        console.error('API 錯誤:', apiError)
+        throw new Error('載入排行榜時發生錯誤')
       }
     } catch (e) {
-      error.value = e.response?.data?.message || e.message || '載入排行榜時發生錯誤，請稍後再試'
-      console.error('排行榜 API 錯誤:', e)
+      error.value = e.message || '載入排行榜時發生錯誤，請稍後再試'
+      console.error('排行榜錯誤:', e)
       leaderboardData.value = []
       systemStats.value = null
     } finally {
@@ -397,17 +424,6 @@
     if (rank === 2) return '#C0C0C0'
     if (rank === 3) return '#CD7F32'
     return undefined
-  }
-
-  function getExperienceTagType(experienceLevel) {
-    const typeMap = {
-      新手: 'default',
-      初級: 'info',
-      中級: 'warning',
-      高級: 'success',
-      資深: 'error'
-    }
-    return typeMap[experienceLevel] || 'default'
   }
 
   function goToDetailedRanking() {
@@ -470,6 +486,7 @@
   /* F1頒獎台風格 (桌面版) */
   .f1-podium-desktop {
     perspective: 1000px;
+    margin-bottom: 2rem;
   }
 
   .podium-container {
@@ -479,44 +496,29 @@
     gap: 0;
     padding: 2rem 0;
     position: relative;
-  }
-
-  /* 統一底座 */
-  .podium-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    height: 40px;
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    z-index: 0;
+    max-width: 780px;
+    margin: 0 auto;
   }
 
   .podium-position {
+    position: relative;
+    width: 260px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    z-index: 1;
   }
 
+  /* 2-1-3 排列 */
   .position-1 {
     order: 2;
-    transform: scale(1.1) translateY(-20px);
   }
 
   .position-2 {
     order: 1;
-    transform: translateY(-10px);
   }
 
   .position-3 {
     order: 3;
-    transform: translateY(-10px);
   }
 
   .podium-card {
@@ -528,8 +530,9 @@
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    width: 260px;
+    width: 100%;
     z-index: 2;
+    margin-bottom: 8px;
   }
 
   .rank-1 {
@@ -548,6 +551,28 @@
     background: linear-gradient(135deg, #cd7f32, #daa447);
     border: 3px solid #cd7f32;
     box-shadow: 0 8px 25px rgba(205, 127, 50, 0.3);
+  }
+
+  /* 頒獎台台階 - 更深的顏色 */
+  .podium-base {
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .podium-base-1 {
+    height: 120px;
+  }
+
+  .podium-base-2 {
+    height: 80px;
+  }
+
+  .podium-base-3 {
+    height: 60px;
   }
 
   .crown-icon {
@@ -612,6 +637,34 @@
 
   .experience-badge {
     margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .experience-icon {
+    font-size: 1.5rem;
+  }
+
+  .experience-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .experience-icon-small {
+    font-size: 1rem;
+  }
+
+  .experience-text-small {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .experience-mobile {
+    font-size: 1.25rem;
+    text-align: center;
   }
 
   .score-display {
@@ -629,6 +682,17 @@
     font-size: 0.875rem;
     color: #64748b;
     font-weight: 500;
+  }
+
+  .score-display {
+    margin-bottom: 0.75rem;
+  }
+
+  .score-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
   }
 
   .match-count {
@@ -732,15 +796,13 @@
     font-size: 1rem;
     font-weight: 700;
     color: #1e293b;
-    text-align: right;
+    text-align: center;
     min-width: 60px;
   }
 
-  .matches-mobile {
-    font-size: 0.875rem;
-    color: #64748b;
-    text-align: right;
-    min-width: 50px;
+  .experience-mobile {
+    font-size: 1.25rem;
+    text-align: center;
   }
 
   /* 其他排名 */
@@ -822,8 +884,9 @@
   }
 
   .match-info {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     color: #64748b;
+    font-weight: 500;
   }
 
   /* 查看更多提示 */
@@ -887,14 +950,14 @@
     }
 
     .score-mobile,
-    .matches-mobile {
+    .experience-mobile {
       font-size: 0.875rem;
     }
   }
 
   @media (max-width: 480px) {
     .mobile-rank-content {
-      grid-template-columns: 45px 1fr 50px 40px;
+      grid-template-columns: 45px 1fr auto auto;
       gap: 0.5rem;
       padding: 1rem;
     }
@@ -907,8 +970,8 @@
       font-size: 0.85rem;
     }
 
-    .matches-mobile {
-      font-size: 0.75rem;
+    .experience-mobile {
+      font-size: 1.1rem;
     }
   }
 </style>

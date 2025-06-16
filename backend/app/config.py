@@ -24,13 +24,21 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get("TEST_DATABASE_URL") or "sqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI = (
+        os.environ.get("TEST_DATABASE_URL") or "sqlite:///:memory:"
+    )
     WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(Config):
-
     pass
+
+
+class RatingCalculationConfig(Config):
+    TRUESKILL_CONSERVATIVE_K = 2.0
+    TRUESKILL_MAX_SIGMA = 8.33
+    TRUESKILL_MIN_SIGMA = 1.0
+    TRUESKILL_EXP_THRESHOLD = 10
 
 
 config_by_name = dict(

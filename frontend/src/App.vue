@@ -53,17 +53,17 @@
                   </template>
                   <template v-else>
                     <n-space align="center" :wrap="false" :size="isMobile ? 'small' : 'medium'">
-                      <router-link v-slot="{ navigate }" :to="{ name: 'Register' }">
-                        <n-button
-                          :size="isMobile ? 'small' : 'medium'"
-                          ghost
-                          round
-                          @click="navigate"
-                          class="register-btn"
-                        >
-                          快速註冊
-                        </n-button>
-                      </router-link>
+                      <!--                      <router-link v-slot="{ navigate }" :to="{ name: 'Register' }">-->
+                      <!--                        <n-button-->
+                      <!--                          :size="isMobile ? 'small' : 'medium'"-->
+                      <!--                          ghost-->
+                      <!--                          round-->
+                      <!--                          @click="navigate"-->
+                      <!--                          class="register-btn"-->
+                      <!--                        >-->
+                      <!--                          快速註冊-->
+                      <!--                        </n-button>-->
+                      <!--                      </router-link>-->
                       <router-link v-slot="{ navigate }" :to="{ name: 'Login' }">
                         <n-button
                           type="primary"
@@ -386,7 +386,7 @@
         icon: renderIcon(HomeIcon)
       },
       {
-        label: renderRouterLink('DetailLeaderboard', '排行榜(完整)'),
+        label: renderRouterLink('DetailLeaderboard', '數據排行榜'),
         key: 'DetailLeaderboard',
         icon: renderIcon(HomeIcon),
         show: isLogin.value

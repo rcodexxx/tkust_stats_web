@@ -14,6 +14,37 @@ from ..models.enums.bio_enums import BloodTypeEnum, GenderEnum
 from ..models.enums.match_enums import MatchPositionEnum
 
 
+# --- 四維度評分專用 Schema ---
+class FourDimensionScoreSchema(Schema):
+    """四維度評分 Schema"""
+
+    official_rank = fields.Float(
+        dump_only=True, metadata={"description": "官方排名分數"}
+    )
+    potential_skill = fields.Float(dump_only=True, metadata={"description": "潛在實力"})
+    consistency = fields.Int(dump_only=True, metadata={"description": "穩定度 (0-100)"})
+    experience_level = fields.Str(dump_only=True, metadata={"description": "經驗等級"})
+    rating_confidence = fields.Int(
+        dump_only=True, metadata={"description": "評分可信度 (0-100)"}
+    )
+
+
+class RatingSummarySchema(Schema):
+    """評分摘要 Schema"""
+
+    official_score = fields.Float(dump_only=True, metadata={"description": "官方分數"})
+    raw_mu = fields.Float(dump_only=True, metadata={"description": "原始 μ 值"})
+    raw_sigma = fields.Float(dump_only=True, metadata={"description": "原始 σ 值"})
+    stability_rating = fields.Int(
+        dump_only=True, metadata={"description": "穩定度評分"}
+    )
+    experience_level = fields.Str(dump_only=True, metadata={"description": "經驗等級"})
+    confidence = fields.Int(dump_only=True, metadata={"description": "評分可信度"})
+    is_experienced = fields.Bool(
+        dump_only=True, metadata={"description": "是否為有經驗球員"}
+    )
+
+
 # --- 巢狀 Schema ---
 class SimpleOrganizationSchema(Schema):
     """僅序列化組織的基礎資訊"""
@@ -50,7 +81,7 @@ class CreatorInfoSchema(Schema):
 
 # --- 主要的 Member Schema ---
 class MemberSchema(Schema):
-    """完整的 Member Schema，支援正式會員和訪客"""
+    """完整的 Member Schema，已整合四維度評分系統"""
 
     # 基本資訊
     id = fields.Int(dump_only=True)
@@ -74,24 +105,46 @@ class MemberSchema(Schema):
     joined_date = fields.Date(dump_only=True, allow_none=True)
     leaved_date = fields.Date(dump_only=True, allow_none=True)
 
-    # TrueSkill 評分
-    mu = fields.Float(dump_only=True)
-    sigma = fields.Float(dump_only=True)
-    score = fields.Int(dump_only=True)
+    # === 四維度評分系統 ===
+    # 主要評分
+    official_rank_score = fields.Float(
+        dump_only=True, metadata={"description": "官方排名分數 (主要排序依據)"}
+    )
+    conservative_score = fields.Float(
+        dump_only=True, metadata={"description": "保守評分"}
+    )
+    potential_skill = fields.Float(
+        dump_only=True, metadata={"description": "潛在實力 (μ值)"}
+    )
+    consistency_rating = fields.Int(
+        dump_only=True, metadata={"description": "穩定度評分 (0-100)"}
+    )
+    experience_level = fields.Str(dump_only=True, metadata={"description": "經驗等級"})
+    rating_confidence = fields.Int(
+        dump_only=True, metadata={"description": "評分可信度 (0-100)"}
+    )
+    is_experienced_player = fields.Bool(
+        dump_only=True, metadata={"description": "是否為有經驗球員"}
+    )
+
+    # 原始 TrueSkill 數據
+    mu = fields.Float(dump_only=True, metadata={"description": "TrueSkill μ 值"})
+    sigma = fields.Float(dump_only=True, metadata={"description": "TrueSkill σ 值"})
+    score = fields.Float(
+        dump_only=True, metadata={"description": "傳統評分 (向後兼容)"}
+    )
+
+    # 結構化的四維度數據
+    four_dimensions = fields.Nested(FourDimensionScoreSchema, dump_only=True)
+    rating_summary = fields.Nested(RatingSummarySchema, dump_only=True)
 
     # 訪客相關資訊
     is_guest = fields.Bool(dump_only=True)
     guest_phone = fields.Str(dump_only=True, allow_none=True)
-    guest_identifier = fields.Str(dump_only=True, allow_none=True)
+    guest_role = fields.Str(dump_only=True, allow_none=True)
+    guest_role_display = fields.Method("get_guest_role_display", dump_only=True)
     usage_count = fields.Int(dump_only=True, allow_none=True)
     last_used_at = fields.DateTime(dump_only=True, allow_none=True)
-    created_at = fields.DateTime(dump_only=True, allow_none=True)
-
-    guest_role = EnumField(
-        GuestRoleEnum, by_value=True, dump_only=True, allow_none=True
-    )
-    guest_role_display = fields.Method("get_guest_role_display", dump_only=True)
-    guest_notes = fields.Str(dump_only=True, allow_none=True)
 
     # 關聯資訊
     organization = fields.Nested(
@@ -99,70 +152,164 @@ class MemberSchema(Schema):
     )
     racket = fields.Nested(SimpleRacketSchema, dump_only=True, allow_none=True)
     user = fields.Nested(SimpleUserSchema, dump_only=True, allow_none=True)
-    creator_info = fields.Nested(CreatorInfoSchema, dump_only=True, allow_none=True)
+
+    total_matches = fields.Method("get_total_matches", dump_only=True)
 
     # 備註
     notes = fields.Str(dump_only=True, allow_none=True)
+    created_at = fields.DateTime(dump_only=True)
 
     def get_display_name(self, obj):
-        """獲取顯示名稱"""
-        return obj.display_name
+        return obj.display_name if obj else None
 
     def get_short_display_name(self, obj):
-        """獲取短版顯示名稱"""
-        return obj.short_display_name
+        return obj.short_display_name if obj else None
 
     def get_is_active(self, obj):
-        """獲取活躍狀態"""
-        return obj.is_active
+        return obj.is_active if obj else False
 
     def get_player_type(self, obj):
-        """獲取球員類型"""
-        return obj.player_type
+        return obj.player_type if obj else None
 
     def get_guest_role_display(self, obj):
-        """獲取訪客身份顯示名稱"""
-        if obj.is_guest and obj.guest_role:
-            return GuestRoleEnum.get_display_name(obj.guest_role)
+        if obj and obj.is_guest:
+            return obj.get_guest_role_display()
         return None
+
+    def get_total_matches(self, obj):
+        """獲取正確的總比賽場次"""
+        # 優先使用計算出的場次
+        if hasattr(obj, '_calculated_match_count'):
+            return obj._calculated_match_count
+
+        # 如果沒有計算值，實時計算
+        try:
+            from sqlalchemy import or_
+
+            from ..models import MatchRecord
+
+            count = db.session.query(MatchRecord).filter(
+                or_(
+                    MatchRecord.player1_id == obj.id,
+                    MatchRecord.player2_id == obj.id,
+                    MatchRecord.player3_id == obj.id,
+                    MatchRecord.player4_id == obj.id
+                )
+            ).count()
+
+            return count
+        except Exception:
+            # 最後備用方案
+            if obj and hasattr(obj, 'match_stats_records'):
+                return obj.match_stats_records.count()
+            return 0
+
+    class Meta:
+        ordered = True
 
 
 # --- 排行榜專用 Schema ---
 class LeaderboardMemberSchema(Schema):
-    """排行榜專用的 Member Schema"""
+    """排行榜專用的會員 Schema - 修正版本"""
 
     id = fields.Int(dump_only=True)
     name = fields.Str(dump_only=True)
     display_name = fields.Method("get_display_name", dump_only=True)
     short_display_name = fields.Method("get_short_display_name", dump_only=True)
-    score = fields.Int(dump_only=True)
-    is_guest = fields.Bool(dump_only=True)
+
+    # 四維度評分
+    official_rank_score = fields.Float(dump_only=True)
+    potential_skill = fields.Float(dump_only=True)
+    consistency_rating = fields.Int(dump_only=True)
+    experience_level = fields.Str(dump_only=True)
+    rating_confidence = fields.Int(dump_only=True)
+    is_experienced_player = fields.Bool(dump_only=True)
+
+    # 基本狀態
+    is_active = fields.Method("get_is_active", dump_only=True)
     player_type = fields.Method("get_player_type", dump_only=True)
+    is_guest = fields.Bool(dump_only=True)
 
-    # 組織名稱
-    organization_name = fields.Method("get_organization_display", dump_only=True)
+    # 組織資訊
+    organization_name = fields.Str(
+        attribute="organization.name", dump_only=True, allow_none=True
+    )
 
-    # 動態計算的統計數據（在 service 中附加）
-    wins = fields.Int(dump_only=True, dump_default=0)
-    losses = fields.Int(dump_only=True, dump_default=0)
-    total_matches = fields.Int(dump_only=True, dump_default=0)
-    win_rate = fields.Float(dump_only=True, dump_default=0.0)
+    # 修正的比賽場次
+    total_matches = fields.Method("get_total_matches", dump_only=True)
+
+    # 原始 TrueSkill 數據（詳細視圖用）
+    mu = fields.Float(dump_only=True)
+    sigma = fields.Float(dump_only=True)
 
     def get_display_name(self, obj):
-        return obj.display_name
+        return obj.display_name if obj else None
 
     def get_short_display_name(self, obj):
-        return obj.short_display_name
+        return obj.short_display_name if obj else None
+
+    def get_is_active(self, obj):
+        return obj.is_active if obj else False
 
     def get_player_type(self, obj):
-        return obj.player_type
+        return obj.player_type if obj else None
 
-    def get_organization_display(self, obj):
-        if obj.is_guest:
-            return "訪客"
-        elif obj.organization:
-            return obj.organization.short_name or obj.organization.name
-        return None
+    def get_total_matches(self, obj):
+        """獲取正確的總比賽場次"""
+        if hasattr(obj, "_calculated_match_count"):
+            return obj._calculated_match_count
+
+        return 0
+
+    class Meta:
+        ordered = True
+
+
+# --- 會員比較 Schema ---
+class MemberComparisonSchema(Schema):
+    """用於會員技術比較的 Schema"""
+
+    skill_advantage = fields.Float(
+        dump_only=True, metadata={"description": "技術優勢分數"}
+    )
+    confidence_advantage = fields.Int(
+        dump_only=True, metadata={"description": "可信度優勢"}
+    )
+    is_likely_stronger = fields.Bool(
+        dump_only=True, metadata={"description": "是否可能更強"}
+    )
+    comparison_reliability = fields.Int(
+        dump_only=True, metadata={"description": "比較可靠性"}
+    )
+
+
+class LeaderboardQuerySchema(Schema):
+    """排行榜查詢參數 Schema"""
+
+    include_guests = fields.Bool(
+        load_default=True, metadata={"description": "是否包含訪客"}
+    )
+    limit = fields.Int(
+        validate=validate.Range(min=1, max=100),
+        allow_none=True,
+        metadata={"description": "限制返回數量"},
+    )
+    organization_id = fields.Int(
+        allow_none=True, metadata={"description": "篩選特定組織"}
+    )
+    min_matches = fields.Int(
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "最少比賽場次"},
+    )
+    experience_level = fields.Str(
+        validate=validate.OneOf(["新手", "初級", "中級", "高級", "資深"]),
+        allow_none=True,
+        metadata={"description": "篩選經驗等級"},
+    )
+
+    class Meta:
+        unknown = EXCLUDE
 
 
 # --- 創建 Schema ---
