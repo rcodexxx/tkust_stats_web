@@ -185,12 +185,12 @@
 
 <script setup>
   import { computed, ref, watch } from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
+  import { useRouter } from 'vue-router'
   import { useMessage } from 'naive-ui'
   import apiClient from '@/services/apiClient'
   import MatchPlayerSelector from '@/components/MatchPlayerSelector.vue'
 
-  // Icons
+  // Icons (保持不變)
   import {
     ArrowBackOutline as ArrowLeftIcon,
     ChevronDownOutline as ChevronDownIcon,
@@ -200,19 +200,19 @@
   } from '@vicons/ionicons5'
 
   const router = useRouter()
-  const route = useRoute()
   const message = useMessage()
 
-  // State
+  // State (保持不變)
+  const loading = ref(false)
   const submitting = ref(false)
   const showAdvancedSettings = ref(false)
   const formRef = ref(null)
 
-  // Form data - 設置合理的預設值
+  // Form data (保持不變)
   const matchForm = ref({
-    match_date_ts: new Date().getTime(), // 預設今天
-    match_type: 'doubles', // 預設雙打
-    match_format: 'games_9', // 預設九局制
+    match_date_ts: new Date().getTime(),
+    match_type: 'doubles',
+    match_format: 'games_9',
     player1_id: null,
     player2_id: null,
     player3_id: null,
@@ -220,15 +220,15 @@
     a_games: 0,
     b_games: 0,
     match_notes: '',
-    court_surface: 'hard_court', // 預設硬地
-    court_environment: 'outdoor', // 預設室外
-    time_slot: 'evening', // 預設晚上
+    court_surface: 'hard_court',
+    court_environment: 'outdoor',
+    time_slot: 'evening',
     total_points: null,
     duration_minutes: null,
     youtube_url: ''
   })
 
-  // Options
+  // Options (保持不變)
   const matchTypeOptions = [
     { label: '單打', value: 'singles' },
     { label: '雙打', value: 'doubles' }
@@ -259,16 +259,7 @@
     { label: '晚上', value: 'evening' }
   ]
 
-  // Form rules
-  const formRules = {
-    match_date: [{ required: true, message: '請選擇比賽日期', trigger: 'change' }],
-    match_type: [{ required: true, message: '請選擇比賽類型', trigger: 'change' }],
-    match_format: [{ required: true, message: '請選擇賽制', trigger: 'change' }],
-    player1_id: [{ required: true, message: '請選擇球員1', trigger: 'change' }],
-    player3_id: [{ required: true, message: '請選擇球員3', trigger: 'change' }]
-  }
-
-  // Computed properties
+  // 🔧 修復：統一的分數驗證邏輯（與 EditMatchRecordView 一致）
   const scoreInputMax = computed(() => {
     const formatMap = {
       games_5: 3,
@@ -278,6 +269,82 @@
     return formatMap[matchForm.value.match_format] || 5
   })
 
+  const validateMatchScore = (aGames, bGames, format) => {
+    const gamesToWin = scoreInputMax.value
+
+    // 1. 基本驗證
+    if (aGames < 0 || bGames < 0) {
+      return { isValid: false, message: '比賽分數不能為負數' }
+    }
+
+    // 2. 不能平局
+    if (aGames === bGames) {
+      return { isValid: false, message: '比賽分數不能相同，必須分出勝負' }
+    }
+
+    // 3. 必須有一方達到獲勝局數
+    if (aGames < gamesToWin && bGames < gamesToWin) {
+      return { isValid: false, message: `比賽尚未結束，需要有一方達到 ${gamesToWin} 局` }
+    }
+
+    // 4. 只能有一方達到獲勝局數
+    if (aGames >= gamesToWin && bGames >= gamesToWin) {
+      return { isValid: false, message: `無效分數：雙方都達到了獲勝局數 ${gamesToWin}` }
+    }
+
+    // 5. 達到獲勝局數的一方必須領先
+    if (aGames >= gamesToWin && aGames <= bGames) {
+      return { isValid: false, message: `無效分數：A方達到 ${gamesToWin} 局但未領先` }
+    }
+
+    if (bGames >= gamesToWin && bGames <= aGames) {
+      return { isValid: false, message: `無效分數：B方達到 ${gamesToWin} 局但未領先` }
+    }
+
+    return { isValid: true, message: '' }
+  }
+
+  // 🔧 修復：表單驗證規則（加入分數驗證）
+  const formRules = {
+    match_date: [{ required: true, message: '請選擇比賽日期', trigger: 'change' }],
+    match_type: [{ required: true, message: '請選擇比賽類型', trigger: 'change' }],
+    match_format: [{ required: true, message: '請選擇賽制', trigger: 'change' }],
+    player1_id: [{ required: true, message: '請選擇球員1', trigger: 'change' }],
+    player3_id: [{ required: true, message: '請選擇球員3', trigger: 'change' }],
+    // 🔧 新增分數驗證規則
+    a_games: [
+      { required: true, message: '請輸入A方得分', trigger: 'blur' },
+      { type: 'number', min: 0, message: '分數不能為負數', trigger: 'blur' },
+      {
+        validator: (rule, value, callback) => {
+          const validation = validateMatchScore(value, matchForm.value.b_games, matchForm.value.match_format)
+          if (!validation.isValid) {
+            callback(new Error(validation.message))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ],
+    b_games: [
+      { required: true, message: '請輸入B方得分', trigger: 'blur' },
+      { type: 'number', min: 0, message: '分數不能為負數', trigger: 'blur' },
+      {
+        validator: (rule, value, callback) => {
+          const validation = validateMatchScore(matchForm.value.a_games, value, matchForm.value.match_format)
+          if (!validation.isValid) {
+            callback(new Error(validation.message))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ]
+  }
+
+  // 🔧 修復：canSubmit 計算邏輯
   const canSubmit = computed(() => {
     const form = matchForm.value
 
@@ -291,17 +358,31 @@
       return false
     }
 
-    // 比賽必須有勝負
-    const maxGames = scoreInputMax.value
-    return (
-      (form.a_games === maxGames && form.a_games > form.b_games) ||
-      (form.b_games === maxGames && form.b_games > form.a_games)
-    )
+    // 🔧 使用新的分數驗證邏輯
+    const scoreValidation = validateMatchScore(form.a_games, form.b_games, form.match_format)
+
+    return scoreValidation.isValid
   })
 
-  // Methods
+  // 🔧 新增：分數狀態計算
+  const matchStatus = computed(() => {
+    const validation = validateMatchScore(
+      matchForm.value.a_games,
+      matchForm.value.b_games,
+      matchForm.value.match_format
+    )
+
+    return {
+      isValid: validation.isValid,
+      message: validation.message,
+      isComplete: validation.isValid && matchForm.value.side_a_outcome !== 'PENDING'
+    }
+  })
+
+  // 🔧 修復：提交邏輯
   const handleRecordMatch = async () => {
     try {
+      // 基本表單驗證
       const valid = await formRef.value?.validate()
       if (!valid) {
         message.error('請修正表單中的錯誤。')
@@ -312,13 +393,15 @@
       return
     }
 
-    const gamesToWin = scoreInputMax.value
-    if (matchForm.value.a_games < gamesToWin && matchForm.value.b_games < gamesToWin) {
-      message.error(`比賽尚未結束，需要有一方達到 ${gamesToWin} 局才能儲存。`)
-      return
-    }
-    if (matchForm.value.a_games === matchForm.value.b_games) {
-      message.error('比賽分數不能相同，請確認勝負。')
+    // 🔧 客戶端預驗證
+    const localValidation = validateMatchScore(
+      matchForm.value.a_games,
+      matchForm.value.b_games,
+      matchForm.value.match_format
+    )
+
+    if (!localValidation.isValid) {
+      message.error(localValidation.message)
       return
     }
 
@@ -368,6 +451,28 @@
       })
 
       const errorData = err.response?.data
+
+      // 🔧 新增：處理分數驗證錯誤
+      if (errorData?.error === 'score_validation_error') {
+        const scoreInfo = errorData.score_info
+        let detailedMessage = errorData.message
+
+        if (scoreInfo) {
+          detailedMessage += `\n\n詳細信息：`
+          detailedMessage += `\nA方得分：${scoreInfo.a_games}`
+          detailedMessage += `\nB方得分：${scoreInfo.b_games}`
+          detailedMessage += `\n比賽格式：${scoreInfo.match_format}`
+          detailedMessage += `\n獲勝需要：${scoreInfo.games_to_win} 局`
+        }
+
+        message.error(detailedMessage, {
+          duration: 8000,
+          closable: true
+        })
+        return
+      }
+
+      // 處理其他錯誤類型
       let errorMessage = '儲存失敗，請稍後再試。'
 
       if (errorData?.details) {
@@ -411,20 +516,31 @@
     router.push({ name: 'ManagementCenter' })
   }
 
-  // Watchers
+  // 🔧 修復：分數變化監聽（與 EditMatchRecordView 一致）
   watch(
     [() => matchForm.value.a_games, () => matchForm.value.b_games, () => matchForm.value.match_format],
-    () => {
-      const gamesToWin = scoreInputMax.value
-      const gamesA = matchForm.value.a_games
-      const gamesB = matchForm.value.b_games
+    (newValues, oldValues) => {
+      const [newAGames, newBGames, newFormat] = newValues
+      const [oldAGames, oldBGames, oldFormat] = oldValues || []
 
-      if (gamesA === gamesToWin && gamesA > gamesB) {
-        matchForm.value.side_a_outcome = 'WIN'
-      } else if (gamesB === gamesToWin && gamesB > gamesA) {
-        matchForm.value.side_a_outcome = 'LOSS'
-      } else {
-        matchForm.value.side_a_outcome = ''
+      // 只在值真正改變時觸發
+      if (newAGames !== oldAGames || newBGames !== oldBGames || newFormat !== oldFormat) {
+        // 本地驗證
+        const validation = validateMatchScore(newAGames, newBGames, newFormat)
+
+        if (!validation.isValid && (newAGames > 0 || newBGames > 0)) {
+          console.warn('分數驗證失敗:', validation.message)
+        }
+
+        // 計算勝負結果
+        const gamesToWin = scoreInputMax.value
+        if (newAGames >= gamesToWin && newAGames > newBGames) {
+          matchForm.value.side_a_outcome = 'WIN'
+        } else if (newBGames >= gamesToWin && newBGames > newAGames) {
+          matchForm.value.side_a_outcome = 'LOSS'
+        } else {
+          matchForm.value.side_a_outcome = 'PENDING'
+        }
       }
     },
     { deep: true }

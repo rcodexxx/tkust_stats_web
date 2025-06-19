@@ -187,8 +187,8 @@
 </template>
 
 <script setup>
-  import { computed, ref, watch, onMounted, nextTick } from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
+  import { computed, nextTick, onMounted, ref, watch } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
   import { useMessage } from 'naive-ui'
   import apiClient from '@/services/apiClient'
   import MatchPlayerSelector from '@/components/MatchPlayerSelector.vue'
@@ -272,7 +272,38 @@
     match_type: [{ required: true, message: '請選擇比賽類型', trigger: 'change' }],
     match_format: [{ required: true, message: '請選擇賽制', trigger: 'change' }],
     player1_id: [{ required: true, message: '請選擇球員1', trigger: 'change' }],
-    player3_id: [{ required: true, message: '請選擇球員3', trigger: 'change' }]
+    player3_id: [{ required: true, message: '請選擇球員3', trigger: 'change' }],
+    // 🔧 新增分數驗證規則
+    a_games: [
+      { required: true, message: '請輸入A方得分', trigger: 'blur' },
+      { type: 'number', min: 0, message: '分數不能為負數', trigger: 'blur' },
+      {
+        validator: (rule, value, callback) => {
+          const validation = validateMatchScore(value, matchForm.value.b_games, matchForm.value.match_format)
+          if (!validation.isValid) {
+            callback(new Error(validation.message))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ],
+    b_games: [
+      { required: true, message: '請輸入B方得分', trigger: 'blur' },
+      { type: 'number', min: 0, message: '分數不能為負數', trigger: 'blur' },
+      {
+        validator: (rule, value, callback) => {
+          const validation = validateMatchScore(matchForm.value.a_games, value, matchForm.value.match_format)
+          if (!validation.isValid) {
+            callback(new Error(validation.message))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ]
   }
 
   // Computed properties
@@ -284,6 +315,41 @@
     }
     return formatMap[matchForm.value.match_format] || 5
   })
+
+  const validateMatchScore = (aGames, bGames, format) => {
+    const gamesToWin = scoreInputMax.value
+
+    // 1. 基本驗證
+    if (aGames < 0 || bGames < 0) {
+      return { isValid: false, message: '比賽分數不能為負數' }
+    }
+
+    // 2. 不能平局
+    if (aGames === bGames) {
+      return { isValid: false, message: '比賽分數不能相同，必須分出勝負' }
+    }
+
+    // 3. 必須有一方達到獲勝局數
+    if (aGames < gamesToWin && bGames < gamesToWin) {
+      return { isValid: false, message: `比賽尚未結束，需要有一方達到 ${gamesToWin} 局` }
+    }
+
+    // 4. 只能有一方達到獲勝局數
+    if (aGames >= gamesToWin && bGames >= gamesToWin) {
+      return { isValid: false, message: `無效分數：雙方都達到了獲勝局數 ${gamesToWin}` }
+    }
+
+    // 5. 達到獲勝局數的一方必須領先
+    if (aGames >= gamesToWin && aGames <= bGames) {
+      return { isValid: false, message: `無效分數：A方達到 ${gamesToWin} 局但未領先` }
+    }
+
+    if (bGames >= gamesToWin && bGames <= aGames) {
+      return { isValid: false, message: `無效分數：B方達到 ${gamesToWin} 局但未領先` }
+    }
+
+    return { isValid: true, message: '' }
+  }
 
   const canSubmit = computed(() => {
     const form = matchForm.value
@@ -298,16 +364,14 @@
       return false
     }
 
-    // 比賽必須有勝負
-    const maxGames = scoreInputMax.value
-    return (
-      (form.a_games === maxGames && form.a_games > form.b_games) ||
-      (form.b_games === maxGames && form.b_games > form.a_games)
-    )
+    // 🔧 使用新的分數驗證邏輯
+    const scoreValidation = validateMatchScore(form.a_games, form.b_games, form.match_format)
+
+    return scoreValidation.isValid
   })
 
   // 🔧 載入比賽記錄相關球員的方法
-  const loadMatchPlayers = async (playerIds) => {
+  const loadMatchPlayers = async playerIds => {
     try {
       // 過濾掉空值
       const validPlayerIds = playerIds.filter(id => id !== null && id !== undefined)
@@ -319,7 +383,7 @@
       console.log('載入比賽相關球員:', validPlayerIds)
 
       // 為每個球員ID獲取詳細信息
-      const playerPromises = validPlayerIds.map(async (playerId) => {
+      const playerPromises = validPlayerIds.map(async playerId => {
         try {
           const response = await apiClient.get(`/members/${playerId}`)
           return response.data.member || response.data
@@ -342,103 +406,15 @@
           playerSelectorRef.value.addPlayersToList(validPlayers)
         }
       }
-
     } catch (error) {
       console.error('載入比賽球員失敗:', error)
     }
   }
 
   // API Methods
-  const fetchMatchRecord = async () => {
-    try {
-      loading.value = true
-      console.log('正在載入比賽記錄 ID:', recordId.value)
-
-      const response = await apiClient.get(`/match-records/${recordId.value}`)
-      console.log('完整 API 響應:', response.data)
-
-      // 🔧 正確的數據結構解析
-      const record = response.data.match_record || response.data.record || response.data
-      console.log('解析後的比賽記錄:', record)
-
-      if (!record) {
-        throw new Error('沒有收到比賽記錄數據')
-      }
-
-      // 處理日期
-      let matchDate = null
-      if (record.match_date) {
-        try {
-          matchDate = new Date(record.match_date).getTime()
-          if (isNaN(matchDate)) {
-            console.warn('日期格式無效:', record.match_date)
-            matchDate = null
-          }
-        } catch (e) {
-          console.warn('日期解析失敗:', record.match_date, e)
-          matchDate = null
-        }
-      }
-
-      // 🔧 正確填充表單數據，處理球員對象結構
-      matchForm.value = {
-        match_date_ts: matchDate,
-        match_date: record.match_date || '',
-        match_type: record.match_type || 'doubles',
-        match_format: record.match_format || 'games_9',
-        // 🔧 正確處理球員ID - 支持直接ID和對象結構
-        player1_id: record.player1?.id || record.player1_id || null,
-        player2_id: record.player2?.id || record.player2_id || null,
-        player3_id: record.player3?.id || record.player3_id || null,
-        player4_id: record.player4?.id || record.player4_id || null,
-        a_games: record.a_games || 0,
-        b_games: record.b_games || 0,
-        match_notes: record.match_notes || '',
-        court_surface: record.court_surface || null,
-        court_environment: record.court_environment || null,
-        time_slot: record.time_slot || null,
-        total_points: record.total_points || null,
-        duration_minutes: record.duration_minutes || null,
-        youtube_url: record.youtube_url || ''
-      }
-
-      console.log('填充後的表單數據:', matchForm.value)
-
-      // 🔧 載入完比賽數據後，確保相關球員信息也已載入
-      await nextTick()
-
-      const playerIds = [
-        matchForm.value.player1_id,
-        matchForm.value.player2_id,
-        matchForm.value.player3_id,
-        matchForm.value.player4_id
-      ].filter(id => id !== null && id !== undefined)
-
-      if (playerIds.length > 0) {
-        await loadMatchPlayers(playerIds)
-      }
-
-    } catch (error) {
-      console.error('載入比賽記錄失敗:', error)
-      const errorMsg = error.response?.data?.message || error.message || '載入比賽記錄失敗'
-      message.error(`載入比賽記錄失敗: ${errorMsg}`)
-
-      // 如果是 404 錯誤，給出更具體的提示
-      if (error.response?.status === 404) {
-        message.error(`找不到 ID 為 ${recordId.value} 的比賽記錄`)
-      }
-
-      // 延遲跳轉，讓用戶看到錯誤訊息
-      setTimeout(() => {
-        router.push({ name: 'MatchManagement' })
-      }, 2000)
-    } finally {
-      loading.value = false
-    }
-  }
-
   const handleUpdateMatch = async () => {
     try {
+      // 基本表單驗證
       const valid = await formRef.value?.validate()
       if (!valid) {
         message.error('請修正表單中的錯誤。')
@@ -449,13 +425,15 @@
       return
     }
 
-    const gamesToWin = scoreInputMax.value
-    if (matchForm.value.a_games < gamesToWin && matchForm.value.b_games < gamesToWin) {
-      message.error(`比賽尚未結束，需要有一方達到 ${gamesToWin} 局才能儲存。`)
-      return
-    }
-    if (matchForm.value.a_games === matchForm.value.b_games) {
-      message.error('比賽分數不能相同，請確認勝負。')
+    // 🔧 可選：客戶端預驗證（使用本地邏輯或實時API）
+    const localValidation = validateMatchScore(
+      matchForm.value.a_games,
+      matchForm.value.b_games,
+      matchForm.value.match_format
+    )
+
+    if (!localValidation.isValid) {
+      message.error(localValidation.message)
       return
     }
 
@@ -505,6 +483,34 @@
       })
 
       const errorData = err.response?.data
+
+      // 🔧 新增：處理分數驗證錯誤
+      if (errorData?.error === 'score_validation_error') {
+        const scoreInfo = errorData.score_info
+        let detailedMessage = errorData.message
+
+        if (scoreInfo) {
+          detailedMessage += `\n\n詳細信息：`
+          detailedMessage += `\nA方得分：${scoreInfo.a_games}`
+          detailedMessage += `\nB方得分：${scoreInfo.b_games}`
+          detailedMessage += `\n比賽格式：${scoreInfo.match_format}`
+          detailedMessage += `\n獲勝需要：${scoreInfo.games_to_win} 局`
+
+          if (scoreInfo.current_values) {
+            detailedMessage += `\n\n目前數據庫中的值：`
+            detailedMessage += `\nA方：${scoreInfo.current_values.a_games}`
+            detailedMessage += `\nB方：${scoreInfo.current_values.b_games}`
+          }
+        }
+
+        message.error(detailedMessage, {
+          duration: 8000,
+          closable: true
+        })
+        return
+      }
+
+      // 處理其他錯誤類型
       let errorMessage = '更新失敗，請稍後再試。'
 
       if (errorData?.details) {
@@ -536,6 +542,137 @@
     }
   }
 
+  const matchStatus = computed(() => {
+    const validation = validateMatchScore(
+      matchForm.value.a_games,
+      matchForm.value.b_games,
+      matchForm.value.match_format
+    )
+
+    return {
+      isValid: validation.isValid,
+      message: validation.message,
+      isComplete: validation.isValid && matchForm.value.side_a_outcome !== 'PENDING'
+    }
+  })
+
+  const fetchMatchRecord = async () => {
+    try {
+      loading.value = true
+      console.log('正在載入比賽記錄 ID:', recordId.value)
+
+      const response = await apiClient.get(`/match-records/${recordId.value}`)
+      console.log('完整 API 響應:', response.data)
+
+      const record = response.data.match_record || response.data.record || response.data
+      console.log('解析後的比賽記錄:', record)
+
+      if (!record) {
+        throw new Error('沒有收到比賽記錄數據')
+      }
+
+      // 🔧 新增：檢查分數驗證狀態
+      if (record.score_validation) {
+        console.log('分數驗證狀態:', record.score_validation)
+
+        if (!record.score_validation.is_valid) {
+          message.warning('⚠️ 此比賽記錄的分數可能不符合規則，建議檢查後重新保存', {
+            duration: 5000,
+            closable: true
+          })
+        }
+      }
+
+      // 處理日期
+      let matchDate = null
+      if (record.match_date) {
+        try {
+          matchDate = new Date(record.match_date).getTime()
+          if (isNaN(matchDate)) {
+            console.warn('日期格式無效:', record.match_date)
+            matchDate = null
+          }
+        } catch (e) {
+          console.warn('日期解析失敗:', record.match_date, e)
+          matchDate = null
+        }
+      }
+
+      // 填充表單數據
+      matchForm.value = {
+        match_date_ts: matchDate,
+        match_date: record.match_date || '',
+        match_type: record.match_type || 'doubles',
+        match_format: record.match_format || 'games_9',
+        player1_id: record.player1?.id || record.player1_id || null,
+        player2_id: record.player2?.id || record.player2_id || null,
+        player3_id: record.player3?.id || record.player3_id || null,
+        player4_id: record.player4?.id || record.player4_id || null,
+        a_games: record.a_games || 0,
+        b_games: record.b_games || 0,
+        match_notes: record.match_notes || '',
+        court_surface: record.court_surface || null,
+        court_environment: record.court_environment || null,
+        time_slot: record.time_slot || null,
+        total_points: record.total_points || null,
+        duration_minutes: record.duration_minutes || null,
+        youtube_url: record.youtube_url || ''
+      }
+
+      console.log('填充後的表單數據:', matchForm.value)
+
+      // 載入相關球員信息
+      await nextTick()
+      const playerIds = [
+        matchForm.value.player1_id,
+        matchForm.value.player2_id,
+        matchForm.value.player3_id,
+        matchForm.value.player4_id
+      ].filter(id => id !== null && id !== undefined)
+
+      if (playerIds.length > 0) {
+        await loadMatchPlayers(playerIds)
+      }
+    } catch (error) {
+      console.error('載入比賽記錄失敗:', error)
+      const errorMsg = error.response?.data?.message || error.message || '載入比賽記錄失敗'
+      message.error(`載入比賽記錄失敗: ${errorMsg}`)
+
+      if (error.response?.status === 404) {
+        message.error(`找不到 ID 為 ${recordId.value} 的比賽記錄`)
+      }
+
+      setTimeout(() => {
+        router.push({ name: 'MatchManagement' })
+      }, 2000)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const validateScoreRealtime = async (aGames, bGames, matchFormat) => {
+    try {
+      const response = await apiClient.post('/match-records/validate-score', {
+        a_games: aGames,
+        b_games: bGames,
+        match_format: matchFormat
+      })
+
+      return {
+        isValid: response.data.is_valid,
+        message: response.data.message,
+        scoreInfo: response.data.score_info
+      }
+    } catch (error) {
+      console.error('實時驗證失敗:', error)
+      return {
+        isValid: false,
+        message: '驗證服務暫時無法使用',
+        scoreInfo: null
+      }
+    }
+  }
+
   const goBack = () => {
     router.push({ name: 'MatchManagement' })
   }
@@ -543,17 +680,30 @@
   // Watchers
   watch(
     [() => matchForm.value.a_games, () => matchForm.value.b_games, () => matchForm.value.match_format],
-    () => {
-      const gamesToWin = scoreInputMax.value
-      const gamesA = matchForm.value.a_games
-      const gamesB = matchForm.value.b_games
+    async (newValues, oldValues) => {
+      const [newAGames, newBGames, newFormat] = newValues
+      const [oldAGames, oldBGames, oldFormat] = oldValues || []
 
-      if (gamesA === gamesToWin && gamesA > gamesB) {
-        matchForm.value.side_a_outcome = 'WIN'
-      } else if (gamesB === gamesToWin && gamesB > gamesA) {
-        matchForm.value.side_a_outcome = 'LOSS'
-      } else {
-        matchForm.value.side_a_outcome = ''
+      // 只在值真正改變時觸發
+      if (newAGames !== oldAGames || newBGames !== oldBGames || newFormat !== oldFormat) {
+        // 本地驗證
+        const validation = validateMatchScore(newAGames, newBGames, newFormat)
+
+        if (!validation.isValid && (newAGames > 0 || newBGames > 0)) {
+          console.warn('分數驗證失敗:', validation.message)
+          // 可選：顯示輕量級提示
+          // message.warning(validation.message, { duration: 3000 })
+        }
+
+        // 計算勝負結果
+        const gamesToWin = scoreInputMax.value
+        if (newAGames >= gamesToWin && newAGames > newBGames) {
+          matchForm.value.side_a_outcome = 'WIN'
+        } else if (newBGames >= gamesToWin && newBGames > newAGames) {
+          matchForm.value.side_a_outcome = 'LOSS'
+        } else {
+          matchForm.value.side_a_outcome = 'PENDING'
+        }
       }
     },
     { deep: true }
