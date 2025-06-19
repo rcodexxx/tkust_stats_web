@@ -1,15 +1,19 @@
 // frontend/src/services/apiClient.js
 import axios from 'axios'
-// import router from '@/router'; // router 的使用最好由 store action 內部處理
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
-// 請求攔截器
+// 請求攔截器 - 添加調試信息
 apiClient.interceptors.request.use(
   config => {
+    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+
     const token = localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -17,58 +21,68 @@ apiClient.interceptors.request.use(
     return config
   },
   error => {
+    console.error('❌ Request Error:', error)
     return Promise.reject(error)
   }
 )
 
-// 回應攔截器
+// 回應攔截器 - 添加調試信息和 301 錯誤處理
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    console.log(`✅ API Response: ${response.status} ${response.config.url}`)
+    return response
+  },
   async error => {
     const originalRequest = error.config
     const status = error.response ? error.response.status : null
-    const data = error.response ? error.response.data : null
 
-    // 只處理 401 錯誤，並且避免對刷新 Token 的請求本身進行無限重試刷新
-    if (
-      status === 401 &&
-      originalRequest.url !== '/auth/refresh' &&
-      !originalRequest._retryRefresh
-    ) {
-      originalRequest._retryRefresh = true // 標記此原始請求已嘗試刷新
-      console.warn('Axios Interceptor: Access token potentially expired or invalid (401).')
+    // 處理 301 重定向錯誤
+    if (status === 301) {
+      console.error('🔄 301 Redirect Error:', {
+        url: originalRequest.url,
+        baseURL: originalRequest.baseURL,
+        fullURL: `${originalRequest.baseURL}${originalRequest.url}`,
+        redirectLocation: error.response.headers?.location
+      })
 
-      // 動態匯入 store 以調用 action
+      // 如果有重定向位置，嘗試使用新 URL
+      if (error.response.headers?.location) {
+        const newUrl = error.response.headers.location
+        console.log(`🔄 Attempting redirect to: ${newUrl}`)
+        originalRequest.url = newUrl
+        originalRequest.baseURL = ''
+        return apiClient(originalRequest)
+      }
+    }
+
+    // 原有的 401 處理邏輯
+    if (status === 401 && originalRequest.url !== '/auth/refresh' && !originalRequest._retryRefresh) {
+      originalRequest._retryRefresh = true
+      console.warn('⚠️ Access token potentially expired (401)')
+
       try {
         const { useAuthStore } = await import('@/stores/authStore')
         const authStore = useAuthStore()
 
-        const newAccessToken = await authStore.refreshTokenAction() // 嘗試刷新 token
+        const newAccessToken = await authStore.refreshTokenAction()
         if (newAccessToken) {
-          console.log('Axios Interceptor: Token refreshed. Retrying original request.')
+          console.log('🔄 Token refreshed, retrying request')
           originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`
-          return apiClient(originalRequest) // 使用 apiClient 重試
+          return apiClient(originalRequest)
         } else {
-          // Refresh token 失敗或沒有 refresh token，authStore.refreshTokenAction 內部應已處理登出
-          // 此處可以 reject 原始錯誤，或者 authStore.logoutAndRedirect() 已導航
-          console.warn(
-            'Axios Interceptor: Refresh token failed or not available. Logout should have been triggered.'
-          )
-          return Promise.reject(error) // 繼續拋出原始錯誤，讓調用方知道
+          console.warn('❌ Refresh token failed, logging out')
+          return Promise.reject(error)
         }
       } catch (storeError) {
-        console.error(
-          'Axios Interceptor: Error during store interaction or refresh attempt.',
-          storeError
-        )
-        // 確保即使 store 操作失敗也執行登出
+        console.error('❌ Store interaction error:', storeError)
         const { useAuthStore } = await import('@/stores/authStore')
         const authStore = useAuthStore()
-        authStore.logoutAndRedirect() // 確保執行登出
+        authStore.logoutAndRedirect()
         return Promise.reject(error)
       }
     }
-    // 對於其他錯誤，或者已經重試過刷新的 401，直接拋出
+
+    console.error(`❌ API Error: ${status} ${originalRequest.url}`, error)
     return Promise.reject(error)
   }
 )

@@ -179,7 +179,7 @@ class MemberSchema(Schema):
     def get_total_matches(self, obj):
         """獲取正確的總比賽場次"""
         # 優先使用計算出的場次
-        if hasattr(obj, '_calculated_match_count'):
+        if hasattr(obj, "_calculated_match_count"):
             return obj._calculated_match_count
 
         # 如果沒有計算值，實時計算
@@ -188,128 +188,28 @@ class MemberSchema(Schema):
 
             from ..models import MatchRecord
 
-            count = db.session.query(MatchRecord).filter(
-                or_(
-                    MatchRecord.player1_id == obj.id,
-                    MatchRecord.player2_id == obj.id,
-                    MatchRecord.player3_id == obj.id,
-                    MatchRecord.player4_id == obj.id
+            count = (
+                db.session.query(MatchRecord)
+                .filter(
+                    or_(
+                        MatchRecord.player1_id == obj.id,
+                        MatchRecord.player2_id == obj.id,
+                        MatchRecord.player3_id == obj.id,
+                        MatchRecord.player4_id == obj.id,
+                    )
                 )
-            ).count()
+                .count()
+            )
 
             return count
         except Exception:
             # 最後備用方案
-            if obj and hasattr(obj, 'match_stats_records'):
+            if obj and hasattr(obj, "match_stats_records"):
                 return obj.match_stats_records.count()
             return 0
 
     class Meta:
         ordered = True
-
-
-# --- 排行榜專用 Schema ---
-class LeaderboardMemberSchema(Schema):
-    """排行榜專用的會員 Schema - 修正版本"""
-
-    id = fields.Int(dump_only=True)
-    name = fields.Str(dump_only=True)
-    display_name = fields.Method("get_display_name", dump_only=True)
-    short_display_name = fields.Method("get_short_display_name", dump_only=True)
-
-    # 四維度評分
-    official_rank_score = fields.Float(dump_only=True)
-    potential_skill = fields.Float(dump_only=True)
-    consistency_rating = fields.Int(dump_only=True)
-    experience_level = fields.Str(dump_only=True)
-    rating_confidence = fields.Int(dump_only=True)
-    is_experienced_player = fields.Bool(dump_only=True)
-
-    # 基本狀態
-    is_active = fields.Method("get_is_active", dump_only=True)
-    player_type = fields.Method("get_player_type", dump_only=True)
-    is_guest = fields.Bool(dump_only=True)
-
-    # 組織資訊
-    organization_name = fields.Str(
-        attribute="organization.name", dump_only=True, allow_none=True
-    )
-
-    # 修正的比賽場次
-    total_matches = fields.Method("get_total_matches", dump_only=True)
-
-    # 原始 TrueSkill 數據（詳細視圖用）
-    mu = fields.Float(dump_only=True)
-    sigma = fields.Float(dump_only=True)
-
-    def get_display_name(self, obj):
-        return obj.display_name if obj else None
-
-    def get_short_display_name(self, obj):
-        return obj.short_display_name if obj else None
-
-    def get_is_active(self, obj):
-        return obj.is_active if obj else False
-
-    def get_player_type(self, obj):
-        return obj.player_type if obj else None
-
-    def get_total_matches(self, obj):
-        """獲取正確的總比賽場次"""
-        if hasattr(obj, "_calculated_match_count"):
-            return obj._calculated_match_count
-
-        return 0
-
-    class Meta:
-        ordered = True
-
-
-# --- 會員比較 Schema ---
-class MemberComparisonSchema(Schema):
-    """用於會員技術比較的 Schema"""
-
-    skill_advantage = fields.Float(
-        dump_only=True, metadata={"description": "技術優勢分數"}
-    )
-    confidence_advantage = fields.Int(
-        dump_only=True, metadata={"description": "可信度優勢"}
-    )
-    is_likely_stronger = fields.Bool(
-        dump_only=True, metadata={"description": "是否可能更強"}
-    )
-    comparison_reliability = fields.Int(
-        dump_only=True, metadata={"description": "比較可靠性"}
-    )
-
-
-class LeaderboardQuerySchema(Schema):
-    """排行榜查詢參數 Schema"""
-
-    include_guests = fields.Bool(
-        load_default=True, metadata={"description": "是否包含訪客"}
-    )
-    limit = fields.Int(
-        validate=validate.Range(min=1, max=100),
-        allow_none=True,
-        metadata={"description": "限制返回數量"},
-    )
-    organization_id = fields.Int(
-        allow_none=True, metadata={"description": "篩選特定組織"}
-    )
-    min_matches = fields.Int(
-        validate=validate.Range(min=0),
-        load_default=0,
-        metadata={"description": "最少比賽場次"},
-    )
-    experience_level = fields.Str(
-        validate=validate.OneOf(["新手", "初級", "中級", "高級", "資深"]),
-        allow_none=True,
-        metadata={"description": "篩選經驗等級"},
-    )
-
-    class Meta:
-        unknown = EXCLUDE
 
 
 # --- 創建 Schema ---
