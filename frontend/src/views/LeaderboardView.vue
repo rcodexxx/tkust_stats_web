@@ -3,7 +3,7 @@
     <div class="leaderboard-content-wrapper">
       <!-- 頁面標題 -->
       <div class="leaderboard-header mb-4">
-        <h1 class="page-title">🏆 軟式網球排行榜</h1>
+        <h1 class="page-title">🏆 淡江軟網排行榜</h1>
         <div class="leaderboard-description">
           <!--          <n-text depth="3" style="font-size: 16px"> 基於 TrueSkill 評分系統的球員實力排名 </n-text>-->
         </div>
@@ -27,17 +27,10 @@
                 <n-statistic label="活躍球員" :value="displayMembers.length" />
               </div>
               <div class="stat-item">
-                <n-statistic label="最高技能值" :value="Math.round((topThree[0]?.mu || 0) * 100) / 100" />
+                <n-statistic label="總比賽場次" :value="totalMatches" />
               </div>
               <div class="stat-item">
-                <n-statistic
-                  label="平均信心度"
-                  :value="
-                    Math.round(
-                      displayMembers.reduce((sum, m) => sum + (m.rating_confidence || 0), 0) / displayMembers.length
-                    )
-                  "
-                />
+                <n-statistic label="平均比賽" :value="averageMatches" />
               </div>
             </div>
           </n-card>
@@ -370,13 +363,13 @@
     return iconMap[experienceLevel] || '🌱'
   }
 
-  // 格式化顯示分數 (x100，不顯示"分"字)
+  // 格式化顯示分數 x100
   const formatDisplayScore = score => {
     if (typeof score !== 'number' || isNaN(score)) return '0'
     return Math.round(score * 100).toString()
   }
 
-  // ✅ 修復：更新輔助函數使用正確的字段名稱
+  // 輔助函數
   const getMatchCount = member => {
     return safeGet(member, 'total_matches', 0)
   }
@@ -394,6 +387,15 @@
   }
 
   // === 計算屬性 ===
+
+  const totalMatches = computed(() => {
+    return displayMembers.value.reduce((sum, member) => sum + getMatchCount(member), 0)
+  })
+
+  const averageMatches = computed(() => {
+    if (displayMembers.value.length === 0) return 0
+    return Math.round(totalMatches.value / displayMembers.value.length)
+  })
 
   // 只顯示有比賽記錄的球員
   const activePlayersData = computed(() => {

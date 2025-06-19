@@ -7,7 +7,7 @@
             <n-layout-header bordered class="app-header">
               <div class="navbar-content">
                 <!-- 桌面版 LOGO -->
-                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom"> TKU Soft Tennis Web </router-link>
+                <router-link v-if="!isMobile" to="/" class="navbar-brand-custom"> TKU Soft Tennis Web</router-link>
 
                 <!-- 移動版選單觸發器 -->
                 <div v-if="isMobile" class="mobile-nav-trigger">
@@ -381,12 +381,12 @@
   const menuOptions = computed(() =>
     [
       {
-        label: renderRouterLink('Leaderboard', '排行榜'),
+        label: renderRouterLink('Leaderboard', '校內排行榜'),
         key: 'Leaderboard',
         icon: renderIcon(HomeIcon)
       },
       {
-        label: renderRouterLink('DetailLeaderboard', '數據排行榜'),
+        label: renderRouterLink('DetailLeaderboard', '詳細數據'),
         key: 'DetailLeaderboard',
         icon: renderIcon(HomeIcon),
         show: isLogin.value
