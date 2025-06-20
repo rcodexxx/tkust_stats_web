@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 
 from ..extensions import db
 from .enums import MatchOutcomeEnum
+from .enums.match_enums import MatchStartServeEnum
 
 
 class MatchRecord(db.Model):
@@ -78,7 +79,16 @@ class MatchRecord(db.Model):
         comment="A方視角的比賽結果 (勝/負)",
     )
 
-    # --- 🔥 新增：每局詳細比分欄位 ---
+    # --- 每局詳細比分欄位 ---
+    first_serve_side = db.Column(
+        SQLAlchemyEnum(
+            MatchStartServeEnum,
+            name="serve_start_enum_match_records",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=True,
+        comment="第一局發球方 (A方/B方)",
+    )
     # 第1局比分
     game1_a_score = db.Column(Integer, nullable=True, default=0, comment="第1局A方得分")
     game1_b_score = db.Column(Integer, nullable=True, default=0, comment="第1局B方得分")
@@ -293,13 +303,8 @@ class MatchRecord(db.Model):
         return [stat.to_dict() for stat in self.player_stats]
 
     def to_dict_with_details(self) -> dict:
-        """
-        轉換為包含詳細信息的字典
-
-        Returns:
-            dict: 完整的比賽記錄字典
-        """
-        return {
+        """轉換為包含詳細信息的字典（包含發球資訊）"""
+        base_dict = {
             "id": self.id,
             "match_id": self.match_id,
             "a_games": self.a_games,
@@ -309,6 +314,160 @@ class MatchRecord(db.Model):
             else None,
             "players": [player.name for player in self.get_all_players()],
             "has_detailed_scores": self.has_detailed_scores(),
-            "games_detail": self.get_all_games_scores(),
+            "games_detail": self.get_all_games_scores_with_serve(),
             "player_stats": self.get_player_stats_detail(),
         }
+
+        # 🔥 新增發球相關資訊
+        if self.first_serve_side:
+            base_dict.update(
+                {
+                    "first_serve_side": self.first_serve_side.value,
+                    "serve_advantage": self._calculate_serve_advantage(),
+                }
+            )
+        else:
+            base_dict.update({"first_serve_side": None, "serve_advantage": None})
+
+        return base_dict
+
+    def get_all_games_scores_with_serve(self) -> list[dict]:
+        """獲取所有局的比分詳情（包含發球資訊）"""
+        games = []
+        for game_num in range(1, 10):
+            a_score, b_score = self.get_game_score(game_num)
+
+            # 只返回有進行的局（雙方得分不全為0）
+            if a_score > 0 or b_score > 0:
+                winner = None
+                if a_score > b_score:
+                    winner = "A"
+                elif b_score > a_score:
+                    winner = "B"
+
+                game_detail = {
+                    "game": game_num,
+                    "a_score": a_score,
+                    "b_score": b_score,
+                    "winner": winner,
+                    "is_completed": winner is not None,
+                }
+
+                # 🔥 新增發球資訊
+                serve_side = self.get_serve_side_for_game(game_num)
+                if serve_side:
+                    game_detail.update(
+                        {
+                            "serve_side": serve_side,
+                            "serve_side_display": "A方"
+                            if serve_side == "side_a"
+                            else "B方",
+                        }
+                    )
+
+                games.append(game_detail)
+
+        return games
+
+    def _calculate_serve_advantage(self) -> dict:
+        """計算發球優勢統計"""
+        if not self.first_serve_side:
+            return None
+
+        serve_stats = {
+            "side_a": {"serve_games": 0, "serve_wins": 0, "serve_win_rate": 0.0},
+            "side_b": {"serve_games": 0, "serve_wins": 0, "serve_win_rate": 0.0},
+        }
+
+        games_detail = self.get_all_games_scores()
+
+        for game_detail in games_detail:
+            game_num = game_detail["game"]
+            serve_side = self.get_serve_side_for_game(game_num)
+            winner = game_detail["winner"]
+
+            if serve_side and winner:
+                serve_stats[serve_side]["serve_games"] += 1
+
+                if serve_side == "side_a" and winner == "A":
+                    serve_stats["side_a"]["serve_wins"] += 1
+                elif serve_side == "side_b" and winner == "B":
+                    serve_stats["side_b"]["serve_wins"] += 1
+
+        # 計算發球勝率
+        for side in ["side_a", "side_b"]:
+            total_serves = serve_stats[side]["serve_games"]
+            if total_serves > 0:
+                serve_stats[side]["serve_win_rate"] = round(
+                    (serve_stats[side]["serve_wins"] / total_serves) * 100, 1
+                )
+
+        return serve_stats
+
+    def get_serve_side_for_game(self, game_number: int) -> str:
+        """獲取指定局數的發球方"""
+        if not (1 <= game_number <= 9) or not self.first_serve_side:
+            return None
+
+        # 奇數局和第一局發球方相同，偶數局相反
+        if game_number % 2 == 1:
+            return self.first_serve_side.value
+        else:
+            return (
+                MatchStartServeEnum.SIDE_B.name
+                if self.first_serve_side == MatchStartServeEnum.SIDE_A
+                else MatchStartServeEnum.SIDE_A.name
+            )
+
+    def get_serving_players_for_game(self, game_number: int) -> list:
+        """
+        獲取指定局數的發球球員ID列表
+
+        Args:
+            game_number: 局數 (1-9)
+
+        Returns:
+            list: 發球方球員ID列表
+        """
+        serve_side = self.get_serve_side_for_game(game_number)
+        if not serve_side:
+            return []
+
+        if serve_side == "side_a":
+            # A方球員 (player1, player2)
+            return [p_id for p_id in [self.player1_id, self.player2_id] if p_id]
+        else:
+            # B方球員 (player3, player4)
+            return [p_id for p_id in [self.player3_id, self.player4_id] if p_id]
+
+    def get_serve_details_basic(self) -> list[dict]:
+        """
+        獲取基本發球詳情（供 service 層使用）
+
+        Returns:
+            list: [{"game": 1, "serve_side": "side_a", "serving_players": [1, 2]}, ...]
+        """
+        serve_details = []
+
+        for game_num in range(1, 10):
+            serve_side = self.get_serve_side_for_game(game_num)
+            if not serve_side:
+                continue
+
+            # 獲取發球球員
+            serving_players = self.get_serving_players_for_game(game_num)
+
+            # 檢查該局是否有比分記錄
+            a_score, b_score = self.get_game_score(game_num)
+            has_score = a_score > 0 or b_score > 0
+
+            serve_details.append(
+                {
+                    "game": game_num,
+                    "serve_side": serve_side,
+                    "serving_players": serving_players,
+                    "has_score": has_score,
+                }
+            )
+
+        return serve_details

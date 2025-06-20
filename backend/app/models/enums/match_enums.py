@@ -68,3 +68,10 @@ class MatchTimeSlotEnum(BaseEnum):
     MORNING = "morning"  # 早上
     AFTERNOON = "afternoon"  # 下午
     EVENING = "evening"  # 晚上
+
+
+class MatchStartServeEnum(BaseEnum):
+    """發球開始方枚舉"""
+
+    SIDE_A = "side_a"  # A方先發球
+    SIDE_B = "side_b"  # B方先發球

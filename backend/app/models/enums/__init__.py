@@ -8,6 +8,7 @@ from .match_enums import (
     MatchNatureEnum,
     MatchOutcomeEnum,
     MatchPositionEnum,
+    MatchStartServeEnum,
     MatchTimeSlotEnum,
     MatchTypeEnum,
 )
@@ -27,4 +28,5 @@ __all__ = [
     UserRoleEnum,
     BloodTypeEnum,
     GenderEnum,
+    MatchStartServeEnum,
 ]
