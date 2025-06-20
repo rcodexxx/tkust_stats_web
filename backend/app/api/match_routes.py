@@ -3,10 +3,13 @@ from flask import current_app, jsonify, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError as MarshmallowValidationError
 
+from ..extensions import db
 from ..schemas.match_schemas import (
     MatchBasicSchema,
     MatchQuerySchema,
     MatchRecordCreateSchema,
+    MatchRecordDetailedScoresCreateSchema,
+    MatchRecordDetailedScoresResponseSchema,
     MatchRecordResponseSchema,
     MatchUpdateSchema,
 )
@@ -21,6 +24,9 @@ responses_schema = MatchRecordResponseSchema(many=True)
 update_schema = MatchUpdateSchema()
 query_schema = MatchQuerySchema()
 basic_schema = MatchBasicSchema()
+detailed_create_schema = MatchRecordDetailedScoresCreateSchema()
+detailed_response_schema = MatchRecordDetailedScoresResponseSchema()
+detailed_responses_schema = MatchRecordDetailedScoresResponseSchema(many=True)
 
 
 @api_bp.route("/match-records", methods=["POST"])
@@ -521,3 +527,195 @@ def get_player_match_history(player_id):
         return jsonify(
             {"error": "server_error", "message": "獲取球員比賽歷史時發生錯誤。"}
         ), 500
+
+
+@api_bp.route("/match-records/detailed", methods=["POST"])
+@jwt_required()
+def create_match_record_with_detailed_scores():
+    """
+    創建包含詳細比分的比賽記錄
+    支援每局的詳細得分記錄
+    """
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify(
+            {"error": "missing_json", "message": "缺少 JSON 請求內容。"}
+        ), 400
+
+    try:
+        # 使用詳細比分 Schema 驗證
+        validated_data = detailed_create_schema.load(json_data)
+
+        # 使用詳細比分 Service 方法創建
+        new_record = MatchRecordService.create_match_record_with_detailed_scores(
+            validated_data
+        )
+
+        return jsonify(
+            {
+                "message": "包含詳細比分的比賽記錄已成功建立。",
+                "record": detailed_response_schema.dump(new_record),
+            }
+        ), 201
+
+    except MarshmallowValidationError as err:
+        return jsonify(
+            {
+                "error": "validation_error",
+                "message": "輸入數據有誤。",
+                "details": err.messages,
+            }
+        ), 400
+    except AppException as e:
+        return jsonify(e.to_dict()), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"創建詳細比分比賽記錄時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "創建時發生錯誤。"}), 500
+
+
+@api_bp.route("/match-records/<int:record_id>/detailed", methods=["GET"])
+@jwt_required(optional=True)
+def get_match_record_with_detailed_scores(record_id):
+    """
+    獲取包含詳細比分的比賽記錄
+    """
+    try:
+        record = MatchRecordService.get_match_record_by_id(record_id)
+        if not record:
+            return jsonify(
+                {"error": "not_found", "message": "找不到指定的比賽記錄。"}
+            ), 404
+
+        return jsonify({"record": detailed_response_schema.dump(record)}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"獲取詳細比分比賽記錄時發生錯誤: {e}", exc_info=True)
+        return jsonify(
+            {"error": "server_error", "message": "獲取數據時發生錯誤。"}
+        ), 500
+
+
+@api_bp.route("/match-records/<int:record_id>/detailed", methods=["PUT"])
+@jwt_required()
+def update_match_record_with_detailed_scores(record_id):
+    """
+    更新包含詳細比分的比賽記錄
+    """
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify(
+            {"error": "missing_json", "message": "缺少 JSON 請求內容。"}
+        ), 400
+
+    try:
+        # 使用詳細比分 Schema 驗證（部分更新）
+        validated_data = detailed_create_schema.load(json_data, partial=True)
+
+        # 使用詳細比分 Service 方法更新
+        updated_record = MatchRecordService.update_match_record_with_detailed_scores(
+            record_id, validated_data
+        )
+
+        return jsonify(
+            {
+                "message": "包含詳細比分的比賽記錄已成功更新。",
+                "record": detailed_response_schema.dump(updated_record),
+            }
+        ), 200
+
+    except MarshmallowValidationError as err:
+        return jsonify(
+            {
+                "error": "validation_error",
+                "message": "輸入數據有誤。",
+                "details": err.messages,
+            }
+        ), 400
+    except AppException as e:
+        return jsonify(e.to_dict()), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"更新詳細比分比賽記錄時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "更新時發生錯誤。"}), 500
+
+
+# 🔥 額外的便利端點
+
+
+@api_bp.route("/match-records/<int:record_id>/games-detail", methods=["GET"])
+@jwt_required(optional=True)
+def get_match_games_detail(record_id):
+    """
+    獲取比賽的局數詳細資訊
+    返回每局的比分和勝負情況
+    """
+    try:
+        record = MatchRecordService.get_match_record_by_id(record_id)
+        if not record:
+            return jsonify(
+                {"error": "not_found", "message": "找不到指定的比賽記錄。"}
+            ), 404
+
+        games_detail = record.get_all_games_scores()
+
+        return jsonify(
+            {
+                "match_record_id": record_id,
+                "has_detailed_scores": record.has_detailed_scores(),
+                "games_detail": games_detail,
+                "summary": {
+                    "total_games_played": len(games_detail),
+                    "a_games_won": record.a_games,
+                    "b_games_won": record.b_games,
+                },
+            }
+        ), 200
+
+    except Exception as e:
+        current_app.logger.error(f"獲取比賽局數詳情時發生錯誤: {e}", exc_info=True)
+        return jsonify(
+            {"error": "server_error", "message": "獲取數據時發生錯誤。"}
+        ), 500
+
+
+@api_bp.route("/match-records/<int:record_id>/auto-calculate", methods=["POST"])
+@jwt_required()
+def auto_calculate_total_games(record_id):
+    """
+    根據詳細比分自動計算總局數
+    """
+    try:
+        record = MatchRecordService.get_match_record_by_id(record_id)
+        if not record:
+            return jsonify(
+                {"error": "not_found", "message": "找不到指定的比賽記錄。"}
+            ), 404
+
+        if not record.has_detailed_scores():
+            return jsonify(
+                {
+                    "error": "no_detailed_scores",
+                    "message": "該比賽記錄沒有詳細比分，無法自動計算。",
+                }
+            ), 400
+
+        # 自動更新總局數
+        old_a_games, old_b_games = record.a_games, record.b_games
+        record.update_games_total()
+
+        db.session.commit()
+
+        return jsonify(
+            {
+                "message": "總局數已根據詳細比分自動更新。",
+                "changes": {
+                    "old": {"a_games": old_a_games, "b_games": old_b_games},
+                    "new": {"a_games": record.a_games, "b_games": record.b_games},
+                },
+                "record": detailed_response_schema.dump(record),
+            }
+        ), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"自動計算總局數時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": "server_error", "message": "計算時發生錯誤。"}), 500

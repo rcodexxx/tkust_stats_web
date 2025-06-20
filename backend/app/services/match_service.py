@@ -11,20 +11,17 @@ from .rating_service import RatingService  # 導入評分服務
 
 
 class MatchRecordService:
-
     # 🔧 新增：分數驗證相關方法
     @staticmethod
     def _get_games_to_win(match_format: str) -> int:
         """根據比賽格式獲取獲勝所需的局數"""
-        format_map = {
-            'games_5': 3,
-            'games_7': 4,
-            'games_9': 5
-        }
+        format_map = {"games_5": 3, "games_7": 4, "games_9": 5}
         return format_map.get(match_format, 5)
 
     @staticmethod
-    def _validate_match_score(games_a: int, games_b: int, match_format: str) -> tuple[bool, str]:
+    def _validate_match_score(
+            games_a: int, games_b: int, match_format: str
+    ) -> tuple[bool, str]:
         """
         驗證比賽分數是否符合規則
         返回: (是否有效, 錯誤訊息)
@@ -57,14 +54,18 @@ class MatchRecordService:
         return True, ""
 
     @staticmethod
-    def _calculate_outcome(games_a: int, games_b: int, match_format: str = None) -> MatchOutcomeEnum:
+    def _calculate_outcome(
+            games_a: int, games_b: int, match_format: str = None
+    ) -> MatchOutcomeEnum:
         """
         根據 A 方和 B 方的局數以及比賽格式計算 A 方的賽果
         修復版本：加入比賽格式驗證
         """
         # 如果提供了 match_format，先驗證分數有效性
         if match_format:
-            is_valid, error_msg = MatchRecordService._validate_match_score(games_a, games_b, match_format)
+            is_valid, error_msg = MatchRecordService._validate_match_score(
+                games_a, games_b, match_format
+            )
             if not is_valid:
                 raise ValidationError(f"比賽分數無效: {error_msg}")
 
@@ -96,9 +97,7 @@ class MatchRecordService:
         try:
             # 🔧 加入分數驗證
             is_valid, error_msg = MatchRecordService._validate_match_score(
-                data["a_games"],
-                data["b_games"],
-                data["match_format"]
+                data["a_games"], data["b_games"], data["match_format"]
             )
             if not is_valid:
                 raise ValidationError(error_msg)
@@ -130,9 +129,7 @@ class MatchRecordService:
 
             # 🔧 使用修復後的計算方法
             new_record.side_a_outcome = MatchRecordService._calculate_outcome(
-                new_record.a_games,
-                new_record.b_games,
-                data["match_format"]
+                new_record.a_games, new_record.b_games, data["match_format"]
             )
             db.session.add(new_record)
 
@@ -203,7 +200,9 @@ class MatchRecordService:
         if court_surface := args.get("court_surface"):
             query = query.join(Match).filter(Match.court_surface == court_surface)
         if court_environment := args.get("court_environment"):
-            query = query.join(Match).filter(Match.court_environment == court_environment)
+            query = query.join(Match).filter(
+                Match.court_environment == court_environment
+            )
         if time_slot := args.get("time_slot"):
             query = query.join(Match).filter(Match.match_time_slot == time_slot)
 
@@ -295,22 +294,26 @@ class MatchRecordService:
             # 🔧 如果更新了分數，先驗證新分數的有效性
             new_a_games = data.get("a_games", record.a_games)
             new_b_games = data.get("b_games", record.b_games)
-            new_match_format = data.get("match_format",
-                                        record.match.match_format.value if record.match.match_format else "games_9")
+            new_match_format = data.get(
+                "match_format",
+                record.match.match_format.value
+                if record.match.match_format
+                else "games_9",
+            )
 
             # 驗證分數
             is_valid, error_msg = MatchRecordService._validate_match_score(
-                new_a_games,
-                new_b_games,
-                new_match_format
+                new_a_games, new_b_games, new_match_format
             )
             if not is_valid:
                 raise ValidationError(error_msg)
 
             # 獲取更新前的球員ID（用於評分重新計算）
             old_player_ids = {
-                record.player1_id, record.player2_id,
-                record.player3_id, record.player4_id
+                record.player1_id,
+                record.player2_id,
+                record.player3_id,
+                record.player4_id,
             }
             old_player_ids.discard(None)
 
@@ -352,15 +355,15 @@ class MatchRecordService:
             # 🔧 重新計算比賽結果（使用修復後的方法）
             if "a_games" in data or "b_games" in data or "match_format" in data:
                 record.side_a_outcome = MatchRecordService._calculate_outcome(
-                    record.a_games,
-                    record.b_games,
-                    new_match_format
+                    record.a_games, record.b_games, new_match_format
                 )
 
             # 獲取更新後的球員ID
             new_player_ids = {
-                record.player1_id, record.player2_id,
-                record.player3_id, record.player4_id
+                record.player1_id,
+                record.player2_id,
+                record.player3_id,
+                record.player4_id,
             }
             new_player_ids.discard(None)
 
@@ -380,7 +383,9 @@ class MatchRecordService:
 
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"更新比賽記錄 ID {record_id} 時出錯: {e}", exc_info=True)
+            current_app.logger.error(
+                f"更新比賽記錄 ID {record_id} 時出錯: {e}", exc_info=True
+            )
             if isinstance(e, (ValidationError, AppException)):
                 raise e
             raise AppException("更新比賽記錄時發生未預期錯誤。")
@@ -481,3 +486,189 @@ class MatchRecordService:
         except Exception as e:
             current_app.logger.error(f"獲取比賽統計時出錯: {e}", exc_info=True)
             raise AppException("獲取比賽統計時發生錯誤。")
+
+
+@staticmethod
+def create_match_record_with_detailed_scores(data: dict) -> MatchRecord:
+    """
+    創建包含詳細比分的比賽記錄
+    """
+    try:
+        # 1. 創建 Match 物件
+        new_match = Match(
+            match_date=data["match_date"],
+            match_type=data["match_type"],
+            match_format=data["match_format"],
+            court_surface=data.get("court_surface"),
+            court_environment=data.get("court_environment"),
+            match_time_slot=data.get("time_slot"),
+            total_points=data.get("total_points"),
+            duration_minutes=data.get("duration_minutes"),
+            youtube_url=data.get("youtube_url"),
+            notes=data.get("match_notes"),  # 對應前端的 match_notes
+        )
+        db.session.add(new_match)
+
+        # 2. 創建 MatchRecord 物件
+        new_record = MatchRecord(
+            match=new_match,
+            player1_id=data["player1_id"],
+            player2_id=data.get("player2_id"),
+            player3_id=data["player3_id"],
+            player4_id=data.get("player4_id"),
+            a_games=data["a_games"],
+            b_games=data["b_games"],
+        )
+
+        # 3. 🔥 新增：設置詳細比分
+        MatchRecordService._set_detailed_scores(new_record, data)
+
+        # 4. 如果有詳細比分，自動更新總局數
+        if MatchRecordService._has_any_detailed_scores(data):
+            new_record.update_games_total()
+
+        # 5. 計算比賽結果
+        new_record.side_a_outcome = MatchRecordService._calculate_outcome(
+            new_record.a_games, new_record.b_games
+        )
+
+        db.session.add(new_record)
+
+        # 6. 更新評分
+        from .rating_service import RatingService
+        RatingService.update_ratings_from_match(new_record)
+
+        db.session.commit()
+        return new_record
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"創建詳細比分比賽記錄時出錯: {e}", exc_info=True)
+        if isinstance(e, ValidationError):
+            raise e
+        raise AppException("創建比賽記錄時發生未預期錯誤。")
+
+
+@staticmethod
+def _set_detailed_scores(record: MatchRecord, data: dict) -> None:
+    """
+    設置比賽記錄的詳細比分
+    """
+    score_fields = [
+        "game1_a_score", "game1_b_score",
+        "game2_a_score", "game2_b_score",
+        "game3_a_score", "game3_b_score",
+        "game4_a_score", "game4_b_score",
+        "game5_a_score", "game5_b_score",
+        "game6_a_score", "game6_b_score",
+        "game7_a_score", "game7_b_score",
+        "game8_a_score", "game8_b_score",
+        "game9_a_score", "game9_b_score",
+    ]
+
+    for field in score_fields:
+        if field in data:
+            setattr(record, field, data[field] or 0)
+
+
+@staticmethod
+def _has_any_detailed_scores(data: dict) -> bool:
+    """
+    檢查數據中是否包含任何詳細比分
+    """
+    score_fields = [
+        "game1_a_score", "game1_b_score",
+        "game2_a_score", "game2_b_score",
+        "game3_a_score", "game3_b_score",
+        "game4_a_score", "game4_b_score",
+        "game5_a_score", "game5_b_score",
+        "game6_a_score", "game6_b_score",
+        "game7_a_score", "game7_b_score",
+        "game8_a_score", "game8_b_score",
+        "game9_a_score", "game9_b_score",
+    ]
+
+    return any(data.get(field, 0) > 0 for field in score_fields)
+
+
+@staticmethod
+def update_match_record_with_detailed_scores(record_id: int, data: dict) -> MatchRecord:
+    """
+    更新包含詳細比分的比賽記錄
+    """
+    record = MatchRecordService.get_match_record_by_id(record_id)
+    if not record:
+        raise AppException("找不到要更新的比賽記錄。", status_code=404)
+
+    try:
+        # 1. 更新 Match 相關資訊
+        if record.match:
+            match_fields_mapping = {
+                "court_surface": "court_surface",
+                "court_environment": "court_environment",
+                "time_slot": "match_time_slot",
+                "total_points": "total_points",
+                "duration_minutes": "duration_minutes",
+                "youtube_url": "youtube_url",
+                "match_notes": "notes",
+            }
+
+            for request_field, model_field in match_fields_mapping.items():
+                if request_field in data:
+                    setattr(record.match, model_field, data[request_field])
+
+        # 2. 更新 MatchRecord 基本資訊
+        record_fields = [
+            "player1_id", "player2_id", "player3_id", "player4_id",
+            "a_games", "b_games"
+        ]
+
+        for field in record_fields:
+            if field in data:
+                setattr(record, field, data[field])
+
+        # 3. 🔥 新增：更新詳細比分
+        MatchRecordService._set_detailed_scores(record, data)
+
+        # 4. 如果有詳細比分，自動更新總局數
+        if MatchRecordService._has_any_detailed_scores(data):
+            record.update_games_total()
+
+        # 5. 重新計算比賽結果
+        if "a_games" in data or "b_games" in data or MatchRecordService._has_any_detailed_scores(data):
+            record.side_a_outcome = MatchRecordService._calculate_outcome(
+                record.a_games, record.b_games
+            )
+
+        # 6. 處理評分更新（如果球員或比分有變化）
+        player_fields_changed = any(
+            field in data for field in ["player1_id", "player2_id", "player3_id", "player4_id"]
+        )
+        scores_changed = any(
+            field in data for field in ["a_games", "b_games"]) or MatchRecordService._has_any_detailed_scores(data)
+
+        if player_fields_changed or scores_changed:
+            # 獲取受影響的球員ID
+            affected_player_ids = []
+            for field in ["player1_id", "player2_id", "player3_id", "player4_id"]:
+                player_id = getattr(record, field, None)
+                if player_id:
+                    affected_player_ids.append(player_id)
+
+            # 提交當前更改
+            db.session.commit()
+
+            # 重新計算評分
+            if affected_player_ids:
+                from .rating_service import RatingService
+                RatingService.recalculate_ratings_for_players(affected_player_ids)
+
+        db.session.commit()
+        return record
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"更新詳細比分比賽記錄時出錯: {e}", exc_info=True)
+        if isinstance(e, (ValidationError, AppException)):
+            raise e
+        raise AppException("更新比賽記錄時發生未預期錯誤。")

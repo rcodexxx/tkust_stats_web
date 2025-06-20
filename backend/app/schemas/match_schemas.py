@@ -387,3 +387,222 @@ class MatchUpdateSchema(Schema):
                     f"建議時長範圍：{min_expected}-{max_expected}分鐘",
                     field_name="duration_minutes",
                 )
+
+
+class MatchRecordDetailedScoresCreateSchema(MatchRecordCreateSchema):
+    """支援詳細比分的創建 Schema"""
+
+    # 第1局比分
+    game1_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第1局A方得分"},
+    )
+    game1_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第1局B方得分"},
+    )
+
+    # 第2局比分
+    game2_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第2局A方得分"},
+    )
+    game2_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第2局B方得分"},
+    )
+
+    # 第3局比分
+    game3_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第3局A方得分"},
+    )
+    game3_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第3局B方得分"},
+    )
+
+    # 第4局比分
+    game4_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第4局A方得分"},
+    )
+    game4_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第4局B方得分"},
+    )
+
+    # 第5局比分
+    game5_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第5局A方得分"},
+    )
+    game5_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第5局B方得分"},
+    )
+
+    # 第6局比分
+    game6_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第6局A方得分"},
+    )
+    game6_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第6局B方得分"},
+    )
+
+    # 第7局比分
+    game7_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第7局A方得分"},
+    )
+    game7_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第7局B方得分"},
+    )
+
+    # 第8局比分
+    game8_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第8局A方得分"},
+    )
+    game8_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第8局B方得分"},
+    )
+
+    # 第9局比分
+    game9_a_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第9局A方得分"},
+    )
+    game9_b_score = fields.Int(
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0),
+        load_default=0,
+        metadata={"description": "第9局B方得分"},
+    )
+
+    @validates_schema
+    def validate_detailed_scores_consistency(self, data, **kwargs):
+        """驗證詳細比分與總局數的一致性"""
+        # 如果有詳細比分，驗證總局數是否匹配
+        games_detail = []
+        for game_num in range(1, 10):
+            a_key = f"game{game_num}_a_score"
+            b_key = f"game{game_num}_b_score"
+
+            a_score = data.get(a_key, 0) or 0
+            b_score = data.get(b_key, 0) or 0
+
+            # 只計算有進行的局（任一方得分>0）
+            if a_score > 0 or b_score > 0:
+                games_detail.append((a_score, b_score))
+
+        if games_detail:
+            # 計算從詳細比分得出的總局數
+            calculated_a_games = sum(1 for a, b in games_detail if a > b)
+            calculated_b_games = sum(1 for a, b in games_detail if b > a)
+
+            # 如果用戶也提供了總局數，檢查是否一致
+            total_a_games = data.get("a_games")
+            total_b_games = data.get("b_games")
+
+            if total_a_games is not None and total_a_games != calculated_a_games:
+                raise ValidationError(
+                    f"A方總局數({total_a_games})與詳細比分計算結果({calculated_a_games})不一致",
+                    field_name="a_games",
+                )
+
+            if total_b_games is not None and total_b_games != calculated_b_games:
+                raise ValidationError(
+                    f"B方總局數({total_b_games})與詳細比分計算結果({calculated_b_games})不一致",
+                    field_name="b_games",
+                )
+
+
+class MatchRecordDetailedScoresResponseSchema(MatchRecordResponseSchema):
+    """支援詳細比分的回應 Schema"""
+
+    # 詳細比分欄位
+    game1_a_score = fields.Int(dump_only=True)
+    game1_b_score = fields.Int(dump_only=True)
+    game2_a_score = fields.Int(dump_only=True)
+    game2_b_score = fields.Int(dump_only=True)
+    game3_a_score = fields.Int(dump_only=True)
+    game3_b_score = fields.Int(dump_only=True)
+    game4_a_score = fields.Int(dump_only=True)
+    game4_b_score = fields.Int(dump_only=True)
+    game5_a_score = fields.Int(dump_only=True)
+    game5_b_score = fields.Int(dump_only=True)
+    game6_a_score = fields.Int(dump_only=True)
+    game6_b_score = fields.Int(dump_only=True)
+    game7_a_score = fields.Int(dump_only=True)
+    game7_b_score = fields.Int(dump_only=True)
+    game8_a_score = fields.Int(dump_only=True)
+    game8_b_score = fields.Int(dump_only=True)
+    game9_a_score = fields.Int(dump_only=True)
+    game9_b_score = fields.Int(dump_only=True)
+
+    # 計算出的資訊
+    has_detailed_scores = fields.Method("get_has_detailed_scores", dump_only=True)
+    games_detail = fields.Method("get_games_detail", dump_only=True)
+
+    def get_has_detailed_scores(self, obj):
+        return obj.has_detailed_scores() if obj else False
+
+    def get_games_detail(self, obj):
+        return obj.get_all_games_scores() if obj else []
